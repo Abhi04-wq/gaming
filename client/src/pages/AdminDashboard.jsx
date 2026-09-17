@@ -57,6 +57,8 @@ export default function AdminDashboard() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const mobileSearchInputRef = useRef(null);
 
   // Modals State
   const [previewGame, setPreviewGame] = useState(null);
@@ -361,52 +363,29 @@ export default function AdminDashboard() {
 
       {/* Top Commander Header */}
       <header className="admin-header-wrap">
-        {/* Brand & Live Node Status */}
+        {/* Brand & Admin Identity */}
         <div className="admin-brand-wrap">
-          <div style={{ position: 'relative' }}>
+          <Link to="/" className="admin-brand-link" title="Go to Website">
             <img
               src={LogoWebp}
               alt="Loyalty Game"
-              style={{
-                width: '42px',
-                height: '42px',
-                objectFit: 'contain',
-                borderRadius: '50%',
-                border: '2px solid rgba(0, 230, 118, 0.4)',
-                boxShadow: '0 0 16px rgba(0, 230, 118, 0.3)',
-              }}
+              className="admin-brand-logo"
             />
-          </div>
+          </Link>
 
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <span style={{ fontWeight: 800, fontSize: '1.2rem', letterSpacing: '-0.02em', color: '#FFFFFF' }}>
+          <div className="admin-brand-info">
+            <div className="admin-brand-title-row">
+              <span className="admin-brand-title">
                 Loyalty Game
               </span>
-              <span
-                style={{
-                  background: 'linear-gradient(135deg, rgba(0, 230, 118, 0.2) 0%, rgba(0, 176, 80, 0.1) 100%)',
-                  color: '#00E676',
-                  border: '1px solid rgba(0, 230, 118, 0.4)',
-                  fontSize: '0.66rem',
-                  fontWeight: 800,
-                  padding: '2px 7px',
-                  borderRadius: '12px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
-                }}
-              >
+              <span className="admin-commander-badge">
                 Commander
               </span>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-              <div className="admin-radar-dot" />
-              <span style={{ fontSize: '0.74rem', color: '#00E676', fontWeight: 600 }}>
-                Node 5000 Active
-              </span>
-              <span style={{ fontSize: '0.74rem', color: '#64748b' }}>•</span>
-              <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
+            <div className="admin-brand-sub-row">
+              <ShieldCheck size={13} className="admin-shield-icon" />
+              <span className="admin-brand-email" title={adminUser?.email || 'Super Admin'}>
                 {adminUser?.email || 'Super Admin'}
               </span>
             </div>
@@ -1030,165 +1009,121 @@ export default function AdminDashboard() {
           <div style={{ animation: 'modalFadeIn 0.3s ease-out' }}>
             {/* Filter & Toolbar */}
             <div className="admin-toolbar-wrap">
-              {/* Left Controls */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px', flex: 1, width: '100%' }}>
-                {/* Search Bar */}
-                <div className="admin-search-box">
-                  <Search
-                    size={16}
-                    style={{
-                      position: 'absolute',
-                      left: '14px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      color: '#64748b',
-                    }}
-                  />
+              {/* Mobile Full-Width Search Input (Visible ONLY when mobileSearchOpen is true) */}
+              {mobileSearchOpen && (
+                <div className="admin-mobile-search-fullwidth">
+                  <Search size={16} className="admin-search-icon" />
                   <input
+                    ref={mobileSearchInputRef}
                     type="text"
                     placeholder="Search title, GZ code, or category..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="admin-search-input"
-                    style={{
-                      width: '100%',
-                      padding: '10px 36px 10px 38px',
-                      background: 'rgba(14, 18, 27, 0.85)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '12px',
-                      color: '#FFFFFF',
-                      fontSize: '0.86rem',
-                      outline: 'none',
-                    }}
+                    className="admin-mobile-search-input"
                   />
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery('')}
-                      style={{
-                        position: 'absolute',
-                        right: '12px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'transparent',
-                        border: 'none',
-                        color: '#94a3b8',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <X size={14} />
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileSearchOpen(false);
+                      setSearchQuery('');
+                    }}
+                    className="admin-mobile-search-close-btn"
+                    title="Close Search"
+                  >
+                    <X size={14} />
+                  </button>
                 </div>
+              )}
 
-                {/* Category Selector */}
-                <div
-                  className="admin-category-pills"
-                  style={{
-                    display: 'inline-flex',
-                    background: 'rgba(14, 18, 27, 0.85)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    padding: '4px',
-                    borderRadius: '12px',
-                    gap: '4px',
-                  }}
-                >
-                  {[
-                    { id: 'all', label: 'All' },
-                    { id: 'originals', label: 'Originals' },
-                    { id: 'table', label: 'Table & Cards' },
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setSelectedCategory(tab.id)}
-                      style={{
-                        background: selectedCategory === tab.id ? '#00E676' : 'transparent',
-                        color: selectedCategory === tab.id ? '#07090e' : '#94a3b8',
-                        border: 'none',
-                        padding: '6px 14px',
-                        borderRadius: '8px',
-                        fontSize: '0.82rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                      }}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
+              {/* Desktop Search Bar (Hidden on mobile via CSS) */}
+              <div className="admin-desktop-search-box">
+                <Search size={16} className="admin-search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search title, GZ code, or category..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="admin-search-input"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="admin-search-clear-btn"
+                    title="Clear Search"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
 
-                {/* Status Filter */}
+              {/* Category Selector Pills */}
+              <div className="admin-category-pills">
+                {[
+                  { id: 'all', label: 'All' },
+                  { id: 'originals', label: 'Originals' },
+                  { id: 'table', label: 'Table & Cards' },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setSelectedCategory(tab.id)}
+                    className={selectedCategory === tab.id ? 'active' : ''}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Toolbar Actions Row: On mobile, Search Icon + Status Dropdown + Grid/Table Toggle all in the SAME ROW */}
+              <div className="admin-toolbar-actions-row">
+                {/* Mobile Search Icon Button */}
+                {!mobileSearchOpen && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileSearchOpen(true);
+                      setTimeout(() => mobileSearchInputRef.current?.focus(), 60);
+                    }}
+                    className={`admin-mobile-search-btn ${searchQuery ? 'has-query' : ''}`}
+                    title="Search Games"
+                  >
+                    <Search size={16} />
+                    {searchQuery && <span className="admin-search-badge-dot" />}
+                  </button>
+                )}
+
+                {/* Status Filter Dropdown */}
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  style={{
-                    background: 'rgba(14, 18, 27, 0.85)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '12px',
-                    color: '#cbd5e1',
-                    fontSize: '0.84rem',
-                    fontWeight: 600,
-                    padding: '8px 14px',
-                    outline: 'none',
-                    cursor: 'pointer',
-                  }}
+                  className="admin-status-select"
                 >
                   <option value="all">Status: All</option>
                   <option value="active">Active Only</option>
                   <option value="paused">Paused Only</option>
                 </select>
-              </div>
 
-              {/* View Mode Toggle */}
-              <div
-                style={{
-                  display: 'flex',
-                  background: 'rgba(14, 18, 27, 0.85)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '10px',
-                  padding: '3px',
-                }}
-              >
-                <button
-                  onClick={() => setViewMode('grid')}
-                  title="Grid Cards View"
-                  style={{
-                    background: viewMode === 'grid' ? 'rgba(0, 230, 118, 0.2)' : 'transparent',
-                    color: viewMode === 'grid' ? '#00E676' : '#64748b',
-                    border: 'none',
-                    borderRadius: '7px',
-                    padding: '6px 12px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                  }}
-                >
-                  <LayoutGrid size={15} />
-                  <span>Grid</span>
-                </button>
-                <button
-                  onClick={() => setViewMode('table')}
-                  title="Table View"
-                  style={{
-                    background: viewMode === 'table' ? 'rgba(0, 230, 118, 0.2)' : 'transparent',
-                    color: viewMode === 'table' ? '#00E676' : '#64748b',
-                    border: 'none',
-                    borderRadius: '7px',
-                    padding: '6px 12px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                  }}
-                >
-                  <TableIcon size={15} />
-                  <span>Table</span>
-                </button>
+                {/* View Mode Toggle: Grid & Table */}
+                <div className="admin-view-mode-toggle">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('grid')}
+                    className={`admin-view-btn ${viewMode === 'grid' ? 'active' : ''}`}
+                    title="Grid Cards View"
+                  >
+                    <LayoutGrid size={15} />
+                    <span>Grid</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('table')}
+                    className={`admin-view-btn ${viewMode === 'table' ? 'active' : ''}`}
+                    title="Table View"
+                  >
+                    <TableIcon size={15} />
+                    <span>Table</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1735,86 +1670,49 @@ export default function AdminDashboard() {
           <div style={{ animation: 'modalFadeIn 0.3s ease-out' }}>
             {/* Header & Filter Controls */}
             <div className="admin-card" style={{ padding: '24px', marginBottom: '24px' }}>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: '16px',
-                  marginBottom: '20px',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <div
-                    style={{
-                      width: '46px',
-                      height: '46px',
-                      borderRadius: '14px',
-                      background: 'rgba(0, 230, 118, 0.15)',
-                      border: '1px solid rgba(0, 230, 118, 0.35)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#00E676',
-                    }}
-                  >
+              <div className="admin-ledger-header">
+                <div className="admin-ledger-title-wrap">
+                  <div className="admin-ledger-title-icon">
                     <Coins size={24} />
                   </div>
                   <div>
-                    <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
+                    <h2 className="admin-ledger-title">
                       Complete Income & Debit Ledger
                     </h2>
-                    <p style={{ color: '#94a3b8', fontSize: '0.84rem', margin: '2px 0 0 0' }}>
+                    <p className="admin-ledger-subtitle">
                       Every transaction automatically recorded in MongoDB across all player wallets
                     </p>
                   </div>
                 </div>
 
-                {/* Right controls */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                  {/* Search input */}
-                  <div style={{ position: 'relative' }}>
-                    <Search
-                      size={15}
-                      style={{
-                        position: 'absolute',
-                        left: '12px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        color: '#64748b',
-                      }}
-                    />
-                    <input
-                      type="text"
-                      placeholder="Search wallet, game, ref ID..."
-                      value={incomeSearch}
-                      onChange={(e) => handleIncomeSearchChange(e.target.value)}
-                      className="admin-search-input"
-                      style={{
-                        padding: '8px 12px 8px 34px',
-                        background: 'rgba(0, 0, 0, 0.4)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: '10px',
-                        color: '#FFFFFF',
-                        fontSize: '0.82rem',
-                        outline: 'none',
-                        minWidth: '220px',
-                      }}
-                    />
+                {/* Controls: Search + Dropdown (2:1 ratio in one row) & Filter (Full Width) */}
+                <div className="admin-ledger-controls">
+                  {/* Row 1: Search & Dropdown (2:1 ratio in one row) */}
+                  <div className="admin-ledger-search-row">
+                    <div className="admin-ledger-search-wrap">
+                      <Search size={15} className="admin-ledger-search-icon" />
+                      <input
+                        type="text"
+                        placeholder="Search wallet, game, ref ID..."
+                        value={incomeSearch}
+                        onChange={(e) => handleIncomeSearchChange(e.target.value)}
+                        className="admin-ledger-search-input"
+                      />
+                    </div>
+
+                    <select
+                      value={incomeSort}
+                      onChange={(e) => setIncomeSort(e.target.value)}
+                      className="admin-ledger-sort-select"
+                    >
+                      <option value="newest">Sort: Newest</option>
+                      <option value="highest">Sort: Highest</option>
+                      <option value="lowest">Sort: Lowest</option>
+                    </select>
                   </div>
 
-                  {/* Filter tabs */}
-                  <div
-                    style={{
-                      display: 'inline-flex',
-                      background: 'rgba(0, 0, 0, 0.4)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      padding: '3px',
-                      borderRadius: '10px',
-                      gap: '3px',
-                    }}
-                  >
+                  {/* Row 2: Filter Tabs (Full Width) */}
+                  <div className="admin-ledger-filter-row">
                     {[
                       { id: 'all', label: 'All' },
                       { id: 'credit', label: 'Credits (+)' },
@@ -1823,135 +1721,50 @@ export default function AdminDashboard() {
                       <button
                         key={tab.id}
                         onClick={() => handleIncomeFilterChange(tab.id)}
-                        style={{
-                          background: incomeFilter === tab.id ? '#00E676' : 'transparent',
-                          color: incomeFilter === tab.id ? '#07090e' : '#94a3b8',
-                          border: 'none',
-                          padding: '6px 12px',
-                          borderRadius: '7px',
-                          fontSize: '0.78rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                        }}
+                        className={`admin-ledger-filter-btn ${incomeFilter === tab.id ? 'active' : ''}`}
                       >
                         {tab.label}
                       </button>
                     ))}
                   </div>
-
-                  {/* Sort dropdown */}
-                  <select
-                    value={incomeSort}
-                    onChange={(e) => setIncomeSort(e.target.value)}
-                    style={{
-                      background: 'rgba(0, 0, 0, 0.4)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '10px',
-                      color: '#cbd5e1',
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      padding: '8px 12px',
-                      outline: 'none',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <option value="newest">Sort: Newest</option>
-                    <option value="highest">Sort: Highest Amount</option>
-                    <option value="lowest">Sort: Lowest Amount</option>
-                  </select>
-
-                  {/* Export CSV */}
-                  <button
-                    onClick={handleExportCSV}
-                    style={{
-                      background: 'rgba(0, 230, 118, 0.15)',
-                      border: '1px solid rgba(0, 230, 118, 0.35)',
-                      color: '#00E676',
-                      borderRadius: '10px',
-                      padding: '8px 14px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                    }}
-                  >
-                    <Download size={14} />
-                    <span>CSV</span>
-                  </button>
                 </div>
               </div>
 
-              {/* Summary Stats Row */}
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                  gap: '14px',
-                }}
-              >
-                <div
-                  style={{
-                    background: 'rgba(0, 230, 118, 0.08)',
-                    border: '1px solid rgba(0, 230, 118, 0.3)',
-                    borderRadius: '12px',
-                    padding: '14px 16px',
-                  }}
-                >
-                  <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>
+              {/* Summary Stats Row (Two cards per row on mobile) */}
+              <div className="admin-ledger-stats-grid">
+                <div className="admin-ledger-stat-card stat-credit">
+                  <div className="admin-ledger-stat-label">
                     Credits Inflow
                   </div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#00E676', marginTop: '2px' }}>
-                    +{incomeSummary.totalCredit} <span style={{ fontSize: '0.75rem' }}>USDT</span>
+                  <div className="admin-ledger-stat-val val-credit">
+                    +{incomeSummary.totalCredit} <span className="stat-cur">USDT</span>
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    background: 'rgba(239, 68, 68, 0.08)',
-                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                    borderRadius: '12px',
-                    padding: '14px 16px',
-                  }}
-                >
-                  <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>
+                <div className="admin-ledger-stat-card stat-debit">
+                  <div className="admin-ledger-stat-label">
                     Debits Outflow
                   </div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f87171', marginTop: '2px' }}>
-                    -{incomeSummary.totalDebit} <span style={{ fontSize: '0.75rem' }}>USDT</span>
+                  <div className="admin-ledger-stat-val val-debit">
+                    -{incomeSummary.totalDebit} <span className="stat-cur">USDT</span>
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    background: 'rgba(56, 189, 248, 0.08)',
-                    border: '1px solid rgba(56, 189, 248, 0.3)',
-                    borderRadius: '12px',
-                    padding: '14px 16px',
-                  }}
-                >
-                  <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>
+                <div className="admin-ledger-stat-card stat-net">
+                  <div className="admin-ledger-stat-label">
                     Net Flow
                   </div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#38bdf8', marginTop: '2px' }}>
-                    {incomeSummary.netEarnings} <span style={{ fontSize: '0.75rem' }}>USDT</span>
+                  <div className="admin-ledger-stat-val val-net">
+                    {incomeSummary.netEarnings} <span className="stat-cur">USDT</span>
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.04)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '12px',
-                    padding: '14px 16px',
-                  }}
-                >
-                  <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>
+                <div className="admin-ledger-stat-card stat-count">
+                  <div className="admin-ledger-stat-label">
                     Transactions Count
                   </div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#FFFFFF', marginTop: '2px' }}>
-                    {incomeSummary.totalTransactions} <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>records</span>
+                  <div className="admin-ledger-stat-val val-count">
+                    {incomeSummary.totalTransactions} <span className="stat-cur">records</span>
                   </div>
                 </div>
               </div>
@@ -2094,6 +1907,23 @@ export default function AdminDashboard() {
                   </tbody>
                 </table>
               </div>
+            </div>
+
+            {/* Table Footer: CSV Button below table */}
+            <div className="admin-ledger-table-footer">
+              <div className="admin-ledger-footer-info">
+                Showing <span className="highlight">{sortedIncomeTxs.length}</span> of{' '}
+                <span className="highlight">{incomeTxs.length}</span> transactions
+              </div>
+
+              <button
+                onClick={handleExportCSV}
+                className="admin-ledger-csv-btn"
+                title="Export all transactions to CSV file"
+              >
+                <Download size={15} />
+                <span>Export to CSV</span>
+              </button>
             </div>
           </div>
         )}
