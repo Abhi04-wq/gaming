@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   getAdminSession,
@@ -10,6 +10,7 @@ import {
 import { api } from '../services/api';
 import LogoWebp from '../logo.webp';
 import Toast from '../components/Toast';
+import '../styles/admin.css';
 import {
   Gamepad2,
   ShieldCheck,
@@ -29,27 +30,35 @@ import {
   Table as TableIcon,
   Eye,
   Activity,
-  Flame,
   Sparkles,
-  Layers,
-  HelpCircle,
-  FileCode,
+  Coins,
+  Download,
   CheckCircle2,
   AlertTriangle,
-  Coins,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Filter,
+  BarChart3,
+  RefreshCw,
+  Clock,
+  Radio,
 } from 'lucide-react';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const adminUser = getAdminSession();
 
+  // Active view tab: 'overview' | 'games' | 'ledger' | 'system'
+  const [activeTab, setActiveTab] = useState('overview');
+
+  // Games State
   const [games, setGames] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
 
-  // Modals
+  // Modals State
   const [previewGame, setPreviewGame] = useState(null);
   const [inspectGame, setInspectGame] = useState(null);
   const [configuringGame, setConfiguringGame] = useState(null);
@@ -57,9 +66,11 @@ export default function AdminDashboard() {
   const [configPrizePool, setConfigPrizePool] = useState('');
   const [configThresholdScore, setConfigThresholdScore] = useState('500');
   const [toastMessage, setToastMessage] = useState(null);
-  const [copiedGameId, setCopiedGameId] = useState(null);
+  const [copiedKey, setCopiedKey] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [iframeKey, setIframeKey] = useState(1);
 
-  // All Income History (every credit + debit saved in DB)
+  // All Income / Transaction History (MongoDB)
   const [incomeSummary, setIncomeSummary] = useState({
     totalCredit: '0.00',
     totalDebit: '0.00',
@@ -72,8 +83,9 @@ export default function AdminDashboard() {
   const [incomeLoading, setIncomeLoading] = useState(false);
   const [incomeFilter, setIncomeFilter] = useState('all'); // 'all' | 'credit' | 'debit'
   const [incomeSearch, setIncomeSearch] = useState('');
+  const [incomeSort, setIncomeSort] = useState('newest'); // 'newest' | 'highest' | 'lowest'
 
-  // Platform stats — always loaded live from database (no hardcoded numbers)
+  // Platform live stats from MongoDB
   const [adminStats, setAdminStats] = useState({
     userCount: 0,
     totalTransactions: 0,
@@ -85,6 +97,17 @@ export default function AdminDashboard() {
   });
   const [statsLoading, setStatsLoading] = useState(true);
 
+  // Auto-refresh interval (optional toggle)
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(new Date());
+
+  // Load games from local storage / catalog service
+  const reloadGames = () => {
+    const list = getAdminGamesList();
+    setGames(list);
+  };
+
+  // Fetch admin stats from server
   const fetchAdminStats = async () => {
     setStatsLoading(true);
     try {
@@ -99,17 +122,7 @@ export default function AdminDashboard() {
     }
   };
 
-  // Load games from service
-  const reloadGames = () => {
-    const list = getAdminGamesList();
-    setGames(list);
-  };
-
-  useEffect(() => {
-    reloadGames();
-  }, []);
-
-  // Fetch ALL users income history from database
+  // Fetch all transactions from database
   const fetchAllIncome = async (typeOverride = null, searchOverride = null) => {
     setIncomeLoading(true);
     try {
@@ -126,17 +139,37 @@ export default function AdminDashboard() {
       }
     } catch (err) {
       console.error('[Admin Income History Error]', err);
-      setToastMessage({ text: 'Failed to load income history from database.', type: 'error' });
     } finally {
       setIncomeLoading(false);
     }
   };
 
+  // Global manual refresh
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    await Promise.all([fetchAdminStats(), fetchAllIncome(), reloadGames()]);
+    setLastUpdated(new Date());
+    setToastMessage({ text: 'Dashboard data synced with database!', type: 'success' });
+    setTimeout(() => setIsRefreshing(false), 600);
+  };
+
+  // Initial load
   useEffect(() => {
-    fetchAllIncome();
+    reloadGames();
     fetchAdminStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchAllIncome();
   }, []);
+
+  // Auto-refresh timer
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const interval = setInterval(() => {
+      fetchAdminStats();
+      fetchAllIncome();
+      setLastUpdated(new Date());
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [autoRefresh, incomeFilter, incomeSearch]);
 
   const handleIncomeFilterChange = (newFilter) => {
     setIncomeFilter(newFilter);
@@ -146,50 +179,31 @@ export default function AdminDashboard() {
   const handleIncomeSearchChange = (value) => {
     setIncomeSearch(value);
     clearTimeout(handleIncomeSearchChange._t);
-    handleIncomeSearchChange._t = setTimeout(() => fetchAllIncome(incomeFilter, value), 500);
+    handleIncomeSearchChange._t = setTimeout(() => fetchAllIncome(incomeFilter, value), 400);
   };
 
-  const formatIncomeDate = (dateStr) => {
-    if (!dateStr) return 'â€”';
-    try {
-      return new Date(dateStr).toLocaleString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return dateStr;
-    }
+  const copyToClipboard = (text, keyName, label = 'Copied to clipboard') => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(keyName);
+    setToastMessage({ text: `${label}!`, type: 'success' });
+    setTimeout(() => setCopiedKey(null), 1800);
   };
 
   const handleLogout = () => {
     logoutAdmin();
     setToastMessage({ text: 'Logged out of admin console.', type: 'info' });
-    setTimeout(() => {
-      navigate('/admin/login');
-    }, 400);
+    setTimeout(() => navigate('/admin/login'), 400);
   };
 
-  // Toggle Game Active / Paused
+  // Toggle Game Active / Paused with smooth animation
   const handleToggleStatus = (gameId, e) => {
     e?.stopPropagation();
     const newStatus = toggleGameStatus(gameId);
     reloadGames();
     setToastMessage({
-      text: `Game ${newStatus === 'active' ? 'activated' : 'paused'} successfully.`,
-      type: 'success',
+      text: `Game ${newStatus === 'active' ? 'activated' : 'paused'} successfully!`,
+      type: newStatus === 'active' ? 'success' : 'info',
     });
-  };
-
-  // Copy Game Embed URL
-  const handleCopyUrl = (game, e) => {
-    e?.stopPropagation();
-    const url = game.embedUrl || `https://gamescdn.gamezop.com/_game-files/${game.gzCode}/index.html`;
-    navigator.clipboard.writeText(url);
-    setCopiedGameId(game.id);
-    setToastMessage({ text: `Copied embed URL for "${game.title}"!`, type: 'success' });
-    setTimeout(() => setCopiedGameId(null), 2000);
   };
 
   // Open Game Pool Configuration Modal
@@ -214,7 +228,7 @@ export default function AdminDashboard() {
       });
       reloadGames();
       setToastMessage({
-        text: `Configuration saved for "${configuringGame.title}"! Entry: ${configEntryPool} USDT, Prize: ${configPrizePool} USDT, Threshold: ${configThresholdScore} pts`,
+        text: `Configuration updated for "${configuringGame.title}"! Entry: ${configEntryPool} USDT, Prize: ${configPrizePool} USDT`,
         type: 'success',
       });
       setConfiguringGame(null);
@@ -223,17 +237,77 @@ export default function AdminDashboard() {
     }
   };
 
-  // Filtered games
+  // Export Transactions to CSV
+  const handleExportCSV = () => {
+    if (incomeTxs.length === 0) {
+      setToastMessage({ text: 'No transactions to export.', type: 'info' });
+      return;
+    }
+
+    const headers = ['Reference ID', 'Type', 'Amount (USDT)', 'Wallet Address', 'Category', 'Description', 'Date'];
+    const rows = incomeTxs.map((tx) => [
+      tx.referenceId,
+      tx.type,
+      tx.amount,
+      tx.walletAddress,
+      tx.category || '',
+      `"${(tx.description || '').replace(/"/g, '""')}"`,
+      new Date(tx.createdAt).toISOString(),
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `transactions_ledger_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    setToastMessage({ text: `Exported ${incomeTxs.length} transactions to CSV!`, type: 'success' });
+  };
+
+  // Quick simulate test transaction (Allows admin to verify DB logging in real-time)
+  const handleSimulateTestTx = async (type) => {
+    try {
+      const testAddr = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e';
+      if (type === 'credit') {
+        await api.depositFunds(testAddr, '5.00', 'Admin Simulation: Bonus Credit Test');
+        setToastMessage({ text: 'Simulated +5.00 USDT Credit in MongoDB!', type: 'success' });
+      } else {
+        await api.deductGameEntry(testAddr, 'tower-crash', '1.00', 'Admin Simulation: Match Entry Fee');
+        setToastMessage({ text: 'Simulated -1.00 USDT Debit in MongoDB!', type: 'info' });
+      }
+      handleManualRefresh();
+    } catch (err) {
+      setToastMessage({ text: 'Simulation error: ' + err.message, type: 'error' });
+    }
+  };
+
+  // Format dates
+  const formatDateTime = (dateStr) => {
+    if (!dateStr) return '—';
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Filter & sort games
   const filteredGames = useMemo(() => {
     return games.filter((g) => {
-      // Category filter
       if (selectedCategory !== 'all') {
         if (selectedCategory === 'originals' && g.category !== 'originals') return false;
         if (selectedCategory === 'table' && g.category !== 'table') return false;
       }
-      // Status filter
       if (statusFilter !== 'all' && g.status !== statusFilter) return false;
-      // Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchTitle = g.title?.toLowerCase().includes(q);
@@ -245,19 +319,38 @@ export default function AdminDashboard() {
     });
   }, [games, selectedCategory, statusFilter, searchQuery]);
 
+  // Sort income transactions
+  const sortedIncomeTxs = useMemo(() => {
+    const list = [...incomeTxs];
+    if (incomeSort === 'highest') {
+      return list.sort((a, b) => Number(b.amount || 0) - Number(a.amount || 0));
+    }
+    if (incomeSort === 'lowest') {
+      return list.sort((a, b) => Number(a.amount || 0) - Number(b.amount || 0));
+    }
+    return list; // default newest
+  }, [incomeTxs, incomeSort]);
+
+  // Calculations for financial flow visuals
+  const numCredits = Number(incomeSummary.totalCredit || 0);
+  const numDebits = Number(incomeSummary.totalDebit || 0);
+  const totalVolume = numCredits + numDebits || 1;
+  const creditPercent = Math.min(100, Math.round((numCredits / totalVolume) * 100));
+  const debitPercent = Math.min(100, Math.round((numDebits / totalVolume) * 100));
+
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: '#090B10',
-        color: '#FFFFFF',
-        fontFamily: "'Inter', sans-serif",
-        paddingBottom: '80px',
-      }}
-    >
-      {/* Toast */}
+    <div className="admin-root">
+      {/* Dynamic Animated Aurora Glows */}
+      <div className="admin-aurora-bg">
+        <div className="admin-blob-1" />
+        <div className="admin-blob-2" />
+        <div className="admin-blob-3" />
+        <div className="admin-grid-pattern" />
+      </div>
+
+      {/* Toast Notification */}
       {toastMessage && (
-        <div className="toast-container">
+        <div className="toast-container" style={{ zIndex: 9999 }}>
           <Toast
             message={toastMessage.text}
             type={toastMessage.type}
@@ -266,57 +359,145 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Top Admin Header */}
-      <header
-        style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 40,
-          background: 'rgba(13, 16, 23, 0.92)',
-          backdropFilter: 'blur(16px)',
-          borderBottom: '1px solid rgba(0, 230, 118, 0.2)',
-          padding: '14px 28px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <img
-            src={LogoWebp}
-            alt="Loyalty Game"
-            style={{ width: '38px', height: '38px', objectFit: 'contain', borderRadius: '50%' }}
-          />
+      {/* Top Commander Header */}
+      <header className="admin-header-wrap">
+        {/* Brand & Live Node Status */}
+        <div className="admin-brand-wrap">
+          <div style={{ position: 'relative' }}>
+            <img
+              src={LogoWebp}
+              alt="Loyalty Game"
+              style={{
+                width: '42px',
+                height: '42px',
+                objectFit: 'contain',
+                borderRadius: '50%',
+                border: '2px solid rgba(0, 230, 118, 0.4)',
+                boxShadow: '0 0 16px rgba(0, 230, 118, 0.3)',
+              }}
+            />
+          </div>
+
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontWeight: 800, fontSize: '1.25rem', letterSpacing: '-0.02em', color: '#FFFFFF' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontWeight: 800, fontSize: '1.2rem', letterSpacing: '-0.02em', color: '#FFFFFF' }}>
                 Loyalty Game
               </span>
               <span
                 style={{
-                  background: 'rgba(0, 230, 118, 0.15)',
+                  background: 'linear-gradient(135deg, rgba(0, 230, 118, 0.2) 0%, rgba(0, 176, 80, 0.1) 100%)',
                   color: '#00E676',
-                  border: '1px solid rgba(0, 230, 118, 0.35)',
-                  fontSize: '0.7rem',
-                  fontWeight: 700,
-                  padding: '2px 8px',
+                  border: '1px solid rgba(0, 230, 118, 0.4)',
+                  fontSize: '0.66rem',
+                  fontWeight: 800,
+                  padding: '2px 7px',
                   borderRadius: '12px',
                   textTransform: 'uppercase',
                   letterSpacing: '0.04em',
                 }}
               >
-                Admin Console
+                Commander
               </span>
             </div>
-            <div style={{ fontSize: '0.78rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00E676' }} />
-              <span>{adminUser?.email || 'Admin'} (Super Admin)</span>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+              <div className="admin-radar-dot" />
+              <span style={{ fontSize: '0.74rem', color: '#00E676', fontWeight: 600 }}>
+                Node 5000 Active
+              </span>
+              <span style={{ fontSize: '0.74rem', color: '#64748b' }}>•</span>
+              <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
+                {adminUser?.email || 'Super Admin'}
+              </span>
             </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* Logout Button */}
+        {/* View Navigation Tabs (Health Removed) */}
+        <div className="admin-nav-tabs">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`admin-tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
+          >
+            <BarChart3 size={15} />
+            <span>Overview</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('games')}
+            className={`admin-tab-btn ${activeTab === 'games' ? 'active' : ''}`}
+          >
+            <Gamepad2 size={15} />
+            <span>Games</span>
+            <span className="badge-pill">{games.length}</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('ledger')}
+            className={`admin-tab-btn ${activeTab === 'ledger' ? 'active' : ''}`}
+          >
+            <Coins size={15} />
+            <span>Ledger</span>
+            <span className="badge-pill">{adminStats.totalTransactions}</span>
+          </button>
+        </div>
+
+        {/* Right Tools: Live Sync, Auto-refresh toggle, Sign Out */}
+        <div className="admin-header-tools">
+          {/* Auto Refresh Toggle */}
+          <button
+            onClick={() => {
+              setAutoRefresh(!autoRefresh);
+              setToastMessage({
+                text: !autoRefresh ? 'Auto-refresh enabled (15s interval)' : 'Auto-refresh paused',
+                type: 'info',
+              });
+            }}
+            title="Toggle 15s Auto-refresh"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: autoRefresh ? 'rgba(0, 230, 118, 0.15)' : 'rgba(255, 255, 255, 0.04)',
+              border: autoRefresh ? '1px solid #00E676' : '1px solid rgba(255, 255, 255, 0.1)',
+              color: autoRefresh ? '#00E676' : '#94a3b8',
+              padding: '7px 12px',
+              borderRadius: '10px',
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <Radio size={14} className={autoRefresh ? 'pulse-dot' : ''} />
+            <span>Live Auto</span>
+          </button>
+
+          {/* Sync Button */}
+          <button
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            title="Reload live database data"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: 'rgba(255, 255, 255, 0.06)',
+              border: '1px solid rgba(255, 255, 255, 0.14)',
+              color: '#FFFFFF',
+              padding: '7px 14px',
+              borderRadius: '10px',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <RotateCw size={14} className={isRefreshing ? 'spin-anim' : ''} />
+            <span>{isRefreshing ? 'Syncing...' : 'Sync'}</span>
+          </button>
+
+          {/* Sign Out */}
           <button
             onClick={handleLogout}
             style={{
@@ -326,1273 +507,1613 @@ export default function AdminDashboard() {
               background: 'rgba(239, 68, 68, 0.12)',
               border: '1px solid rgba(239, 68, 68, 0.3)',
               color: '#f87171',
-              padding: '8px 14px',
+              padding: '7px 14px',
               borderRadius: '10px',
-              fontSize: '0.84rem',
+              fontSize: '0.8rem',
               fontWeight: 600,
               cursor: 'pointer',
-              transition: 'all 0.2s',
+              transition: 'all 0.2s ease',
             }}
-            onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)')}
-            onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)')}
           >
-            <LogOut size={15} />
+            <LogOut size={14} />
             <span>Sign Out</span>
           </button>
         </div>
       </header>
 
-      {/* Main Content Body */}
-      <main style={{ maxWidth: '1440px', margin: '0 auto', padding: '30px 24px' }}>
-        {/* KPI / Metric Cards */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: '18px',
-            marginBottom: '32px',
-          }}
-        >
-          {/* Total Users (from database) */}
-          <div
-            className="glass-panel"
-            style={{
-              padding: '20px',
-              borderRadius: '18px',
-              background: 'rgba(15, 18, 26, 0.75)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '16px',
-            }}
-          >
-            <div
-              style={{
-                width: '50px',
-                height: '50px',
-                borderRadius: '14px',
-                background: 'rgba(56, 189, 248, 0.12)',
-                border: '1px solid rgba(56, 189, 248, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#38bdf8',
-              }}
-            >
-              <Users size={24} />
-            </div>
-            <div>
-              <p style={{ color: '#94a3b8', fontSize: '0.82rem', margin: 0, fontWeight: 500 }}>Total Users</p>
-              <h3 style={{ fontSize: '1.6rem', fontWeight: 800, margin: '2px 0 0 0', color: '#FFFFFF' }}>
-                {statsLoading ? '…' : adminStats.userCount.toLocaleString()}
-                <span style={{ fontSize: '0.78rem', color: '#38bdf8', marginLeft: '8px', fontWeight: 600 }}>
-                  registered
-                </span>
-              </h3>
-            </div>
-          </div>
+      {/* Main Container Body */}
+      <main className="admin-main-content">
 
-          {/* Total Transactions (from database) */}
-          <div
-            className="glass-panel"
-            style={{
-              padding: '20px',
-              borderRadius: '18px',
-              background: 'rgba(15, 18, 26, 0.75)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '16px',
-            }}
-          >
-            <div
-              style={{
-                width: '50px',
-                height: '50px',
-                borderRadius: '14px',
-                background: 'rgba(0, 230, 118, 0.12)',
-                border: '1px solid rgba(0, 230, 118, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#00E676',
-              }}
-            >
-              <Activity size={24} />
-            </div>
-            <div>
-              <p style={{ color: '#94a3b8', fontSize: '0.82rem', margin: 0, fontWeight: 500 }}>Total Transactions</p>
-              <h3 style={{ fontSize: '1.6rem', fontWeight: 800, margin: '2px 0 0 0', color: '#FFFFFF' }}>
-                {statsLoading ? '…' : adminStats.totalTransactions.toLocaleString()}
-                <span style={{ fontSize: '0.78rem', color: '#00E676', marginLeft: '6px', fontWeight: 600 }}>
-                  all time
-                </span>
-              </h3>
-            </div>
-          </div>
-
-          {/* Total Credited (from database) */}
-          <div
-            className="glass-panel"
-            style={{
-              padding: '20px',
-              borderRadius: '18px',
-              background: 'rgba(15, 18, 26, 0.75)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '16px',
-            }}
-          >
-            <div
-              style={{
-                width: '50px',
-                height: '50px',
-                borderRadius: '14px',
-                background: 'rgba(245, 158, 11, 0.12)',
-                border: '1px solid rgba(245, 158, 11, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#f59e0b',
-              }}
-            >
-              <TrendingUp size={24} />
-            </div>
-            <div>
-              <p style={{ color: '#94a3b8', fontSize: '0.82rem', margin: 0, fontWeight: 500 }}>Total Credited</p>
-              <h3 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '2px 0 0 0', color: '#00E676' }}>
-                {statsLoading ? '…' : `+${adminStats.totalCredit}`}
-                <span style={{ fontSize: '0.78rem', color: '#00E676', marginLeft: '6px', fontWeight: 600 }}>
-                  USDT
-                </span>
-              </h3>
-            </div>
-          </div>
-
-          {/* Total Debited (from database) */}
-          <div
-            className="glass-panel"
-            style={{
-              padding: '20px',
-              borderRadius: '18px',
-              background: 'rgba(15, 18, 26, 0.75)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '16px',
-            }}
-          >
-            <div
-              style={{
-                width: '50px',
-                height: '50px',
-                borderRadius: '14px',
-                background: 'rgba(239, 68, 68, 0.12)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#f87171',
-              }}
-            >
-              <TrendingDown size={24} />
-            </div>
-            <div>
-              <p style={{ color: '#94a3b8', fontSize: '0.82rem', margin: 0, fontWeight: 500 }}>Total Debited</p>
-              <h3 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '2px 0 0 0', color: '#f87171' }}>
-                {statsLoading ? '…' : `-${adminStats.totalDebit}`}
-                <span style={{ fontSize: '0.78rem', color: '#f87171', marginLeft: '6px', fontWeight: 600 }}>
-                  USDT
-                </span>
-              </h3>
-            </div>
-          </div>
-        </div>
-
-        {/* All Income History â€” every credit + debit saved in database */}
-        <div
-          className="glass-panel"
-          style={{
-            borderRadius: '18px',
-            background: 'rgba(15, 18, 26, 0.85)',
-            border: '1px solid rgba(0, 230, 118, 0.25)',
-            padding: '22px',
-            marginBottom: '32px',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: '12px',
-              marginBottom: '18px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {/* ========================================================================= */}
+        {/* VIEW 1: OVERVIEW & ANALYTICS */}
+        {/* ========================================================================= */}
+        {activeTab === 'overview' && (
+          <div style={{ animation: 'modalFadeIn 0.3s ease-out' }}>
+            {/* Top Interactive Metric KPI Cards */}
+            <div className="admin-kpi-grid">
+              {/* Card 1: Registered Users */}
               <div
-                style={{
-                  width: '42px',
-                  height: '42px',
-                  borderRadius: '12px',
-                  background: 'rgba(0, 230, 118, 0.12)',
-                  border: '1px solid rgba(0, 230, 118, 0.3)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#00E676',
-                }}
+                className="admin-card admin-card-interactive admin-kpi-card"
+                onClick={() => setActiveTab('ledger')}
+                title="Click to view transactions"
+                style={{ padding: '22px' }}
               >
-                <Coins size={22} />
-              </div>
-              <div>
-                <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
-                  All Income History
-                </h2>
-                <p style={{ color: '#94a3b8', fontSize: '0.82rem', margin: '2px 0 0 0' }}>
-                  Every credit (green) and debit (red) from all users â€” credits: {incomeSummary.creditCount}, debits:{' '}
-                  {incomeSummary.debitCount}
-                </p>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-              <div style={{ position: 'relative' }}>
-                <Search
-                  size={15}
-                  style={{
-                    position: 'absolute',
-                    left: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    color: '#64748b',
-                  }}
-                />
-                <input
-                  type="text"
-                  placeholder="Search wallet, game, ref ID..."
-                  value={incomeSearch}
-                  onChange={(e) => handleIncomeSearchChange(e.target.value)}
-                  style={{
-                    padding: '8px 12px 8px 34px',
-                    background: 'rgba(0, 0, 0, 0.4)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '10px',
-                    color: '#FFFFFF',
-                    fontSize: '0.82rem',
-                    outline: 'none',
-                    minWidth: '220px',
-                  }}
-                />
-              </div>
-
-              <div
-                style={{
-                  display: 'inline-flex',
-                  background: 'rgba(0, 0, 0, 0.4)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  padding: '3px',
-                  borderRadius: '10px',
-                  gap: '3px',
-                }}
-              >
-                {[
-                  { id: 'all', label: 'All' },
-                  { id: 'credit', label: 'Credits' },
-                  { id: 'debit', label: 'Debits' },
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => handleIncomeFilterChange(tab.id)}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+                  <div
                     style={{
-                      background: incomeFilter === tab.id ? '#00E676' : 'transparent',
-                      color: incomeFilter === tab.id ? '#090B10' : '#94a3b8',
-                      border: 'none',
-                      padding: '5px 12px',
-                      borderRadius: '7px',
-                      fontSize: '0.78rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '14px',
+                      background: 'rgba(56, 189, 248, 0.15)',
+                      border: '1px solid rgba(56, 189, 248, 0.35)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#38bdf8',
                     }}
                   >
-                    {tab.label}
-                  </button>
-                ))}
+                    <Users size={24} />
+                  </div>
+                  <span
+                    style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      color: '#38bdf8',
+                      background: 'rgba(56, 189, 248, 0.12)',
+                      padding: '3px 8px',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    Decentralized
+                  </span>
+                </div>
+                <p style={{ color: '#94a3b8', fontSize: '0.84rem', margin: '0 0 4px 0', fontWeight: 600 }}>
+                  Registered Users
+                </p>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <h2 style={{ fontSize: '2rem', fontWeight: 900, color: '#FFFFFF', margin: 0 }}>
+                    {statsLoading ? '…' : adminStats.userCount.toLocaleString()}
+                  </h2>
+                  <span style={{ fontSize: '0.78rem', color: '#38bdf8', fontWeight: 600 }}>active wallets</span>
+                </div>
+                <div style={{ marginTop: '12px', fontSize: '0.74rem', color: '#64748b' }}>
+                  Click to inspect user ledger →
+                </div>
               </div>
 
-              <button
-                onClick={() => fetchAllIncome()}
-                disabled={incomeLoading}
-                title="Reload income history"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.06)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
-                  color: '#cbd5e1',
-                  borderRadius: '10px',
-                  padding: '8px 12px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                }}
+              {/* Card 2: Total Transactions */}
+              <div
+                className="admin-card admin-card-interactive admin-kpi-card"
+                onClick={() => setActiveTab('ledger')}
+                title="Click to open financial ledger"
+                style={{ padding: '22px' }}
               >
-                <RotateCw size={14} />
-                <span>{incomeLoading ? 'Loading...' : 'Reload'}</span>
-              </button>
-            </div>
-          </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+                  <div
+                    style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '14px',
+                      background: 'rgba(0, 230, 118, 0.15)',
+                      border: '1px solid rgba(0, 230, 118, 0.35)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#00E676',
+                    }}
+                  >
+                    <Activity size={24} />
+                  </div>
+                  <span
+                    style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      color: '#00E676',
+                      background: 'rgba(0, 230, 118, 0.12)',
+                      padding: '3px 8px',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    MongoDB Synced
+                  </span>
+                </div>
+                <p style={{ color: '#94a3b8', fontSize: '0.84rem', margin: '0 0 4px 0', fontWeight: 600 }}>
+                  Total Transactions
+                </p>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <h2 style={{ fontSize: '2rem', fontWeight: 900, color: '#FFFFFF', margin: 0 }}>
+                    {statsLoading ? '…' : adminStats.totalTransactions.toLocaleString()}
+                  </h2>
+                  <span style={{ fontSize: '0.78rem', color: '#00E676', fontWeight: 600 }}>logged</span>
+                </div>
+                <div style={{ marginTop: '12px', fontSize: '0.74rem', color: '#64748b' }}>
+                  Credits: {adminStats.creditCount} • Debits: {adminStats.debitCount}
+                </div>
+              </div>
 
-          {/* Platform totals */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-              gap: '12px',
-              marginBottom: '18px',
-            }}
-          >
-            <div
-              style={{
-                background: 'rgba(0, 230, 118, 0.07)',
-                border: '1px solid rgba(0, 230, 118, 0.3)',
-                borderRadius: '12px',
-                padding: '12px 16px',
-              }}
-            >
-              <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>
-                Total Credits
-              </div>
-              <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#00E676' }}>
-                +{incomeSummary.totalCredit} <span style={{ fontSize: '0.75rem' }}>USDT</span>
-              </div>
-            </div>
-            <div
-              style={{
-                background: 'rgba(239, 68, 68, 0.07)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
-                borderRadius: '12px',
-                padding: '12px 16px',
-              }}
-            >
-              <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>
-                Total Debits
-              </div>
-              <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#f87171' }}>
-                -{incomeSummary.totalDebit} <span style={{ fontSize: '0.75rem' }}>USDT</span>
-              </div>
-            </div>
-            <div
-              style={{
-                background: 'rgba(56, 189, 248, 0.07)',
-                border: '1px solid rgba(56, 189, 248, 0.3)',
-                borderRadius: '12px',
-                padding: '12px 16px',
-              }}
-            >
-              <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>
-                Net Flow
-              </div>
-              <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#38bdf8' }}>
-                {incomeSummary.netEarnings} <span style={{ fontSize: '0.75rem' }}>USDT</span>
-              </div>
-            </div>
-            <div
-              style={{
-                background: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '12px',
-                padding: '12px 16px',
-              }}
-            >
-              <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>
-                Transactions
-              </div>
-              <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#FFFFFF' }}>
-                {incomeSummary.totalTransactions}
-              </div>
-            </div>
-          </div>
-
-          {/* Transactions table */}
-          <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem' }}>
-              <thead>
-                <tr
-                  style={{
-                    background: 'rgba(0, 0, 0, 0.4)',
-                    color: '#94a3b8',
-                    fontSize: '0.72rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.04em',
-                  }}
-                >
-                  <th style={{ padding: '12px 14px' }}>Type</th>
-                  <th style={{ padding: '12px 14px' }}>Amount</th>
-                  <th style={{ padding: '12px 14px' }}>Wallet</th>
-                  <th style={{ padding: '12px 14px' }}>Description</th>
-                  <th style={{ padding: '12px 14px' }}>Category</th>
-                  <th style={{ padding: '12px 14px' }}>Reference</th>
-                  <th style={{ padding: '12px 14px' }}>Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {incomeLoading ? (
-                  <tr>
-                    <td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>
-                      Loading income history...
-                    </td>
-                  </tr>
-                ) : incomeTxs.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>
-                      No transactions found in database yet.
-                    </td>
-                  </tr>
-                ) : (
-                  incomeTxs.map((tx) => {
-                    const isCredit = tx.type === 'credit';
-                    return (
-                      <tr
-                        key={tx._id || tx.referenceId}
-                        style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
-                      >
-                        <td style={{ padding: '10px 14px' }}>
-                          <span
-                            style={{
-                              background: isCredit ? 'rgba(0, 230, 118, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                              color: isCredit ? '#00E676' : '#f87171',
-                              fontSize: '0.7rem',
-                              fontWeight: 800,
-                              padding: '3px 9px',
-                              borderRadius: '10px',
-                              textTransform: 'uppercase',
-                            }}
-                          >
-                            {isCredit ? 'Credit' : 'Debit'}
-                          </span>
-                        </td>
-                        <td
-                          style={{
-                            padding: '10px 14px',
-                            fontWeight: 800,
-                            color: isCredit ? '#00E676' : '#f87171',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {isCredit ? '+' : '-'}
-                          {Number(tx.amount || 0).toFixed(2)} USDT
-                        </td>
-                        <td
-                          style={{
-                            padding: '10px 14px',
-                            fontFamily: 'monospace',
-                            color: '#cbd5e1',
-                            fontSize: '0.76rem',
-                          }}
-                        >
-                          {tx.walletAddress
-                            ? `${tx.walletAddress.slice(0, 6)}...${tx.walletAddress.slice(-4)}`
-                            : 'â€”'}
-                        </td>
-                        <td style={{ padding: '10px 14px', color: '#e2e8f0', maxWidth: '260px' }}>
-                          {tx.description || `${tx.gameTitle || 'Transaction'}`}
-                        </td>
-                        <td style={{ padding: '10px 14px', color: '#94a3b8' }}>
-                          {(tx.category || tx.type || '').replace(/_/g, ' ')}
-                        </td>
-                        <td style={{ padding: '10px 14px', fontFamily: 'monospace', color: '#64748b', fontSize: '0.74rem' }}>
-                          {tx.referenceId}
-                        </td>
-                        <td style={{ padding: '10px 14px', color: '#94a3b8', whiteSpace: 'nowrap' }}>
-                          {formatIncomeDate(tx.createdAt)}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Action & Filter Toolbar */}
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '16px',
-            marginBottom: '24px',
-          }}
-        >
-          {/* Left: Search & Category Tabs */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px', flex: 1 }}>
-            {/* Search Input */}
-            <div style={{ position: 'relative', minWidth: '260px' }}>
-              <Search
-                size={16}
-                style={{
-                  position: 'absolute',
-                  left: '14px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: '#64748b',
+              {/* Card 3: Total Credits (Inflow / Rewards / Deposits) */}
+              <div
+                className="admin-card admin-card-interactive admin-kpi-card"
+                onClick={() => {
+                  setIncomeFilter('credit');
+                  setActiveTab('ledger');
                 }}
-              />
-              <input
-                type="text"
-                placeholder="Search game title, code, or tag..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px 10px 38px',
-                  background: 'rgba(15, 18, 26, 0.8)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '12px',
-                  color: '#FFFFFF',
-                  fontSize: '0.86rem',
-                  outline: 'none',
-                }}
-              />
-            </div>
-
-            {/* Category Selector */}
-            <div
-              style={{
-                display: 'inline-flex',
-                background: 'rgba(15, 18, 26, 0.8)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                padding: '4px',
-                borderRadius: '12px',
-                gap: '4px',
-              }}
-            >
-              {[
-                { id: 'all', label: 'All Categories' },
-                { id: 'originals', label: 'Originals' },
-                { id: 'table', label: 'Table & Cards' },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setSelectedCategory(tab.id)}
-                  style={{
-                    background: selectedCategory === tab.id ? '#00E676' : 'transparent',
-                    color: selectedCategory === tab.id ? '#090B10' : '#94a3b8',
-                    border: 'none',
-                    padding: '6px 14px',
-                    borderRadius: '8px',
-                    fontSize: '0.82rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Status Filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              style={{
-                background: 'rgba(15, 18, 26, 0.8)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '12px',
-                color: '#cbd5e1',
-                fontSize: '0.84rem',
-                fontWeight: 600,
-                padding: '8px 14px',
-                outline: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              <option value="all">Status: All</option>
-              <option value="active">Active Only</option>
-              <option value="paused">Paused Only</option>
-            </select>
-          </div>
-
-          {/* Right: View Mode */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {/* View Mode Toggle */}
-            <div
-              style={{
-                display: 'flex',
-                background: 'rgba(15, 18, 26, 0.8)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '10px',
-                padding: '3px',
-              }}
-            >
-              <button
-                onClick={() => setViewMode('grid')}
-                title="Grid Cards View"
-                style={{
-                  background: viewMode === 'grid' ? 'rgba(0, 230, 118, 0.2)' : 'transparent',
-                  color: viewMode === 'grid' ? '#00E676' : '#64748b',
-                  border: 'none',
-                  borderRadius: '7px',
-                  padding: '6px 10px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
+                title="Click to filter credits"
+                style={{ padding: '22px' }}
               >
-                <LayoutGrid size={16} />
-              </button>
-              <button
-                onClick={() => setViewMode('table')}
-                title="Table View"
-                style={{
-                  background: viewMode === 'table' ? 'rgba(0, 230, 118, 0.2)' : 'transparent',
-                  color: viewMode === 'table' ? '#00E676' : '#64748b',
-                  border: 'none',
-                  borderRadius: '7px',
-                  padding: '6px 10px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+                  <div
+                    style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '14px',
+                      background: 'rgba(0, 230, 118, 0.15)',
+                      border: '1px solid rgba(0, 230, 118, 0.35)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#00E676',
+                    }}
+                  >
+                    <ArrowDownLeft size={24} />
+                  </div>
+                  <span
+                    style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      color: '#00E676',
+                      background: 'rgba(0, 230, 118, 0.12)',
+                      padding: '3px 8px',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    Total Inflow
+                  </span>
+                </div>
+                <p style={{ color: '#94a3b8', fontSize: '0.84rem', margin: '0 0 4px 0', fontWeight: 600 }}>
+                  Total Credited
+                </p>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <h2 style={{ fontSize: '1.9rem', fontWeight: 900, color: '#00E676', margin: 0 }}>
+                    {statsLoading ? '…' : `+${adminStats.totalCredit}`}
+                  </h2>
+                  <span style={{ fontSize: '0.8rem', color: '#00E676', fontWeight: 700 }}>USDT</span>
+                </div>
+                <div style={{ marginTop: '12px', fontSize: '0.74rem', color: '#64748b' }}>
+                  {adminStats.creditCount} reward & deposit events
+                </div>
+              </div>
+
+              {/* Card 4: Total Debits (Entry Fees Outflow) */}
+              <div
+                className="admin-card admin-card-interactive admin-kpi-card"
+                onClick={() => {
+                  setIncomeFilter('debit');
+                  setActiveTab('ledger');
                 }}
+                title="Click to filter debits"
+                style={{ padding: '22px' }}
               >
-                <TableIcon size={16} />
-              </button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+                  <div
+                    style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '14px',
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      border: '1px solid rgba(239, 68, 68, 0.35)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#f87171',
+                    }}
+                  >
+                    <ArrowUpRight size={24} />
+                  </div>
+                  <span
+                    style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      color: '#f87171',
+                      background: 'rgba(239, 68, 68, 0.12)',
+                      padding: '3px 8px',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    Match Stakes
+                  </span>
+                </div>
+                <p style={{ color: '#94a3b8', fontSize: '0.84rem', margin: '0 0 4px 0', fontWeight: 600 }}>
+                  Total Debited
+                </p>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <h2 style={{ fontSize: '1.9rem', fontWeight: 900, color: '#f87171', margin: 0 }}>
+                    {statsLoading ? '…' : `-${adminStats.totalDebit}`}
+                  </h2>
+                  <span style={{ fontSize: '0.8rem', color: '#f87171', fontWeight: 700 }}>USDT</span>
+                </div>
+                <div style={{ marginTop: '12px', fontSize: '0.74rem', color: '#64748b' }}>
+                  {adminStats.debitCount} game entry deductions
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* Games Catalog Section Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
-            Platform Games ({filteredGames.length})
-          </h2>
-          <span style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
-            Showing {filteredGames.length} of {games.length} total catalog games
-          </span>
-        </div>
+            {/* Interactive Flow Visualizer & Analytics Hub */}
+            <div className="admin-analytics-grid">
+              {/* Chart 1: Credit vs Debit Flow Breakdown */}
+              <div className="admin-card" style={{ padding: '26px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <div>
+                    <h3 style={{ margin: '0 0 4px 0', fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF' }}>
+                      Financial Flow Ratio
+                    </h3>
+                    <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.82rem' }}>
+                      Real-time breakdown of player entry debits vs prize/deposit credits
+                    </p>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: '0.74rem',
+                      padding: '4px 10px',
+                      borderRadius: '10px',
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      color: '#cbd5e1',
+                      fontWeight: 600,
+                    }}
+                  >
+                    Net: {adminStats.netEarnings} USDT
+                  </span>
+                </div>
 
-        {/* Empty Search State */}
-        {filteredGames.length === 0 && (
-          <div
-            className="glass-panel"
-            style={{
-              padding: '60px 20px',
-              textAlign: 'center',
-              borderRadius: '20px',
-              background: 'rgba(15, 18, 26, 0.6)',
-              border: '1px dashed rgba(255, 255, 255, 0.15)',
-            }}
-          >
-            <Gamepad2 size={42} color="#64748b" style={{ margin: '0 auto 12px auto' }} />
-            <h3 style={{ fontSize: '1.2rem', color: '#FFFFFF', marginBottom: '6px' }}>No games match your query</h3>
-            <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '18px' }}>
-              Try adjusting your search terms or clearing your category filters.
-            </p>
-            <button
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedCategory('all');
-                setStatusFilter('all');
-              }}
-              className="btn-secondary"
-            >
-              Reset Filters
-            </button>
-          </div>
-        )}
+                {/* Animated Horizontal Split Bar */}
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '8px', fontWeight: 700 }}>
+                    <span style={{ color: '#00E676' }}>Credits ({creditPercent}%)</span>
+                    <span style={{ color: '#f87171' }}>Debits ({debitPercent}%)</span>
+                  </div>
+                  <div
+                    style={{
+                      height: '14px',
+                      borderRadius: '10px',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.5)',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${creditPercent}%`,
+                        background: 'linear-gradient(90deg, #00E676 0%, #00B050 100%)',
+                        boxShadow: '0 0 12px rgba(0, 230, 118, 0.5)',
+                        transition: 'width 0.8s ease',
+                      }}
+                    />
+                    <div
+                      style={{
+                        width: `${debitPercent}%`,
+                        background: 'linear-gradient(90deg, #f87171 0%, #dc2626 100%)',
+                        boxShadow: '0 0 12px rgba(239, 68, 68, 0.5)',
+                        transition: 'width 0.8s ease',
+                      }}
+                    />
+                  </div>
+                </div>
 
-        {/* VIEW 1: GRID CARDS VIEW */}
-        {viewMode === 'grid' && filteredGames.length > 0 && (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))',
-              gap: '20px',
-            }}
-          >
-            {filteredGames.map((game) => {
-              const isPaused = game.status === 'paused';
-              const isCopied = copiedGameId === game.id;
-
-              return (
+                {/* Comparative Volume Columns */}
                 <div
-                  key={game.id}
-                  className="glass-panel"
                   style={{
-                    borderRadius: '20px',
-                    overflow: 'hidden',
-                    background: 'rgba(15, 18, 26, 0.85)',
-                    border: isPaused ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    transition: 'all 0.25s ease',
-                    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.4)',
-                    opacity: isPaused ? 0.75 : 1,
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '16px',
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    padding: '18px',
+                    borderRadius: '14px',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
                   }}
                 >
-                  {/* Game Cover Preview */}
-                  <div style={{ position: 'relative', width: '100%', height: '145px', overflow: 'hidden' }}>
-                    <img
-                      src={game.coverUrl}
-                      alt={game.title}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        filter: isPaused ? 'grayscale(80%)' : 'none',
-                      }}
-                      onError={(e) => {
-                        e.target.src = game.logoUrl || LogoWebp;
-                      }}
-                    />
-                    <div
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        background: 'linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(15,18,26,0.95) 100%)',
-                      }}
-                    />
-
-                    {/* Top Badges */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '12px',
-                        left: '12px',
-                        right: '12px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}
-                    >
-                      {/* Tag Pill */}
-                      <span
-                        style={{
-                          background: game.tagColor || '#00E676',
-                          color: '#090B10',
-                          fontSize: '0.68rem',
-                          fontWeight: 800,
-                          padding: '3px 8px',
-                          borderRadius: '8px',
-                          letterSpacing: '0.04em',
-                          textTransform: 'uppercase',
-                        }}
-                      >
-                        {game.tag || 'GAME'}
-                      </span>
-
-                      {/* Status Toggle Badge */}
-                      <button
-                        type="button"
-                        onClick={(e) => handleToggleStatus(game.id, e)}
-                        title="Click to toggle game status"
-                        style={{
-                          background: isPaused ? 'rgba(239, 68, 68, 0.9)' : 'rgba(0, 230, 118, 0.9)',
-                          color: isPaused ? '#FFFFFF' : '#090B10',
-                          border: 'none',
-                          fontSize: '0.68rem',
-                          fontWeight: 800,
-                          padding: '3px 9px',
-                          borderRadius: '12px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                        }}
-                      >
-                        <span
-                          style={{
-                            width: '6px',
-                            height: '6px',
-                            borderRadius: '50%',
-                            background: isPaused ? '#FFFFFF' : '#090B10',
-                          }}
-                        />
-                        <span>{isPaused ? 'Paused' : 'Active'}</span>
-                      </button>
+                  <div>
+                    <div style={{ fontSize: '0.74rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>
+                      Total Prize Inflow
                     </div>
-
-                    {/* Circle Logo Thumbnail Overlap */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        bottom: '10px',
-                        left: '14px',
-                        width: '44px',
-                        height: '44px',
-                        borderRadius: '50%',
-                        overflow: 'hidden',
-                        border: '2px solid rgba(0, 230, 118, 0.5)',
-                        background: '#090B10',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-                      }}
-                    >
-                      <img
-                        src={game.logoUrl}
-                        alt=""
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        onError={(e) => {
-                          e.target.src = LogoWebp;
-                        }}
-                      />
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#00E676', marginTop: '2px' }}>
+                      +{adminStats.totalCredit} <span style={{ fontSize: '0.74rem' }}>USDT</span>
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '4px' }}>
+                      Avg per credit: {(numCredits / (adminStats.creditCount || 1)).toFixed(2)} USDT
                     </div>
                   </div>
 
-                  {/* Card Body */}
-                  <div style={{ padding: '14px 18px 18px 18px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                    <div style={{ marginBottom: '8px' }}>
-                      <h4 style={{ fontSize: '1.15rem', fontWeight: 700, margin: '0 0 2px 0', color: '#FFFFFF' }}>
-                        {game.title}
-                      </h4>
-                      <p style={{ color: '#00E676', fontSize: '0.78rem', margin: 0, fontWeight: 600 }}>
-                        {game.categoryLabel || game.category}
-                      </p>
+                  <div>
+                    <div style={{ fontSize: '0.74rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>
+                      Total Stakes Outflow
                     </div>
-
-                    <p
-                      style={{
-                        fontSize: '0.82rem',
-                        color: '#94a3b8',
-                        margin: '0 0 14px 0',
-                        lineHeight: 1.45,
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      {game.description}
-                    </p>
-
-                    {/* Game Stats Chips */}
-                    <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(3, 1fr)',
-                        gap: '6px',
-                        background: 'rgba(0, 0, 0, 0.35)',
-                        padding: '8px 10px',
-                        borderRadius: '10px',
-                        border: '1px solid rgba(255, 255, 255, 0.05)',
-                        marginBottom: '16px',
-                        textAlign: 'center',
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'uppercase' }}>RTP</div>
-                        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#00E676' }}>{game.rtp || '99%'}</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'uppercase' }}>Max Win</div>
-                        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#fbbf24' }}>{game.maxWin || '1000x'}</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'uppercase' }}>Players</div>
-                        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#cbd5e1' }}>{game.players || '1,000'}</div>
-                      </div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f87171', marginTop: '2px' }}>
+                      -{adminStats.totalDebit} <span style={{ fontSize: '0.74rem' }}>USDT</span>
                     </div>
-
-                    {/* Pools & Threshold Metrics Display */}
-                    <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 1fr 1fr',
-                        gap: '6px',
-                        background: 'rgba(0, 230, 118, 0.05)',
-                        border: '1px solid rgba(0, 230, 118, 0.18)',
-                        padding: '8px 10px',
-                        borderRadius: '10px',
-                        marginBottom: '14px',
-                      }}
-                    >
-                      <div>
-                        <span style={{ fontSize: '0.64rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', fontWeight: 600 }}>
-                          Entry Pool
-                        </span>
-                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#FFFFFF' }}>
-                          {game.entryPool || '1.00'} <span style={{ fontSize: '0.68rem', color: '#00E676' }}>USDT</span>
-                        </span>
-                      </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <span style={{ fontSize: '0.64rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', fontWeight: 600 }}>
-                          Prize Pool
-                        </span>
-                        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#00E676' }}>
-                          {game.prizePool || '100.00'} <span style={{ fontSize: '0.68rem', color: '#00E676' }}>USDT</span>
-                        </span>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <span style={{ fontSize: '0.64rem', color: '#FFB300', textTransform: 'uppercase', display: 'block', fontWeight: 600 }}>
-                          Win Score
-                        </span>
-                        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#FFB300' }}>
-                          {game.thresholdScore || '500'} <span style={{ fontSize: '0.68rem' }}>PTS</span>
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'auto' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                        {/* Preview / Test Play */}
-                        <button
-                          onClick={() => setPreviewGame(game)}
-                          style={{
-                            background: 'rgba(0, 230, 118, 0.15)',
-                            border: '1px solid rgba(0, 230, 118, 0.4)',
-                            color: '#00E676',
-                            borderRadius: '10px',
-                            padding: '9px 12px',
-                            fontSize: '0.82rem',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '6px',
-                            transition: 'all 0.2s',
-                          }}
-                          onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(0, 230, 118, 0.25)')}
-                          onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(0, 230, 118, 0.15)')}
-                        >
-                          <Play size={14} fill="#00E676" />
-                          <span>Test Play</span>
-                        </button>
-
-                        {/* Configuration Button */}
-                        <button
-                          onClick={(e) => handleOpenConfig(game, e)}
-                          title="Configure Entry Pool & Prize Pool"
-                          style={{
-                            background: 'rgba(56, 189, 248, 0.15)',
-                            border: '1px solid rgba(56, 189, 248, 0.4)',
-                            color: '#38bdf8',
-                            borderRadius: '10px',
-                            padding: '9px 12px',
-                            fontSize: '0.82rem',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '6px',
-                            transition: 'all 0.2s',
-                          }}
-                          onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(56, 189, 248, 0.25)')}
-                          onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(56, 189, 248, 0.15)')}
-                        >
-                          <SlidersHorizontal size={14} />
-                          <span>Configure</span>
-                        </button>
-                      </div>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px' }}>
-                        {/* Inspect Details */}
-                        <button
-                          onClick={() => setInspectGame(game)}
-                          style={{
-                            background: 'rgba(255, 255, 255, 0.06)',
-                            border: '1px solid rgba(255, 255, 255, 0.12)',
-                            color: '#e2e8f0',
-                            borderRadius: '10px',
-                            padding: '8px 12px',
-                            fontSize: '0.8rem',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '6px',
-                            transition: 'all 0.2s',
-                          }}
-                          onMouseOver={(e) => (e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)')}
-                          onMouseOut={(e) => (e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)')}
-                        >
-                          <Eye size={14} />
-                          <span>Inspect</span>
-                        </button>
-
-                        {/* Copy URL */}
-                        <button
-                          onClick={(e) => handleCopyUrl(game, e)}
-                          title="Copy direct GameZop embed URL"
-                          style={{
-                            background: 'rgba(255, 255, 255, 0.06)',
-                            border: '1px solid rgba(255, 255, 255, 0.12)',
-                            color: isCopied ? '#00E676' : '#94a3b8',
-                            borderRadius: '10px',
-                            padding: '8px 12px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          {isCopied ? <Check size={15} /> : <Copy size={15} />}
-                        </button>
-                      </div>
+                    <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '4px' }}>
+                      Avg stake fee: {(numDebits / (adminStats.debitCount || 1)).toFixed(2)} USDT
                     </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
+              </div>
 
-        {/* VIEW 2: TABLE VIEW */}
-        {viewMode === 'table' && filteredGames.length > 0 && (
-          <div
-            className="glass-panel"
-            style={{
-              borderRadius: '18px',
-              overflow: 'hidden',
-              background: 'rgba(15, 18, 26, 0.85)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-            }}
-          >
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
-                <thead>
-                  <tr
+              {/* Chart 2: Interactive Quick Actions & Simulation Command */}
+              <div className="admin-card" style={{ padding: '26px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <div>
+                    <h3 style={{ margin: '0 0 4px 0', fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF' }}>
+                      Commander Fast Actions
+                    </h3>
+                    <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.82rem' }}>
+                      Trigger live database test events & export ledger reports
+                    </p>
+                  </div>
+                  <Sparkles size={20} color="#00E676" />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {/* Export Ledger CSV */}
+                  <button
+                    onClick={handleExportCSV}
                     style={{
-                      borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      color: '#94a3b8',
-                      fontSize: '0.78rem',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.04em',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '14px 18px',
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.04)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      color: '#FFFFFF',
+                      fontSize: '0.88rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(0, 230, 118, 0.4)';
+                      e.currentTarget.style.background = 'rgba(0, 230, 118, 0.08)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
                     }}
                   >
-                    <th style={{ padding: '14px 18px' }}>Game</th>
-                    <th style={{ padding: '14px 18px' }}>GZ Code</th>
-                    <th style={{ padding: '14px 18px' }}>Category</th>
-                    <th style={{ padding: '14px 18px' }}>RTP</th>
-                    <th style={{ padding: '14px 18px' }}>Max Win</th>
-                    <th style={{ padding: '14px 18px' }}>Players</th>
-                    <th style={{ padding: '14px 18px' }}>Entry Pool</th>
-                    <th style={{ padding: '14px 18px' }}>Prize Pool</th>
-                    <th style={{ padding: '14px 18px' }}>Win Score</th>
-                    <th style={{ padding: '14px 18px' }}>Status</th>
-                    <th style={{ padding: '14px 18px', textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredGames.map((game) => {
-                    const isPaused = game.status === 'paused';
-                    return (
-                      <tr
-                        key={game.id}
-                        style={{
-                          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-                          transition: 'background 0.2s',
-                        }}
-                        onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)')}
-                        onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
-                      >
-                        {/* Game info */}
-                        <td style={{ padding: '14px 18px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <img
-                              src={game.logoUrl}
-                              alt=""
-                              style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover' }}
-                              onError={(e) => {
-                                e.target.src = LogoWebp;
-                              }}
-                            />
-                            <div>
-                              <div style={{ fontWeight: 700, color: '#FFFFFF' }}>{game.title}</div>
-                              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>ID: {game.id}</div>
-                            </div>
-                          </div>
-                        </td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <Download size={18} color="#00E676" />
+                      <div style={{ textAlign: 'left' }}>
+                        <div>Export Ledger to CSV</div>
+                        <div style={{ fontSize: '0.74rem', color: '#94a3b8', fontWeight: 400 }}>
+                          Download complete records for audits
+                        </div>
+                      </div>
+                    </div>
+                    <ArrowUpRight size={16} color="#64748b" />
+                  </button>
 
-                        {/* GameZop Code */}
-                        <td style={{ padding: '14px 18px', fontFamily: 'monospace', color: '#94a3b8' }}>
-                          {game.gzCode}
-                        </td>
+                  {/* Simulate Credit Transaction */}
+                  <button
+                    onClick={() => handleSimulateTestTx('credit')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '14px 18px',
+                      borderRadius: '12px',
+                      background: 'rgba(0, 230, 118, 0.06)',
+                      border: '1px solid rgba(0, 230, 118, 0.25)',
+                      color: '#00E676',
+                      fontSize: '0.88rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(0, 230, 118, 0.14)')}
+                    onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(0, 230, 118, 0.06)')}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <Coins size={18} />
+                      <div style={{ textAlign: 'left' }}>
+                        <div>Simulate +5.00 USDT Credit</div>
+                        <div style={{ fontSize: '0.74rem', color: '#94a3b8', fontWeight: 400 }}>
+                          Tests MongoDB deposit & balance credit event
+                        </div>
+                      </div>
+                    </div>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800 }}>TEST +</span>
+                  </button>
 
-                        {/* Category */}
-                        <td style={{ padding: '14px 18px', color: '#cbd5e1' }}>
-                          {game.categoryLabel}
-                        </td>
+                  {/* Simulate Debit Transaction */}
+                  <button
+                    onClick={() => handleSimulateTestTx('debit')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '14px 18px',
+                      borderRadius: '12px',
+                      background: 'rgba(239, 68, 68, 0.06)',
+                      border: '1px solid rgba(239, 68, 68, 0.25)',
+                      color: '#f87171',
+                      fontSize: '0.88rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(239, 68, 68, 0.14)')}
+                    onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(239, 68, 68, 0.06)')}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <Activity size={18} />
+                      <div style={{ textAlign: 'left' }}>
+                        <div>Simulate -1.00 USDT Match Entry</div>
+                        <div style={{ fontSize: '0.74rem', color: '#94a3b8', fontWeight: 400 }}>
+                          Tests MongoDB game entry fee deduction
+                        </div>
+                      </div>
+                    </div>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800 }}>TEST -</span>
+                  </button>
+                </div>
+              </div>
+            </div>
 
-                        {/* RTP */}
-                        <td style={{ padding: '14px 18px', color: '#00E676', fontWeight: 700 }}>
-                          {game.rtp || '99%'}
-                        </td>
+            {/* Quick Catalog Preview Banner */}
+            <div
+              className="admin-card"
+              style={{
+                padding: '24px 28px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '16px',
+                background: 'linear-gradient(135deg, rgba(14, 18, 27, 0.95) 0%, rgba(10, 13, 20, 0.95) 100%)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    background: 'rgba(0, 230, 118, 0.15)',
+                    border: '1px solid rgba(0, 230, 118, 0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#00E676',
+                  }}
+                >
+                  <Gamepad2 size={24} />
+                </div>
+                <div>
+                  <h3 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', fontWeight: 800, color: '#FFFFFF' }}>
+                    Game Catalog Management ({games.length} Games Active)
+                  </h3>
+                  <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.84rem' }}>
+                    Configure entry pools, jackpots, threshold scores, and toggle active status.
+                  </p>
+                </div>
+              </div>
 
-                        {/* Max Win */}
-                        <td style={{ padding: '14px 18px', color: '#fbbf24', fontWeight: 700 }}>
-                          {game.maxWin || '1000x'}
-                        </td>
-
-                        {/* Players */}
-                        <td style={{ padding: '14px 18px', color: '#cbd5e1' }}>
-                          {game.players || '1,000'}
-                        </td>
-
-                        {/* Entry Pool */}
-                        <td style={{ padding: '14px 18px', fontWeight: 600, color: '#FFFFFF' }}>
-                          {game.entryPool || '1.00'} <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>USDT</span>
-                        </td>
-
-                        {/* Prize Pool */}
-                        <td style={{ padding: '14px 18px', fontWeight: 800, color: '#00E676' }}>
-                          {game.prizePool || '100.00'} <span style={{ fontSize: '0.74rem', color: '#00E676' }}>USDT</span>
-                        </td>
-
-                        {/* Win Score Threshold */}
-                        <td style={{ padding: '14px 18px', fontWeight: 800, color: '#FFB300' }}>
-                          {game.thresholdScore || '500'} <span style={{ fontSize: '0.74rem', color: '#cbd5e1' }}>pts</span>
-                        </td>
-
-                        {/* Status */}
-                        <td style={{ padding: '14px 18px' }}>
-                          <button
-                            type="button"
-                            onClick={(e) => handleToggleStatus(game.id, e)}
-                            style={{
-                              background: isPaused ? 'rgba(239, 68, 68, 0.15)' : 'rgba(0, 230, 118, 0.15)',
-                              color: isPaused ? '#f87171' : '#00E676',
-                              border: isPaused
-                                ? '1px solid rgba(239, 68, 68, 0.3)'
-                                : '1px solid rgba(0, 230, 118, 0.3)',
-                              padding: '4px 10px',
-                              borderRadius: '12px',
-                              fontSize: '0.74rem',
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                            }}
-                          >
-                            â— {isPaused ? 'Paused' : 'Active'}
-                          </button>
-                        </td>
-
-                        {/* Actions */}
-                        <td style={{ padding: '14px 18px', textAlign: 'right' }}>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                            <button
-                              onClick={() => setPreviewGame(game)}
-                              title="Test Play in Admin"
-                              style={{
-                                background: 'rgba(0, 230, 118, 0.15)',
-                                border: '1px solid rgba(0, 230, 118, 0.3)',
-                                color: '#00E676',
-                                borderRadius: '8px',
-                                padding: '6px 10px',
-                                fontSize: '0.78rem',
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                              }}
-                            >
-                              <Play size={13} fill="#00E676" />
-                              <span>Play</span>
-                            </button>
-
-                            <button
-                              onClick={(e) => handleOpenConfig(game, e)}
-                              title="Configure Entry Pool & Prize Pool"
-                              style={{
-                                background: 'rgba(56, 189, 248, 0.15)',
-                                border: '1px solid rgba(56, 189, 248, 0.3)',
-                                color: '#38bdf8',
-                                borderRadius: '8px',
-                                padding: '6px 10px',
-                                fontSize: '0.78rem',
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                              }}
-                            >
-                              <SlidersHorizontal size={13} />
-                              <span>Config</span>
-                            </button>
-
-                            <button
-                              onClick={() => setInspectGame(game)}
-                              title="Inspect Details"
-                              style={{
-                                background: 'rgba(255, 255, 255, 0.06)',
-                                border: '1px solid rgba(255, 255, 255, 0.1)',
-                                color: '#e2e8f0',
-                                borderRadius: '8px',
-                                padding: '6px 10px',
-                                cursor: 'pointer',
-                              }}
-                            >
-                              <Eye size={14} />
-                            </button>
-
-                            <button
-                              onClick={(e) => handleCopyUrl(game, e)}
-                              title="Copy GameZop URL"
-                              style={{
-                                background: 'rgba(255, 255, 255, 0.06)',
-                                border: '1px solid rgba(255, 255, 255, 0.1)',
-                                color: '#94a3b8',
-                                borderRadius: '8px',
-                                padding: '6px 10px',
-                                cursor: 'pointer',
-                              }}
-                            >
-                              <Copy size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <button
+                onClick={() => setActiveTab('games')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: '#00E676',
+                  color: '#07090e',
+                  border: 'none',
+                  padding: '10px 20px',
+                  borderRadius: '12px',
+                  fontSize: '0.88rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 16px rgba(0, 230, 118, 0.3)',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <span>Manage Games</span>
+                <ArrowUpRight size={16} />
+              </button>
             </div>
           </div>
         )}
+
+        {/* ========================================================================= */}
+        {/* VIEW 2: GAMES CATALOG MANAGEMENT */}
+        {/* ========================================================================= */}
+        {activeTab === 'games' && (
+          <div style={{ animation: 'modalFadeIn 0.3s ease-out' }}>
+            {/* Filter & Toolbar */}
+            <div className="admin-toolbar-wrap">
+              {/* Left Controls */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px', flex: 1, width: '100%' }}>
+                {/* Search Bar */}
+                <div className="admin-search-box">
+                  <Search
+                    size={16}
+                    style={{
+                      position: 'absolute',
+                      left: '14px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: '#64748b',
+                    }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Search title, GZ code, or category..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="admin-search-input"
+                    style={{
+                      width: '100%',
+                      padding: '10px 36px 10px 38px',
+                      background: 'rgba(14, 18, 27, 0.85)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '12px',
+                      color: '#FFFFFF',
+                      fontSize: '0.86rem',
+                      outline: 'none',
+                    }}
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      style={{
+                        position: 'absolute',
+                        right: '12px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#94a3b8',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Category Selector */}
+                <div
+                  className="admin-category-pills"
+                  style={{
+                    display: 'inline-flex',
+                    background: 'rgba(14, 18, 27, 0.85)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    padding: '4px',
+                    borderRadius: '12px',
+                    gap: '4px',
+                  }}
+                >
+                  {[
+                    { id: 'all', label: 'All' },
+                    { id: 'originals', label: 'Originals' },
+                    { id: 'table', label: 'Table & Cards' },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setSelectedCategory(tab.id)}
+                      style={{
+                        background: selectedCategory === tab.id ? '#00E676' : 'transparent',
+                        color: selectedCategory === tab.id ? '#07090e' : '#94a3b8',
+                        border: 'none',
+                        padding: '6px 14px',
+                        borderRadius: '8px',
+                        fontSize: '0.82rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Status Filter */}
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  style={{
+                    background: 'rgba(14, 18, 27, 0.85)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '12px',
+                    color: '#cbd5e1',
+                    fontSize: '0.84rem',
+                    fontWeight: 600,
+                    padding: '8px 14px',
+                    outline: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="all">Status: All</option>
+                  <option value="active">Active Only</option>
+                  <option value="paused">Paused Only</option>
+                </select>
+              </div>
+
+              {/* View Mode Toggle */}
+              <div
+                style={{
+                  display: 'flex',
+                  background: 'rgba(14, 18, 27, 0.85)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '10px',
+                  padding: '3px',
+                }}
+              >
+                <button
+                  onClick={() => setViewMode('grid')}
+                  title="Grid Cards View"
+                  style={{
+                    background: viewMode === 'grid' ? 'rgba(0, 230, 118, 0.2)' : 'transparent',
+                    color: viewMode === 'grid' ? '#00E676' : '#64748b',
+                    border: 'none',
+                    borderRadius: '7px',
+                    padding: '6px 12px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  <LayoutGrid size={15} />
+                  <span>Grid</span>
+                </button>
+                <button
+                  onClick={() => setViewMode('table')}
+                  title="Table View"
+                  style={{
+                    background: viewMode === 'table' ? 'rgba(0, 230, 118, 0.2)' : 'transparent',
+                    color: viewMode === 'table' ? '#00E676' : '#64748b',
+                    border: 'none',
+                    borderRadius: '7px',
+                    padding: '6px 12px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  <TableIcon size={15} />
+                  <span>Table</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Games Count Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
+                Platform Games ({filteredGames.length})
+              </h3>
+              <span style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
+                Showing {filteredGames.length} of {games.length} total catalog games
+              </span>
+            </div>
+
+            {/* Empty State */}
+            {filteredGames.length === 0 && (
+              <div
+                className="admin-card"
+                style={{
+                  padding: '60px 20px',
+                  textAlign: 'center',
+                  background: 'rgba(14, 18, 27, 0.6)',
+                  border: '1px dashed rgba(255, 255, 255, 0.15)',
+                }}
+              >
+                <Gamepad2 size={42} color="#64748b" style={{ margin: '0 auto 12px auto' }} />
+                <h4 style={{ fontSize: '1.2rem', color: '#FFFFFF', marginBottom: '6px' }}>No games match your query</h4>
+                <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '18px' }}>
+                  Try resetting your search query or switching category filters.
+                </p>
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedCategory('all');
+                    setStatusFilter('all');
+                  }}
+                  className="preset-pill-btn"
+                  style={{ padding: '8px 18px', fontSize: '0.84rem' }}
+                >
+                  Reset Filters
+                </button>
+              </div>
+            )}
+
+            {/* GRID CARDS VIEW */}
+            {viewMode === 'grid' && filteredGames.length > 0 && (
+              <div className="admin-games-grid">
+                {filteredGames.map((game) => {
+                  const isPaused = game.status === 'paused';
+                  const isCopied = copiedKey === `game-${game.id}`;
+
+                  return (
+                    <div
+                      key={game.id}
+                      className="admin-card"
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        opacity: isPaused ? 0.78 : 1,
+                        border: isPaused ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(255, 255, 255, 0.08)',
+                      }}
+                    >
+                      {/* Cover Image */}
+                      <div style={{ position: 'relative', width: '100%', height: '150px', overflow: 'hidden' }}>
+                        <img
+                          src={game.coverUrl}
+                          alt={game.title}
+                          className="game-card-img-zoom"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            filter: isPaused ? 'grayscale(85%)' : 'none',
+                          }}
+                          onError={(e) => {
+                            e.target.src = game.logoUrl || LogoWebp;
+                          }}
+                        />
+                        <div
+                          style={{
+                            position: 'absolute',
+                            inset: 0,
+                            background: 'linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(14, 18, 27, 0.95) 100%)',
+                          }}
+                        />
+
+                        {/* Top Badges Bar */}
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '12px',
+                            left: '12px',
+                            right: '12px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <span
+                            style={{
+                              background: game.tagColor || '#00E676',
+                              color: '#07090e',
+                              fontSize: '0.68rem',
+                              fontWeight: 800,
+                              padding: '3px 8px',
+                              borderRadius: '8px',
+                              letterSpacing: '0.04em',
+                              textTransform: 'uppercase',
+                            }}
+                          >
+                            {game.tag || 'GAME'}
+                          </span>
+
+                          {/* Interactive Animated Toggle Switch */}
+                          <div
+                            className="admin-switch-container"
+                            onClick={(e) => handleToggleStatus(game.id, e)}
+                            title={`Click to ${isPaused ? 'Activate' : 'Pause'} Game`}
+                          >
+                            <span style={{ fontSize: '0.7rem', fontWeight: 800, color: isPaused ? '#f87171' : '#00E676' }}>
+                              {isPaused ? 'Paused' : 'Active'}
+                            </span>
+                            <div className={`admin-switch ${!isPaused ? 'active' : ''}`}>
+                              <div className="admin-switch-handle" />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Circular Logo Thumbnail */}
+                        <div
+                          style={{
+                            position: 'absolute',
+                            bottom: '10px',
+                            left: '14px',
+                            width: '46px',
+                            height: '46px',
+                            borderRadius: '50%',
+                            overflow: 'hidden',
+                            border: '2px solid rgba(0, 230, 118, 0.5)',
+                            background: '#07090e',
+                            boxShadow: '0 4px 14px rgba(0,0,0,0.6)',
+                          }}
+                        >
+                          <img
+                            src={game.logoUrl}
+                            alt=""
+                            className="admin-logo-circle"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={(e) => {
+                              e.target.src = LogoWebp;
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Card Content Body */}
+                      <div style={{ padding: '16px 20px 20px 20px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                        <div style={{ marginBottom: '10px' }}>
+                          <h4 style={{ fontSize: '1.15rem', fontWeight: 800, margin: '0 0 2px 0', color: '#FFFFFF' }}>
+                            {game.title}
+                          </h4>
+                          <p style={{ color: '#00E676', fontSize: '0.78rem', margin: 0, fontWeight: 700 }}>
+                            {game.categoryLabel || game.category} • Code: {game.gzCode}
+                          </p>
+                        </div>
+
+                        <p
+                          style={{
+                            fontSize: '0.82rem',
+                            color: '#94a3b8',
+                            margin: '0 0 14px 0',
+                            lineHeight: 1.45,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          {game.description}
+                        </p>
+
+                        {/* RTP / Max Win / Players Chips */}
+                        <div
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(3, 1fr)',
+                            gap: '6px',
+                            background: 'rgba(0, 0, 0, 0.35)',
+                            padding: '8px 10px',
+                            borderRadius: '10px',
+                            border: '1px solid rgba(255, 255, 255, 0.05)',
+                            marginBottom: '14px',
+                            textAlign: 'center',
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontSize: '0.66rem', color: '#64748b', textTransform: 'uppercase' }}>RTP</div>
+                            <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#00E676' }}>{game.rtp || '99%'}</div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '0.66rem', color: '#64748b', textTransform: 'uppercase' }}>Max Win</div>
+                            <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#fbbf24' }}>{game.maxWin || '1000x'}</div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '0.66rem', color: '#64748b', textTransform: 'uppercase' }}>Players</div>
+                            <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#cbd5e1' }}>{game.players || '1,000'}</div>
+                          </div>
+                        </div>
+
+                        {/* Pool Metrics Display */}
+                        <div
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: '1fr 1fr 1fr',
+                            gap: '6px',
+                            background: 'rgba(0, 230, 118, 0.05)',
+                            border: '1px solid rgba(0, 230, 118, 0.2)',
+                            padding: '10px',
+                            borderRadius: '12px',
+                            marginBottom: '16px',
+                          }}
+                        >
+                          <div>
+                            <span style={{ fontSize: '0.64rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', fontWeight: 600 }}>
+                              Entry Pool
+                            </span>
+                            <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#FFFFFF' }}>
+                              {game.entryPool || '1.00'} <span style={{ fontSize: '0.68rem', color: '#00E676' }}>USDT</span>
+                            </span>
+                          </div>
+                          <div style={{ textAlign: 'center' }}>
+                            <span style={{ fontSize: '0.64rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', fontWeight: 600 }}>
+                              Prize Pool
+                            </span>
+                            <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#00E676' }}>
+                              {game.prizePool || '100.00'} <span style={{ fontSize: '0.68rem' }}>USDT</span>
+                            </span>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <span style={{ fontSize: '0.64rem', color: '#FFB300', textTransform: 'uppercase', display: 'block', fontWeight: 600 }}>
+                              Win Score
+                            </span>
+                            <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#FFB300' }}>
+                              {game.thresholdScore || '500'} <span style={{ fontSize: '0.68rem' }}>PTS</span>
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'auto' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                            {/* Test Play */}
+                            <button
+                              onClick={() => {
+                                setPreviewGame(game);
+                                setIframeKey((prev) => prev + 1);
+                              }}
+                              style={{
+                                background: 'rgba(0, 230, 118, 0.15)',
+                                border: '1px solid rgba(0, 230, 118, 0.4)',
+                                color: '#00E676',
+                                borderRadius: '10px',
+                                padding: '9px 12px',
+                                fontSize: '0.82rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                transition: 'all 0.2s',
+                              }}
+                              onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(0, 230, 118, 0.25)')}
+                              onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(0, 230, 118, 0.15)')}
+                            >
+                              <Play size={14} fill="#00E676" />
+                              <span>Test Play</span>
+                            </button>
+
+                            {/* Configure Pools */}
+                            <button
+                              onClick={(e) => handleOpenConfig(game, e)}
+                              style={{
+                                background: 'rgba(56, 189, 248, 0.15)',
+                                border: '1px solid rgba(56, 189, 248, 0.4)',
+                                color: '#38bdf8',
+                                borderRadius: '10px',
+                                padding: '9px 12px',
+                                fontSize: '0.82rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                transition: 'all 0.2s',
+                              }}
+                              onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(56, 189, 248, 0.25)')}
+                              onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(56, 189, 248, 0.15)')}
+                            >
+                              <SlidersHorizontal size={14} />
+                              <span>Configure</span>
+                            </button>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px' }}>
+                            {/* Inspect Specs */}
+                            <button
+                              onClick={() => setInspectGame(game)}
+                              style={{
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                border: '1px solid rgba(255, 255, 255, 0.12)',
+                                color: '#cbd5e1',
+                                borderRadius: '10px',
+                                padding: '8px 12px',
+                                fontSize: '0.8rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                transition: 'all 0.2s',
+                              }}
+                              onMouseOver={(e) => (e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)')}
+                              onMouseOut={(e) => (e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)')}
+                            >
+                              <Eye size={14} />
+                              <span>Inspect Specs</span>
+                            </button>
+
+                            {/* Copy Embed URL */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const url = game.embedUrl || `https://gamescdn.gamezop.com/_game-files/${game.gzCode}/index.html`;
+                                copyToClipboard(url, `game-${game.id}`, `Copied URL for "${game.title}"`);
+                              }}
+                              title="Copy direct GameZop embed URL"
+                              style={{
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                border: '1px solid rgba(255, 255, 255, 0.12)',
+                                color: isCopied ? '#00E676' : '#94a3b8',
+                                borderRadius: '10px',
+                                padding: '8px 12px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              {isCopied ? <Check size={15} /> : <Copy size={15} />}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* TABLE VIEW */}
+            {viewMode === 'table' && filteredGames.length > 0 && (
+              <div
+                className="admin-card admin-table-responsive"
+                style={{
+                  borderRadius: '18px',
+                  overflow: 'hidden',
+                }}
+              >
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr
+                        style={{
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                          background: 'rgba(0, 0, 0, 0.4)',
+                          color: '#94a3b8',
+                          fontSize: '0.74rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.04em',
+                        }}
+                      >
+                        <th style={{ padding: '14px 18px' }}>Game</th>
+                        <th style={{ padding: '14px 18px' }}>GZ Code</th>
+                        <th style={{ padding: '14px 18px' }}>Category</th>
+                        <th style={{ padding: '14px 18px' }}>RTP</th>
+                        <th style={{ padding: '14px 18px' }}>Max Win</th>
+                        <th style={{ padding: '14px 18px' }}>Entry Pool</th>
+                        <th style={{ padding: '14px 18px' }}>Prize Pool</th>
+                        <th style={{ padding: '14px 18px' }}>Win Score</th>
+                        <th style={{ padding: '14px 18px' }}>Status</th>
+                        <th style={{ padding: '14px 18px', textAlign: 'right' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredGames.map((game) => {
+                        const isPaused = game.status === 'paused';
+                        return (
+                          <tr
+                            key={game.id}
+                            style={{
+                              borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                              transition: 'background 0.2s',
+                            }}
+                            onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)')}
+                            onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+                          >
+                            <td style={{ padding: '12px 18px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <img
+                                  src={game.logoUrl}
+                                  alt=""
+                                  style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
+                                  onError={(e) => {
+                                    e.target.src = LogoWebp;
+                                  }}
+                                />
+                                <div>
+                                  <div style={{ fontWeight: 700, color: '#FFFFFF' }}>{game.title}</div>
+                                  <div style={{ fontSize: '0.72rem', color: '#64748b' }}>ID: {game.id}</div>
+                                </div>
+                              </div>
+                            </td>
+
+                            <td style={{ padding: '12px 18px', fontFamily: 'monospace', color: '#94a3b8' }}>
+                              {game.gzCode}
+                            </td>
+
+                            <td style={{ padding: '12px 18px', color: '#cbd5e1' }}>
+                              {game.categoryLabel}
+                            </td>
+
+                            <td style={{ padding: '12px 18px', color: '#00E676', fontWeight: 700 }}>
+                              {game.rtp || '99%'}
+                            </td>
+
+                            <td style={{ padding: '12px 18px', color: '#fbbf24', fontWeight: 700 }}>
+                              {game.maxWin || '1000x'}
+                            </td>
+
+                            <td style={{ padding: '12px 18px', fontWeight: 700, color: '#FFFFFF' }}>
+                              {game.entryPool || '1.00'} <span style={{ fontSize: '0.7rem', color: '#00E676' }}>USDT</span>
+                            </td>
+
+                            <td style={{ padding: '12px 18px', fontWeight: 800, color: '#00E676' }}>
+                              {game.prizePool || '100.00'} <span style={{ fontSize: '0.7rem' }}>USDT</span>
+                            </td>
+
+                            <td style={{ padding: '12px 18px', fontWeight: 800, color: '#FFB300' }}>
+                              {game.thresholdScore || '500'} <span style={{ fontSize: '0.7rem', color: '#cbd5e1' }}>pts</span>
+                            </td>
+
+                            <td style={{ padding: '12px 18px' }}>
+                              <div
+                                className="admin-switch-container"
+                                onClick={(e) => handleToggleStatus(game.id, e)}
+                                title={`Click to ${isPaused ? 'Activate' : 'Pause'} Game`}
+                              >
+                                <div className={`admin-switch ${!isPaused ? 'active' : ''}`}>
+                                  <div className="admin-switch-handle" />
+                                </div>
+                              </div>
+                            </td>
+
+                            <td style={{ padding: '12px 18px', textAlign: 'right' }}>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                                <button
+                                  onClick={() => {
+                                    setPreviewGame(game);
+                                    setIframeKey((prev) => prev + 1);
+                                  }}
+                                  title="Test Play in Admin"
+                                  style={{
+                                    background: 'rgba(0, 230, 118, 0.15)',
+                                    border: '1px solid rgba(0, 230, 118, 0.3)',
+                                    color: '#00E676',
+                                    borderRadius: '8px',
+                                    padding: '6px 10px',
+                                    fontSize: '0.76rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                  }}
+                                >
+                                  <Play size={12} fill="#00E676" />
+                                  <span>Play</span>
+                                </button>
+
+                                <button
+                                  onClick={(e) => handleOpenConfig(game, e)}
+                                  title="Configure Entry Pool & Prize Pool"
+                                  style={{
+                                    background: 'rgba(56, 189, 248, 0.15)',
+                                    border: '1px solid rgba(56, 189, 248, 0.3)',
+                                    color: '#38bdf8',
+                                    borderRadius: '8px',
+                                    padding: '6px 10px',
+                                    fontSize: '0.76rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                  }}
+                                >
+                                  <SlidersHorizontal size={12} />
+                                  <span>Config</span>
+                                </button>
+
+                                <button
+                                  onClick={() => setInspectGame(game)}
+                                  title="Inspect Details"
+                                  style={{
+                                    background: 'rgba(255, 255, 255, 0.06)',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    color: '#e2e8f0',
+                                    borderRadius: '8px',
+                                    padding: '6px 10px',
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  <Eye size={13} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* VIEW 3: FINANCIAL LEDGER & INCOME DETAILS */}
+        {/* ========================================================================= */}
+        {activeTab === 'ledger' && (
+          <div style={{ animation: 'modalFadeIn 0.3s ease-out' }}>
+            {/* Header & Filter Controls */}
+            <div className="admin-card" style={{ padding: '24px', marginBottom: '24px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '16px',
+                  marginBottom: '20px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div
+                    style={{
+                      width: '46px',
+                      height: '46px',
+                      borderRadius: '14px',
+                      background: 'rgba(0, 230, 118, 0.15)',
+                      border: '1px solid rgba(0, 230, 118, 0.35)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#00E676',
+                    }}
+                  >
+                    <Coins size={24} />
+                  </div>
+                  <div>
+                    <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
+                      Complete Income & Debit Ledger
+                    </h2>
+                    <p style={{ color: '#94a3b8', fontSize: '0.84rem', margin: '2px 0 0 0' }}>
+                      Every transaction automatically recorded in MongoDB across all player wallets
+                    </p>
+                  </div>
+                </div>
+
+                {/* Right controls */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  {/* Search input */}
+                  <div style={{ position: 'relative' }}>
+                    <Search
+                      size={15}
+                      style={{
+                        position: 'absolute',
+                        left: '12px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: '#64748b',
+                      }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Search wallet, game, ref ID..."
+                      value={incomeSearch}
+                      onChange={(e) => handleIncomeSearchChange(e.target.value)}
+                      className="admin-search-input"
+                      style={{
+                        padding: '8px 12px 8px 34px',
+                        background: 'rgba(0, 0, 0, 0.4)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '10px',
+                        color: '#FFFFFF',
+                        fontSize: '0.82rem',
+                        outline: 'none',
+                        minWidth: '220px',
+                      }}
+                    />
+                  </div>
+
+                  {/* Filter tabs */}
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      background: 'rgba(0, 0, 0, 0.4)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      padding: '3px',
+                      borderRadius: '10px',
+                      gap: '3px',
+                    }}
+                  >
+                    {[
+                      { id: 'all', label: 'All' },
+                      { id: 'credit', label: 'Credits (+)' },
+                      { id: 'debit', label: 'Debits (-)' },
+                    ].map((tab) => (
+                      <button
+                        key={tab.id}
+                        onClick={() => handleIncomeFilterChange(tab.id)}
+                        style={{
+                          background: incomeFilter === tab.id ? '#00E676' : 'transparent',
+                          color: incomeFilter === tab.id ? '#07090e' : '#94a3b8',
+                          border: 'none',
+                          padding: '6px 12px',
+                          borderRadius: '7px',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Sort dropdown */}
+                  <select
+                    value={incomeSort}
+                    onChange={(e) => setIncomeSort(e.target.value)}
+                    style={{
+                      background: 'rgba(0, 0, 0, 0.4)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '10px',
+                      color: '#cbd5e1',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      padding: '8px 12px',
+                      outline: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <option value="newest">Sort: Newest</option>
+                    <option value="highest">Sort: Highest Amount</option>
+                    <option value="lowest">Sort: Lowest Amount</option>
+                  </select>
+
+                  {/* Export CSV */}
+                  <button
+                    onClick={handleExportCSV}
+                    style={{
+                      background: 'rgba(0, 230, 118, 0.15)',
+                      border: '1px solid rgba(0, 230, 118, 0.35)',
+                      color: '#00E676',
+                      borderRadius: '10px',
+                      padding: '8px 14px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                    }}
+                  >
+                    <Download size={14} />
+                    <span>CSV</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Summary Stats Row */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                  gap: '14px',
+                }}
+              >
+                <div
+                  style={{
+                    background: 'rgba(0, 230, 118, 0.08)',
+                    border: '1px solid rgba(0, 230, 118, 0.3)',
+                    borderRadius: '12px',
+                    padding: '14px 16px',
+                  }}
+                >
+                  <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>
+                    Credits Inflow
+                  </div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#00E676', marginTop: '2px' }}>
+                    +{incomeSummary.totalCredit} <span style={{ fontSize: '0.75rem' }}>USDT</span>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.08)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    borderRadius: '12px',
+                    padding: '14px 16px',
+                  }}
+                >
+                  <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>
+                    Debits Outflow
+                  </div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f87171', marginTop: '2px' }}>
+                    -{incomeSummary.totalDebit} <span style={{ fontSize: '0.75rem' }}>USDT</span>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    background: 'rgba(56, 189, 248, 0.08)',
+                    border: '1px solid rgba(56, 189, 248, 0.3)',
+                    borderRadius: '12px',
+                    padding: '14px 16px',
+                  }}
+                >
+                  <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>
+                    Net Flow
+                  </div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#38bdf8', marginTop: '2px' }}>
+                    {incomeSummary.netEarnings} <span style={{ fontSize: '0.75rem' }}>USDT</span>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.04)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '12px',
+                    padding: '14px 16px',
+                  }}
+                >
+                  <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>
+                    Transactions Count
+                  </div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#FFFFFF', marginTop: '2px' }}>
+                    {incomeSummary.totalTransactions} <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>records</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Transactions Table */}
+            <div className="admin-card admin-table-responsive" style={{ borderRadius: '18px', overflow: 'hidden' }}>
+              <div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem' }}>
+                  <thead>
+                    <tr
+                      style={{
+                        background: 'rgba(0, 0, 0, 0.4)',
+                        color: '#94a3b8',
+                        fontSize: '0.72rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                      }}
+                    >
+                      <th style={{ padding: '12px 16px' }}>Type</th>
+                      <th style={{ padding: '12px 16px' }}>Amount</th>
+                      <th style={{ padding: '12px 16px' }}>Wallet Address</th>
+                      <th style={{ padding: '12px 16px' }}>Description</th>
+                      <th style={{ padding: '12px 16px' }}>Category</th>
+                      <th style={{ padding: '12px 16px' }}>Reference ID</th>
+                      <th style={{ padding: '12px 16px' }}>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {incomeLoading ? (
+                      <tr>
+                        <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
+                          <RotateCw size={24} className="spin-anim" style={{ margin: '0 auto 8px auto', display: 'block', color: '#00E676' }} />
+                          Loading ledger from database...
+                        </td>
+                      </tr>
+                    ) : sortedIncomeTxs.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
+                          No transactions found in database for this filter.
+                        </td>
+                      </tr>
+                    ) : (
+                      sortedIncomeTxs.map((tx) => {
+                        const isCredit = tx.type === 'credit';
+                        const isCopied = copiedKey === `tx-${tx.referenceId}`;
+
+                        return (
+                          <tr
+                            key={tx._id || tx.referenceId}
+                            style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+                          >
+                            <td style={{ padding: '12px 16px' }}>
+                              <span
+                                style={{
+                                  background: isCredit ? 'rgba(0, 230, 118, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                  color: isCredit ? '#00E676' : '#f87171',
+                                  fontSize: '0.7rem',
+                                  fontWeight: 800,
+                                  padding: '4px 10px',
+                                  borderRadius: '10px',
+                                  textTransform: 'uppercase',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                }}
+                              >
+                                {isCredit ? <ArrowDownLeft size={11} /> : <ArrowUpRight size={11} />}
+                                <span>{isCredit ? 'Credit' : 'Debit'}</span>
+                              </span>
+                            </td>
+
+                            <td
+                              style={{
+                                padding: '12px 16px',
+                                fontWeight: 800,
+                                color: isCredit ? '#00E676' : '#f87171',
+                                whiteSpace: 'nowrap',
+                                fontSize: '0.9rem',
+                              }}
+                            >
+                              {isCredit ? '+' : '-'}
+                              {Number(tx.amount || 0).toFixed(2)} USDT
+                            </td>
+
+                            <td
+                              style={{
+                                padding: '12px 16px',
+                                fontFamily: 'monospace',
+                                color: '#cbd5e1',
+                                fontSize: '0.78rem',
+                              }}
+                            >
+                              {tx.walletAddress
+                                ? `${tx.walletAddress.slice(0, 6)}...${tx.walletAddress.slice(-4)}`
+                                : '—'}
+                            </td>
+
+                            <td style={{ padding: '12px 16px', color: '#FFFFFF', maxWidth: '280px' }}>
+                              {tx.description || `${tx.gameTitle || 'Transaction'}`}
+                            </td>
+
+                            <td style={{ padding: '12px 16px', color: '#94a3b8', fontSize: '0.78rem' }}>
+                              <span
+                                style={{
+                                  background: 'rgba(255, 255, 255, 0.05)',
+                                  padding: '3px 8px',
+                                  borderRadius: '6px',
+                                }}
+                              >
+                                {(tx.category || tx.type || '').replace(/_/g, ' ')}
+                              </span>
+                            </td>
+
+                            <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: '#64748b', fontSize: '0.76rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span>{tx.referenceId}</span>
+                                <button
+                                  onClick={() => copyToClipboard(tx.referenceId, `tx-${tx.referenceId}`, 'Copied reference ID')}
+                                  style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: isCopied ? '#00E676' : '#64748b',
+                                    cursor: 'pointer',
+                                    padding: '2px',
+                                  }}
+                                >
+                                  {isCopied ? <Check size={12} /> : <Copy size={12} />}
+                                </button>
+                              </div>
+                            </td>
+
+                            <td style={{ padding: '12px 16px', color: '#94a3b8', whiteSpace: 'nowrap', fontSize: '0.78rem' }}>
+                              {formatDateTime(tx.createdAt)}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
       </main>
 
       {/* ========================================================================= */}
-      {/* MODAL 1: TEST PLAY GAME MODAL */}
+      {/* MODAL 1: TEST PLAY GAME MODAL WITH RELOAD & FULLSCREEN */}
       {/* ========================================================================= */}
       {previewGame && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 100,
-            background: 'rgba(0, 0, 0, 0.85)',
-            backdropFilter: 'blur(10px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
-          }}
-          onClick={() => setPreviewGame(null)}
-        >
+        <div className="admin-modal-backdrop" onClick={() => setPreviewGame(null)}>
           <div
-            className="glass-panel"
+            className="admin-modal-dialog admin-card admin-preview-dialog-responsive"
             style={{
               width: '100%',
-              maxWidth: '960px',
+              maxWidth: '980px',
               height: '88vh',
-              borderRadius: '24px',
-              border: '1px solid rgba(0, 230, 118, 0.3)',
-              background: '#0a0d14',
               display: 'flex',
               flexDirection: 'column',
-              overflow: 'hidden',
-              boxShadow: '0 25px 70px rgba(0,0,0,0.8), 0 0 50px rgba(0, 230, 118, 0.15)',
+              padding: 0,
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1600,7 +2121,7 @@ export default function AdminDashboard() {
             <div
               style={{
                 padding: '14px 20px',
-                background: 'rgba(15, 18, 26, 0.95)',
+                background: 'rgba(14, 18, 27, 0.95)',
                 borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
                 display: 'flex',
                 alignItems: 'center',
@@ -1611,26 +2132,26 @@ export default function AdminDashboard() {
                 <img
                   src={previewGame.logoUrl}
                   alt=""
-                  style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
+                  style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
                   onError={(e) => {
                     e.target.src = LogoWebp;
                   }}
                 />
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#FFFFFF' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#FFFFFF' }}>
                     {previewGame.title}
                   </h3>
                   <span style={{ fontSize: '0.74rem', color: '#00E676' }}>
-                    Admin Test Preview â€¢ Code: {previewGame.gzCode}
+                    Admin Interactive Test Session • Code: {previewGame.gzCode}
                   </span>
                 </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Link
-                  to={`/play/${previewGame.id}`}
-                  target="_blank"
-                  rel="noreferrer"
+                {/* Reload Iframe */}
+                <button
+                  onClick={() => setIframeKey((prev) => prev + 1)}
+                  title="Reload Game Frame"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -1641,12 +2162,35 @@ export default function AdminDashboard() {
                     padding: '6px 12px',
                     borderRadius: '8px',
                     fontSize: '0.78rem',
-                    textDecoration: 'none',
                     fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <RotateCw size={13} />
+                  <span>Reload</span>
+                </button>
+
+                {/* Popout fullscreen */}
+                <Link
+                  to={`/play/${previewGame.id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: 'rgba(0, 230, 118, 0.15)',
+                    border: '1px solid rgba(0, 230, 118, 0.4)',
+                    color: '#00E676',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    fontSize: '0.78rem',
+                    textDecoration: 'none',
+                    fontWeight: 700,
                   }}
                 >
                   <ExternalLink size={13} />
-                  <span>Open Full Screen</span>
+                  <span>Open Full Game</span>
                 </Link>
 
                 <button
@@ -1672,6 +2216,7 @@ export default function AdminDashboard() {
             {/* Game Iframe */}
             <div style={{ flex: 1, position: 'relative', background: '#000000' }}>
               <iframe
+                key={iframeKey}
                 src={previewGame.directUrl || previewGame.embedUrl || `https://gamescdn.gamezop.com/_game-files/${previewGame.gzCode}/index.html`}
                 title={previewGame.title}
                 style={{
@@ -1688,35 +2233,320 @@ export default function AdminDashboard() {
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL 2: INSPECT GAME DETAILS MODAL */}
+      {/* MODAL 2: CONFIGURE GAME POOLS MODAL WITH INTERACTIVE PRESETS */}
+      {/* ========================================================================= */}
+      {configuringGame && (
+        <div className="admin-modal-backdrop" onClick={() => setConfiguringGame(null)}>
+          <div
+            className="admin-modal-dialog admin-card admin-modal-dialog-responsive"
+            style={{
+              width: '100%',
+              maxWidth: '540px',
+              padding: '28px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div
+                  style={{
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '12px',
+                    background: 'rgba(0, 230, 118, 0.15)',
+                    border: '1px solid rgba(0, 230, 118, 0.35)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#00E676',
+                  }}
+                >
+                  <SlidersHorizontal size={22} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF' }}>
+                    Game Configuration
+                  </h3>
+                  <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                    {configuringGame.title} ({configuringGame.gzCode})
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setConfiguringGame(null)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: 'none',
+                  color: '#94a3b8',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveConfig} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* Entry Pool Input */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '0.84rem', fontWeight: 700, color: '#FFFFFF' }}>
+                    Entry Pool (USDT)
+                  </label>
+                  <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Player match stake fee</span>
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0.01"
+                    required
+                    placeholder="e.g. 1.00"
+                    value={configEntryPool}
+                    onChange={(e) => setConfigEntryPool(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px 14px',
+                      paddingRight: '64px',
+                      background: 'rgba(0, 0, 0, 0.45)',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      borderRadius: '12px',
+                      color: '#FFFFFF',
+                      fontSize: '1rem',
+                      fontWeight: 700,
+                      outline: 'none',
+                    }}
+                  />
+                  <span
+                    style={{
+                      position: 'absolute',
+                      right: '14px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: '#00E676',
+                      fontWeight: 800,
+                      fontSize: '0.82rem',
+                    }}
+                  >
+                    USDT
+                  </span>
+                </div>
+
+                {/* Quick Presets */}
+                <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
+                  {['0.50', '1.00', '2.00', '5.00', '10.00', '25.00', '50.00'].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setConfigEntryPool(preset)}
+                      className={`preset-pill-btn ${configEntryPool === preset ? 'active' : ''}`}
+                    >
+                      ${preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Prize Pool Input */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '0.84rem', fontWeight: 700, color: '#FFFFFF' }}>
+                    Prize Pool (USDT)
+                  </label>
+                  <span style={{ fontSize: '0.72rem', color: '#00E676' }}>Jackpot reward pool</span>
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0.1"
+                    required
+                    placeholder="e.g. 100.00"
+                    value={configPrizePool}
+                    onChange={(e) => setConfigPrizePool(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px 14px',
+                      paddingRight: '64px',
+                      background: 'rgba(0, 0, 0, 0.45)',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      borderRadius: '12px',
+                      color: '#00E676',
+                      fontSize: '1rem',
+                      fontWeight: 800,
+                      outline: 'none',
+                    }}
+                  />
+                  <span
+                    style={{
+                      position: 'absolute',
+                      right: '14px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: '#00E676',
+                      fontWeight: 800,
+                      fontSize: '0.82rem',
+                    }}
+                  >
+                    USDT
+                  </span>
+                </div>
+
+                {/* Quick Presets */}
+                <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
+                  {['50.00', '100.00', '250.00', '500.00', '1000.00', '2500.00', '5000.00'].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setConfigPrizePool(preset)}
+                      className={`preset-pill-btn ${configPrizePool === preset ? 'active' : ''}`}
+                    >
+                      ${preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Threshold Win Score Input */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '0.84rem', fontWeight: 700, color: '#FFFFFF' }}>
+                    Threshold Win Score (Points)
+                  </label>
+                  <span style={{ fontSize: '0.72rem', color: '#FFB300' }}>Score required to claim prize</span>
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="number"
+                    step="1"
+                    min="1"
+                    required
+                    placeholder="e.g. 500"
+                    value={configThresholdScore}
+                    onChange={(e) => setConfigThresholdScore(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px 14px',
+                      paddingRight: '64px',
+                      background: 'rgba(0, 0, 0, 0.45)',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      borderRadius: '12px',
+                      color: '#FFB300',
+                      fontSize: '1rem',
+                      fontWeight: 800,
+                      outline: 'none',
+                    }}
+                  />
+                  <span
+                    style={{
+                      position: 'absolute',
+                      right: '14px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: '#FFB300',
+                      fontWeight: 800,
+                      fontSize: '0.82rem',
+                    }}
+                  >
+                    PTS
+                  </span>
+                </div>
+
+                {/* Quick Presets */}
+                <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
+                  {['100', '250', '500', '1000', '2500', '5000'].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setConfigThresholdScore(preset)}
+                      className={`preset-pill-btn ${configThresholdScore === preset ? 'active' : ''}`}
+                    >
+                      {preset} pts
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Calculated Multiplier Ratio */}
+              {parseFloat(configEntryPool) > 0 && parseFloat(configPrizePool) > 0 && (
+                <div
+                  style={{
+                    background: 'rgba(0, 230, 118, 0.08)',
+                    border: '1px solid rgba(0, 230, 118, 0.25)',
+                    borderRadius: '12px',
+                    padding: '12px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <span style={{ fontSize: '0.82rem', color: '#94a3b8' }}>Calculated Jackpot Multiplier:</span>
+                  <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#00E676' }}>
+                    {(parseFloat(configPrizePool) / parseFloat(configEntryPool)).toFixed(1)}x Multiplier
+                  </span>
+                </div>
+              )}
+
+              {/* Modal Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setConfiguringGame(null)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.06)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    color: '#cbd5e1',
+                    borderRadius: '10px',
+                    padding: '10px 18px',
+                    fontSize: '0.84rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    background: '#00E676',
+                    color: '#07090e',
+                    border: 'none',
+                    borderRadius: '10px',
+                    padding: '10px 22px',
+                    fontSize: '0.84rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(0, 230, 118, 0.3)',
+                  }}
+                >
+                  Save Configuration
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 3: INSPECT GAME SPECS MODAL */}
       {/* ========================================================================= */}
       {inspectGame && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 100,
-            background: 'rgba(0, 0, 0, 0.85)',
-            backdropFilter: 'blur(10px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
-          }}
-          onClick={() => setInspectGame(null)}
-        >
+        <div className="admin-modal-backdrop" onClick={() => setInspectGame(null)}>
           <div
-            className="glass-panel"
+            className="admin-modal-dialog admin-card admin-modal-dialog-responsive"
             style={{
               width: '100%',
               maxWidth: '680px',
               maxHeight: '90vh',
               overflowY: 'auto',
-              borderRadius: '24px',
-              border: '1px solid rgba(0, 230, 118, 0.3)',
-              background: '#0d1017',
               padding: '28px',
-              boxShadow: '0 25px 70px rgba(0,0,0,0.8)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1748,7 +2578,7 @@ export default function AdminDashboard() {
                     >
                       {inspectGame.categoryLabel}
                     </span>
-                    <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>GZ: {inspectGame.gzCode}</span>
+                    <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>GZ Code: {inspectGame.gzCode}</span>
                   </div>
                 </div>
               </div>
@@ -1782,7 +2612,7 @@ export default function AdminDashboard() {
               </p>
             </div>
 
-            {/* Technical Specifications */}
+            {/* Technical Specs */}
             <div
               style={{
                 display: 'grid',
@@ -1847,7 +2677,10 @@ export default function AdminDashboard() {
                   {inspectGame.embedUrl || `https://gamescdn.gamezop.com/_game-files/${inspectGame.gzCode}/index.html`}
                 </code>
                 <button
-                  onClick={(e) => handleCopyUrl(inspectGame, e)}
+                  onClick={() => {
+                    const url = inspectGame.embedUrl || `https://gamescdn.gamezop.com/_game-files/${inspectGame.gzCode}/index.html`;
+                    copyToClipboard(url, `inspect-${inspectGame.id}`, 'Copied embed URL');
+                  }}
                   style={{
                     background: 'rgba(255, 255, 255, 0.08)',
                     border: 'none',
@@ -1889,335 +2722,6 @@ export default function AdminDashboard() {
                 </div>
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL 3: CONFIGURE GAME POOLS MODAL */}
-      {/* ========================================================================= */}
-      {configuringGame && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 100,
-            background: 'rgba(0, 0, 0, 0.85)',
-            backdropFilter: 'blur(10px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
-          }}
-          onClick={() => setConfiguringGame(null)}
-        >
-          <div
-            className="glass-panel"
-            style={{
-              width: '100%',
-              maxWidth: '520px',
-              borderRadius: '24px',
-              border: '1px solid rgba(0, 230, 118, 0.35)',
-              background: '#0d1017',
-              padding: '28px',
-              boxShadow: '0 25px 70px rgba(0,0,0,0.8), 0 0 40px rgba(0, 230, 118, 0.1)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '12px',
-                    background: 'rgba(0, 230, 118, 0.12)',
-                    border: '1px solid rgba(0, 230, 118, 0.3)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#00E676',
-                  }}
-                >
-                  <SlidersHorizontal size={20} />
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF' }}>
-                    Game Configuration
-                  </h3>
-                  <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
-                    {configuringGame.title} (Code: {configuringGame.gzCode})
-                  </span>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setConfiguringGame(null)}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: 'none',
-                  color: '#94a3b8',
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveConfig} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              {/* Entry Pool Input */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#FFFFFF' }}>
-                    Entry Pool (USDT)
-                  </label>
-                  <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Player entry / match stake</span>
-                </div>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="number"
-                    step="any"
-                    min="0.01"
-                    required
-                    placeholder="e.g. 1.00"
-                    value={configEntryPool}
-                    onChange={(e) => setConfigEntryPool(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 14px',
-                      paddingRight: '64px',
-                      background: 'rgba(0, 0, 0, 0.45)',
-                      border: '1px solid #2a2f3d',
-                      borderRadius: '12px',
-                      color: '#FFFFFF',
-                      fontSize: '1rem',
-                      fontWeight: 700,
-                      outline: 'none',
-                    }}
-                  />
-                  <span
-                    style={{
-                      position: 'absolute',
-                      right: '14px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      color: '#00E676',
-                      fontWeight: 800,
-                      fontSize: '0.82rem',
-                    }}
-                  >
-                    USDT
-                  </span>
-                </div>
-
-                {/* Quick Presets for Entry Pool */}
-                <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
-                  {['0.50', '1.00', '2.00', '5.00', '10.00', '25.00', '50.00'].map((preset) => (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => setConfigEntryPool(preset)}
-                      style={{
-                        background: configEntryPool === preset ? 'rgba(0, 230, 118, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                        border: configEntryPool === preset ? '1px solid #00E676' : '1px solid rgba(255, 255, 255, 0.1)',
-                        color: configEntryPool === preset ? '#00E676' : '#cbd5e1',
-                        borderRadius: '6px',
-                        padding: '4px 8px',
-                        fontSize: '0.74rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      ${preset}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Prize Pool Input */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#FFFFFF' }}>
-                    Prize Pool (USDT)
-                  </label>
-                  <span style={{ fontSize: '0.72rem', color: '#00E676' }}>Total jackpot / reward payout</span>
-                </div>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="number"
-                    step="any"
-                    min="0.1"
-                    required
-                    placeholder="e.g. 100.00"
-                    value={configPrizePool}
-                    onChange={(e) => setConfigPrizePool(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 14px',
-                      paddingRight: '64px',
-                      background: 'rgba(0, 0, 0, 0.45)',
-                      border: '1px solid #2a2f3d',
-                      borderRadius: '12px',
-                      color: '#00E676',
-                      fontSize: '1rem',
-                      fontWeight: 800,
-                      outline: 'none',
-                    }}
-                  />
-                  <span
-                    style={{
-                      position: 'absolute',
-                      right: '14px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      color: '#00E676',
-                      fontWeight: 800,
-                      fontSize: '0.82rem',
-                    }}
-                  >
-                    USDT
-                  </span>
-                </div>
-
-                {/* Quick Presets for Prize Pool */}
-                <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
-                  {['50.00', '100.00', '250.00', '500.00', '1000.00', '2500.00', '5000.00'].map((preset) => (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => setConfigPrizePool(preset)}
-                      style={{
-                        background: configPrizePool === preset ? 'rgba(0, 230, 118, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                        border: configPrizePool === preset ? '1px solid #00E676' : '1px solid rgba(255, 255, 255, 0.1)',
-                        color: configPrizePool === preset ? '#00E676' : '#cbd5e1',
-                        borderRadius: '6px',
-                        padding: '4px 8px',
-                        fontSize: '0.74rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      ${preset}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Threshold Score Input */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#FFFFFF' }}>
-                    Threshold Win Score (Points)
-                  </label>
-                  <span style={{ fontSize: '0.72rem', color: '#FFB300' }}>Score needed to claim Prize Pool</span>
-                </div>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="number"
-                    step="1"
-                    min="1"
-                    required
-                    placeholder="e.g. 500"
-                    value={configThresholdScore}
-                    onChange={(e) => setConfigThresholdScore(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 14px',
-                      paddingRight: '64px',
-                      background: 'rgba(0, 0, 0, 0.45)',
-                      border: '1px solid #2a2f3d',
-                      borderRadius: '12px',
-                      color: '#FFB300',
-                      fontSize: '1rem',
-                      fontWeight: 800,
-                      outline: 'none',
-                    }}
-                  />
-                  <span
-                    style={{
-                      position: 'absolute',
-                      right: '14px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      color: '#FFB300',
-                      fontWeight: 800,
-                      fontSize: '0.82rem',
-                    }}
-                  >
-                    PTS
-                  </span>
-                </div>
-
-                {/* Quick Presets for Threshold Score */}
-                <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
-                  {['100', '250', '500', '1000', '2500', '5000'].map((preset) => (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => setConfigThresholdScore(preset)}
-                      style={{
-                        background: configThresholdScore === preset ? 'rgba(255, 179, 0, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                        border: configThresholdScore === preset ? '1px solid #FFB300' : '1px solid rgba(255, 255, 255, 0.1)',
-                        color: configThresholdScore === preset ? '#FFB300' : '#cbd5e1',
-                        borderRadius: '6px',
-                        padding: '4px 8px',
-                        fontSize: '0.74rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {preset} pts
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Calculated Ratio Preview */}
-              {parseFloat(configEntryPool) > 0 && parseFloat(configPrizePool) > 0 && (
-                <div
-                  style={{
-                    background: 'rgba(0, 230, 118, 0.08)',
-                    border: '1px solid rgba(0, 230, 118, 0.25)',
-                    borderRadius: '12px',
-                    padding: '12px 14px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Prize Multiplier Ratio:</span>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#00E676' }}>
-                    {(parseFloat(configPrizePool) / parseFloat(configEntryPool)).toFixed(1)}x
-                  </span>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => setConfiguringGame(null)}
-                  className="btn-secondary"
-                  style={{ padding: '10px 18px' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  style={{ padding: '10px 22px', fontWeight: 700 }}
-                >
-                  Save Configuration
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}

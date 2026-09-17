@@ -3231,6 +3231,307 @@ h6 {
 }
 
 /* =========================================================
+   PREMIUM INCOME DETAILS TRANSACTION CARD DESIGN
+   ========================================================= */
+.income-card {
+  position: relative;
+  border-radius: 14px;
+  padding: 16px 18px;
+  background: linear-gradient(145deg, rgba(16, 26, 20, 0.72) 0%, rgba(10, 15, 12, 0.88) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+}
+
+.income-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: transparent;
+  transition: opacity 0.3s ease;
+}
+
+.income-card.credit-card {
+  border-color: rgba(0, 230, 118, 0.22);
+}
+.income-card.credit-card::before {
+  background: linear-gradient(90deg, transparent 0%, #00E676 50%, transparent 100%);
+  opacity: 0.75;
+}
+
+.income-card.debit-card {
+  border-color: rgba(255, 82, 82, 0.22);
+}
+.income-card.debit-card::before {
+  background: linear-gradient(90deg, transparent 0%, #FF5252 50%, transparent 100%);
+  opacity: 0.75;
+}
+
+.income-card:hover {
+  transform: translateY(-2px);
+}
+.income-card.credit-card:hover {
+  border-color: rgba(0, 230, 118, 0.45);
+  box-shadow: 0 8px 26px rgba(0, 230, 118, 0.12), 0 0 1px rgba(0, 230, 118, 0.4);
+}
+.income-card.debit-card:hover {
+  border-color: rgba(255, 82, 82, 0.45);
+  box-shadow: 0 8px 26px rgba(255, 82, 82, 0.12), 0 0 1px rgba(255, 82, 82, 0.4);
+}
+
+/* Card Top Row */
+.income-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.income-card-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+/* Circular Avatar */
+.income-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+  transition: transform 0.2s ease;
+}
+.income-card:hover .income-avatar {
+  transform: scale(1.05);
+}
+
+.income-avatar.credit {
+  background: radial-gradient(circle, rgba(0, 230, 118, 0.2) 0%, rgba(0, 230, 118, 0.05) 100%);
+  border: 1.5px solid #00E676;
+  color: #00E676;
+  box-shadow: 0 0 12px rgba(0, 230, 118, 0.22);
+}
+
+.income-avatar.debit {
+  background: radial-gradient(circle, rgba(255, 82, 82, 0.2) 0%, rgba(255, 82, 82, 0.05) 100%);
+  border: 1.5px solid #FF5252;
+  color: #FF5252;
+  box-shadow: 0 0 12px rgba(255, 82, 82, 0.22);
+}
+
+/* Info block */
+.income-info-block {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.income-item-title {
+  font-weight: 700;
+  color: #FFFFFF;
+  font-size: 0.98rem;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  word-break: break-word;
+}
+
+/* Badge Row */
+.income-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.income-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 20px;
+  text-transform: uppercase;
+}
+
+.income-status-badge.credit {
+  background: rgba(0, 230, 118, 0.14);
+  color: #00E676;
+  border: 1px solid rgba(0, 230, 118, 0.3);
+}
+
+.income-status-badge.debit {
+  background: rgba(255, 82, 82, 0.14);
+  color: #FF5252;
+  border: 1px solid rgba(255, 82, 82, 0.3);
+}
+
+.badge-pulse-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  display: inline-block;
+  box-shadow: 0 0 6px currentColor;
+}
+
+.income-score-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: rgba(255, 215, 0, 0.12);
+  border: 1px solid rgba(255, 215, 0, 0.35);
+  color: #FFD700;
+}
+
+.trophy-icon {
+  color: #FFD700;
+}
+
+/* Card Right (Amount + Balance) */
+.income-card-right {
+  text-align: right;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.income-amount {
+  font-size: 1.22rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.income-amount.credit {
+  color: #00E676;
+  text-shadow: 0 0 14px rgba(0, 230, 118, 0.35);
+}
+
+.income-amount.debit {
+  color: #FF5252;
+  text-shadow: 0 0 14px rgba(255, 82, 82, 0.35);
+}
+
+.income-currency {
+  font-size: 0.78rem;
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+.income-balance-after {
+  font-size: 0.74rem;
+  color: #64748b;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bal-lbl {
+  color: #64748b;
+}
+
+.bal-val {
+  color: #cbd5e1;
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+
+/* Divider */
+.income-card-divider {
+  height: 1px;
+  width: 100%;
+  margin: 12px 0 10px 0;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+}
+
+/* Card Bottom (Time + Reference Hash) */
+.income-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.income-timestamp {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  color: #718096;
+}
+
+.income-ref-hash-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  outline: none;
+}
+
+.income-ref-hash-btn:hover {
+  background: rgba(0, 230, 118, 0.08);
+  border-color: rgba(0, 230, 118, 0.35);
+  color: #00E676;
+}
+
+.income-ref-hash-btn.copied {
+  background: rgba(0, 230, 118, 0.12);
+  border-color: #00E676;
+  color: #00E676;
+}
+
+.ref-prefix {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.ref-code {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.copied-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #00E676;
+  font-weight: 700;
+  font-size: 0.7rem;
+}
+
+/* =========================================================
    INCOME DETAILS PAGE — MOBILE RESPONSIVE (≤768px)
    ========================================================= */
 @media (max-width: 768px) {
@@ -3305,33 +3606,39 @@ h6 {
     min-width: 0 !important;
   }
 
-  /* Transaction rows wrap: details on top, amount below */
-  .income-tx-row {
-    flex-wrap: wrap !important;
-    gap: 12px !important;
-    padding: 12px 14px !important;
+  /* Mobile Transaction Cards */
+  .income-card {
+    padding: 13px 14px !important;
+    border-radius: 12px !important;
   }
 
-  .income-tx-left {
-    min-width: 0 !important;
-    flex: 1 1 100% !important;
+  .income-card-top {
+    gap: 10px !important;
   }
 
-  .income-tx-meta {
-    flex-wrap: wrap !important;
-    row-gap: 4px !important;
+  .income-avatar {
+    width: 38px !important;
+    height: 38px !important;
   }
 
-  .income-tx-ref {
-    max-width: 100% !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
+  .income-item-title {
+    font-size: 0.9rem !important;
   }
 
-  .income-tx-right {
-    flex: 1 1 100% !important;
-    text-align: left !important;
+  .income-amount {
+    font-size: 1.05rem !important;
+  }
+
+  .income-balance-after {
+    font-size: 0.7rem !important;
+  }
+
+  .income-card-bottom {
+    gap: 8px !important;
+  }
+
+  .ref-code {
+    max-width: 130px !important;
   }
 
   /* Compact navbar toggle pills */
@@ -4082,82 +4389,89 @@ img {
     flex-shrink: 0;
   }
 
-  /* Cards: two in one row */
+  /* Cards: ONE game in ONE row on mobile */
   .games-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    grid-template-columns: 1fr !important;
+    gap: 16px;
   }
 
   .game-card-art {
-    height: 120px;
+    height: 165px;
   }
 
   .game-tag-pill {
-    top: 8px;
-    left: 8px;
-    font-size: 0.58rem;
-    padding: 3px 8px;
+    top: 10px;
+    left: 10px;
+    font-size: 0.65rem;
+    padding: 4px 10px;
   }
 
   .game-demo-pill {
-    display: none;
+    display: inline-flex;
+    top: 10px;
+    right: 10px;
+    padding: 4px 10px;
+    font-size: 0.68rem;
   }
 
   .game-logo-avatar-frame {
-    width: 32px;
-    height: 32px;
-    bottom: 8px;
-    left: 8px;
+    width: 44px;
+    height: 44px;
+    bottom: 10px;
+    left: 10px;
     border-radius: 50%;
   }
 
   .game-card-body {
-    padding: 10px 10px 12px 10px;
+    padding: 14px 16px;
   }
 
   .game-card-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
   }
 
   .game-title {
-    font-size: 0.85rem;
+    font-size: 1.1rem;
   }
 
   .game-category-badge {
-    font-size: 0.58rem;
+    font-size: 0.68rem;
   }
 
   .game-desc {
-    font-size: 0.68rem;
-    margin-bottom: 10px;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    margin-bottom: 12px;
   }
 
   .game-specs-panel {
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 8px;
+    flex-wrap: nowrap;
+    gap: 10px;
+    padding: 10px;
   }
 
   .spec-label {
-    font-size: 0.58rem;
+    font-size: 0.65rem;
   }
 
   .spec-val {
-    font-size: 0.7rem;
+    font-size: 0.82rem;
   }
 
   .game-card-actions {
-    flex-direction: column;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 10px;
   }
 
   .card-btn-play,
   .card-btn-demo {
     width: 100%;
-    font-size: 0.75rem;
-    padding: 8px 10px;
+    font-size: 0.82rem;
+    padding: 10px 12px;
   }
 
   /* Attractive mobile cards: glow, depth, motion */
@@ -4888,12 +5202,12 @@ img {
   }
 
   .games-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    grid-template-columns: 1fr !important;
+    gap: 14px;
   }
 
   .game-card-art {
-    height: 100px;
+    height: 155px;
   }
 
   /* Modal tabs share one row with ellipsis fallback */

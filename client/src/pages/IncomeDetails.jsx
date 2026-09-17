@@ -123,6 +123,55 @@ export default function IncomeDetails() {
     }
   };
 
+  // Helper to extract clean display info from transaction data
+  const formatCardData = (tx) => {
+    const isCredit = tx.type === 'credit';
+    const desc = tx.description || '';
+
+    // Check for score pattern: e.g. "(Score: 10 >= 10 PTS)" or "(Score: 120 >= 100 PTS)"
+    const scoreMatch = desc.match(/\(Score:\s*([^)]+)\)/i);
+    const scoreText = scoreMatch ? scoreMatch[1].replace('>=', '≥') : null;
+
+    // Clean up description without the score clause
+    let cleanDesc = desc.replace(/\(Score:\s*[^)]+\)/i, '').trim();
+
+    // Determine primary display title and action/subtitle
+    let mainTitle = tx.gameTitle || '';
+    let categoryPill = '';
+
+    if (!mainTitle) {
+      if (cleanDesc.includes(' - ')) {
+        const parts = cleanDesc.split(' - ');
+        categoryPill = parts[0].trim();
+        mainTitle = parts.slice(1).join(' - ').trim();
+      } else {
+        mainTitle = cleanDesc || (isCredit ? 'Prize Pool Credit' : 'Game Entry Fee');
+      }
+    } else {
+      if (cleanDesc.includes(' - ')) {
+        categoryPill = cleanDesc.split(' - ')[0].trim();
+      }
+    }
+
+    // Standardize badge tag
+    let badgeText = categoryPill || (tx.category ? tx.category.replace('_', ' ') : (isCredit ? 'PRIZE REWARD' : 'GAME ENTRY'));
+    if (tx.category === 'prize_reward') badgeText = 'PRIZE REWARD';
+    else if (tx.category === 'game_entry') badgeText = 'ENTRY FEE';
+    else if (tx.category === 'deposit') badgeText = 'DEPOSIT';
+    else if (tx.category === 'withdrawal') badgeText = 'WITHDRAWAL';
+
+    return {
+      isCredit,
+      mainTitle,
+      badgeText: badgeText.toUpperCase(),
+      scoreText,
+      amount: Number(tx.amount || 0).toFixed(2),
+      balanceAfter: Number(tx.balanceAfter || 0).toFixed(2),
+      referenceId: tx.referenceId || '',
+      createdAt: tx.createdAt,
+    };
+  };
+
   const netNum = parseFloat(data.summary?.netEarnings || '0');
 
   return (
@@ -502,105 +551,84 @@ export default function IncomeDetails() {
                 </Link>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {filteredTransactions.map((tx) => {
-                  const isCredit = tx.type === 'credit';
+                  const card = formatCardData(tx);
+                  const isCredit = card.isCredit;
+
                   return (
                     <div
                       key={tx._id || tx.referenceId}
-                      className="income-tx-row"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '14px 18px',
-                        background: 'rgba(15, 22, 18, 0.65)',
-                        border: isCredit ? '1px solid rgba(0, 230, 118, 0.2)' : '1px solid rgba(255, 82, 82, 0.2)',
-                        borderRadius: '12px',
-                        transition: 'transform 0.15s ease, border-color 0.15s ease',
-                      }}
+                      className={`income-card ${isCredit ? 'credit-card' : 'debit-card'}`}
                     >
-                      {/* Left: Type Icon & Description */}
-                      <div className="income-tx-left" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                        {/* Circular Type Avatar */}
-                        <div
-                          style={{
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '50%',
-                            background: isCredit ? 'rgba(0, 230, 118, 0.12)' : 'rgba(255, 82, 82, 0.12)',
-                            border: isCredit ? '1.5px solid #00E676' : '1.5px solid #FF5252',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: isCredit ? '#00E676' : '#FF5252',
-                            flexShrink: 0,
-                          }}
-                        >
-                          {isCredit ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}
-                        </div>
-
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                            <span style={{ fontWeight: 700, color: '#FFFFFF', fontSize: '0.94rem' }}>
-                              {tx.description || (isCredit ? 'Prize Pool Credit' : 'Game Entry Deduction')}
-                            </span>
-                            <span
-                              style={{
-                                fontSize: '0.68rem',
-                                padding: '2px 8px',
-                                borderRadius: '12px',
-                                background: isCredit ? 'rgba(0, 230, 118, 0.15)' : 'rgba(255, 82, 82, 0.15)',
-                                color: isCredit ? '#00E676' : '#FF5252',
-                                fontWeight: 800,
-                                textTransform: 'uppercase',
-                              }}
-                            >
-                              {tx.category ? tx.category.replace('_', ' ') : tx.type}
-                            </span>
+                      {/* Top Tier: Left (Avatar + Game Name + Badges) & Right (Amount + Balance) */}
+                      <div className="income-card-top">
+                        <div className="income-card-left">
+                          {/* Circular Status Avatar */}
+                          <div className={`income-avatar ${isCredit ? 'credit' : 'debit'}`}>
+                            {isCredit ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
                           </div>
 
-                          <div className="income-tx-meta" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px', fontSize: '0.76rem', color: '#64748b' }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <Clock size={12} />
-                              {formatTxTime(tx.createdAt)}
-                            </span>
-                            <span
-                              onClick={() => copyTxId(tx.referenceId)}
-                              className="income-tx-ref"
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                fontFamily: 'var(--font-mono)',
-                                color: copiedId === tx.referenceId ? '#00E676' : '#94a3b8',
-                                cursor: 'pointer',
-                              }}
-                              title="Click to copy Transaction Reference ID"
-                            >
-                              {tx.referenceId}
-                              {copiedId === tx.referenceId ? <Check size={11} color="#00E676" /> : <Copy size={11} />}
-                            </span>
+                          <div className="income-info-block">
+                            <div className="income-item-title" title={card.mainTitle}>
+                              {card.mainTitle}
+                            </div>
+
+                            <div className="income-badge-row">
+                              <span className={`income-status-badge ${isCredit ? 'credit' : 'debit'}`}>
+                                <span className="badge-pulse-dot" />
+                                {card.badgeText}
+                              </span>
+
+                              {card.scoreText && (
+                                <span className="income-score-badge">
+                                  <Trophy size={11} className="trophy-icon" />
+                                  <span>Score: {card.scoreText}</span>
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right: Amount & Balance */}
+                        <div className="income-card-right">
+                          <div className={`income-amount ${isCredit ? 'credit' : 'debit'}`}>
+                            {isCredit ? `+${card.amount}` : `-${card.amount}`}
+                            <span className="income-currency">USDT</span>
+                          </div>
+                          <div className="income-balance-after">
+                            <span className="bal-lbl">Bal after:</span>
+                            <span className="bal-val">{card.balanceAfter} USDT</span>
                           </div>
                         </div>
                       </div>
 
-                      {/* Right: Amount & Balance Snapshot */}
-                      <div className="income-tx-right" style={{ textAlign: 'right' }}>
-                        <div
-                          style={{
-                            fontSize: '1.15rem',
-                            fontWeight: 800,
-                            color: isCredit ? '#00E676' : '#FF5252',
-                            letterSpacing: '-0.01em',
-                          }}
+                      {/* Thin Separator Line */}
+                      <div className="income-card-divider" />
+
+                      {/* Bottom Tier: Timestamp & Copyable Ref Pill */}
+                      <div className="income-card-bottom">
+                        <div className="income-timestamp">
+                          <Clock size={12} />
+                          <span>{formatTxTime(card.createdAt)}</span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => copyTxId(card.referenceId)}
+                          className={`income-ref-hash-btn ${copiedId === card.referenceId ? 'copied' : ''}`}
+                          title="Click to copy Transaction Reference ID"
                         >
-                          {isCredit ? `+${Number(tx.amount).toFixed(2)}` : `-${Number(tx.amount).toFixed(2)}`}{' '}
-                          <span style={{ fontSize: '0.78rem', color: isCredit ? '#39FF88' : '#FF8A80', fontWeight: 600 }}>USDT</span>
-                        </div>
-                        <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '3px' }}>
-                          Bal after: <span style={{ color: '#cbd5e1', fontWeight: 600 }}>{Number(tx.balanceAfter || 0).toFixed(2)} USDT</span>
-                        </div>
+                          <span className="ref-prefix">TX:</span>
+                          <span className="ref-code">{card.referenceId}</span>
+                          {copiedId === card.referenceId ? (
+                            <span className="copied-tag">
+                              <Check size={11} /> Copied
+                            </span>
+                          ) : (
+                            <Copy size={11} className="copy-icon" />
+                          )}
+                        </button>
                       </div>
                     </div>
                   );
