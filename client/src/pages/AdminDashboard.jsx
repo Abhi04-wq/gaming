@@ -1433,13 +1433,14 @@ export default function AdminDashboard() {
                             <button
                               onClick={() => setInspectGame(game)}
                               style={{
+                                flex: 1,
                                 background: 'rgba(255, 255, 255, 0.05)',
                                 border: '1px solid rgba(255, 255, 255, 0.12)',
-                                color: '#cbd5e1',
+                                color: '#FFFFFF',
+                                padding: '8px 14px',
                                 borderRadius: '10px',
-                                padding: '8px 12px',
                                 fontSize: '0.8rem',
-                                fontWeight: 600,
+                                fontWeight: 700,
                                 cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -1452,29 +1453,6 @@ export default function AdminDashboard() {
                             >
                               <Eye size={14} />
                               <span>Inspect Specs</span>
-                            </button>
-
-                            {/* Copy Embed URL */}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const url = game.embedUrl || `https://gamescdn.gamezop.com/_game-files/${game.gzCode}/index.html`;
-                                copyToClipboard(url, `game-${game.id}`, `Copied URL for "${game.title}"`);
-                              }}
-                              title="Copy direct GameZop embed URL"
-                              style={{
-                                background: 'rgba(255, 255, 255, 0.05)',
-                                border: '1px solid rgba(255, 255, 255, 0.12)',
-                                color: isCopied ? '#00E676' : '#94a3b8',
-                                borderRadius: '10px',
-                                padding: '8px 12px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                              }}
-                            >
-                              {isCopied ? <Check size={15} /> : <Copy size={15} />}
                             </button>
                           </div>
                         </div>
@@ -2483,47 +2461,6 @@ export default function AdminDashboard() {
               >
                 <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Current Players</div>
                 <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#38bdf8' }}>{inspectGame.players}</div>
-              </div>
-            </div>
-
-            {/* Embed & CDN URLs */}
-            <div style={{ marginBottom: '20px' }}>
-              <h5 style={{ margin: '0 0 6px 0', fontSize: '0.82rem', textTransform: 'uppercase', color: '#64748b' }}>
-                Direct CDN Embed URL
-              </h5>
-              <div
-                style={{
-                  background: 'rgba(0, 0, 0, 0.4)',
-                  padding: '10px 12px',
-                  borderRadius: '10px',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '8px',
-                }}
-              >
-                <code style={{ fontSize: '0.78rem', color: '#38bdf8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {inspectGame.embedUrl || `https://gamescdn.gamezop.com/_game-files/${inspectGame.gzCode}/index.html`}
-                </code>
-                <button
-                  onClick={() => {
-                    const url = inspectGame.embedUrl || `https://gamescdn.gamezop.com/_game-files/${inspectGame.gzCode}/index.html`;
-                    copyToClipboard(url, `inspect-${inspectGame.id}`, 'Copied embed URL');
-                  }}
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    border: 'none',
-                    color: '#00E676',
-                    padding: '6px 10px',
-                    borderRadius: '6px',
-                    fontSize: '0.75rem',
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                  }}
-                >
-                  Copy
-                </button>
               </div>
             </div>
 
