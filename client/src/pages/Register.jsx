@@ -4,7 +4,8 @@ import { ethers } from 'ethers';
 import { useAuth } from '../context/AuthContext';
 import {
   detectInjectedProvider,
-  createDemoWallet,
+  connectInjectedWallet,
+  isWalletDetected,
   signChallengeMessage,
   fetchLiveUsdtBalance,
   shortenAddress,
@@ -64,42 +65,18 @@ export default function Register() {
   const [alreadyRegisteredAddress, setAlreadyRegisteredAddress] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
 
-  const handleConnectAndRegister = async (walletName, isDemoMode = false) => {
+  const handleConnectAndRegister = async (walletName) => {
     setConnectingWallet(walletName);
     setErrorMessage('');
     setAlreadyRegisteredAddress(null);
 
     try {
-      let signer;
-      let address;
-      let chainId = 1;
-
-      if (isDemoMode) {
-        // Instant Demo Connection using locally generated cryptographic wallet
-        setAuthStep('connecting');
-        const demo = createDemoWallet(walletName);
-        signer = demo.signer;
-        address = demo.address;
-        chainId = 1;
-      } else {
-        // Real Browser Extension Connection
-        setAuthStep('connecting');
-        const injected = detectInjectedProvider();
-
-        if (!injected) {
-          throw new Error(
-            `No Web3 wallet extension detected for ${walletName}. Please click "Demo" to test instant cryptographic login without installing an extension!`
-          );
-        }
-
-        const browserProvider = new ethers.BrowserProvider(injected);
-        await browserProvider.send('eth_requestAccounts', []);
-        signer = await browserProvider.getSigner();
-        address = (await signer.getAddress()).toLowerCase();
-
-        const network = await browserProvider.getNetwork();
-        chainId = Number(network.chainId);
-      }
+      // Browser Extension Connection
+      setAuthStep('connecting');
+      const connection = await connectInjectedWallet(walletName);
+      const signer = connection.signer;
+      const address = connection.address.toLowerCase();
+      const chainId = connection.chainId;
 
       // Step 2: Check if this wallet is already registered in MongoDB
       const checkRes = await api.checkWallet(address);
@@ -110,9 +87,6 @@ export default function Register() {
         setAuthStep(null);
         return;
       }
-
-      // Step 3: Fetch live on-chain USDT balance using RPC
-      const usdtData = await fetchLiveUsdtBalance(address, chainId);
 
       // Step 4: Request cryptographically unique single-use nonce from server
       setAuthStep('signing');
@@ -132,7 +106,7 @@ export default function Register() {
         throw new Error(`Signature failed: ${sigErr.message || 'Signature request cancelled.'}`);
       }
 
-      // Step 6: Send signature, nonce, and details to Express backend
+      // Step 6: Send signature, nonce, and details to Express backend with 50 starting tokens
       setAuthStep('registering');
       const registerRes = await api.register({
         walletAddress: address,
@@ -140,7 +114,7 @@ export default function Register() {
         nonce: nonceRes.nonce,
         walletType: walletName,
         chainId,
-        usdtBalance: usdtData.formatted,
+        usdtBalance: '50.00',
       });
 
       if (!registerRes.success) {
@@ -152,7 +126,7 @@ export default function Register() {
       loginUser(registerRes.token, registerRes.user, signer);
 
       setToastMessage({
-        text: 'Wallet connected successfully. Your Web3 account has been created!',
+        text: 'Wallet connected successfully! 50 USDT welcome tokens credited.',
         type: 'success',
       });
 
@@ -237,7 +211,7 @@ export default function Register() {
               {authStep === 'connecting' && 'Connecting to wallet provider...'}
               {authStep === 'signing' && 'Please confirm the signature request in your wallet.'}
               {authStep === 'registering' && 'Verifying cryptographic signature on backend...'}
-              {authStep === 'done' && 'Account verified! Opening games lobby...'}
+              {authStep === 'done' && 'Account verified! Opening games...'}
             </span>
           </div>
         )}
@@ -249,17 +223,10 @@ export default function Register() {
               key={wallet.id}
               wallet={wallet}
               isConnecting={connectingWallet === wallet.name}
-              onConnect={() => handleConnectAndRegister(wallet.name, false)}
-              onDemoConnect={() => handleConnectAndRegister(wallet.name, true)}
+              isDetected={isWalletDetected(wallet.name)}
+              onConnect={() => handleConnectAndRegister(wallet.name)}
             />
           ))}
-        </div>
-
-        {/* Demo Helper Note */}
-        <div className="register-demo-note">
-          <span style={{ color: '#00E676', fontWeight: 600 }}>Tip: </span>
-          Click <strong style={{ color: '#FFFFFF' }}>Connect</strong> to use your browser extension, or click{' '}
-          <strong style={{ color: '#00E676' }}>Demo</strong> to test instant cryptographic signing without an extension!
         </div>
 
         {/* Card Footer: Already have an account? */}

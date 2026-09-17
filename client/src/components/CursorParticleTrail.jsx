@@ -315,7 +315,8 @@ export default function CursorParticleTrail() {
         width: '100vw',
         height: '100vh',
         pointerEvents: 'none',
-        zIndex: 9999,
+        // Above fullscreen overlays (e.g. Income Details / game pages use z-index 999999)
+        zIndex: 1000000,
       }}
     />
   );

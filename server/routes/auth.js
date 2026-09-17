@@ -4,6 +4,7 @@ const { ethers } = require('ethers');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
+const Transaction = require('../models/Transaction');
 const NonceChallenge = require('../models/NonceChallenge');
 const { protect } = require('../middleware/auth');
 const { generateAccountId } = require('../utils/accountId');
@@ -119,7 +120,7 @@ router.post('/register', async (req, res) => {
       nonce,
       walletType = 'MetaMask',
       chainId = 1,
-      usdtBalance = '0.00',
+      usdtBalance = '50.00',
     } = req.body;
 
     if (!walletAddress || !signature || !nonce) {
@@ -196,13 +197,37 @@ router.post('/register', async (req, res) => {
       walletType: ['MetaMask', 'Trust Wallet', 'SafePal', 'Rabby Wallet', 'Coinbase Wallet'].includes(walletType)
         ? walletType
         : 'MetaMask',
-      usdtBalance: String(usdtBalance || '0.00'),
+      usdtBalance: String(usdtBalance && usdtBalance !== '0.00' ? usdtBalance : '50.00'),
       chainId: Number(chainId) || 1,
       lastLoginAt: new Date(),
       isActive: true,
     });
 
     const token = generateToken(newUser);
+
+    // Record initial signup bonus as CREDIT in income ledger so
+    // Income Details shows where the starting balance came from
+    try {
+      const startingBalance = parseFloat(newUser.usdtBalance || '50.00');
+      if (startingBalance > 0) {
+        await Transaction.create({
+          walletAddress: normalizedAddress,
+          userId: newUser._id,
+          type: 'credit',
+          category: 'bonus',
+          amount: startingBalance,
+          balanceBefore: 0,
+          balanceAfter: startingBalance,
+          currency: 'USDT',
+          description: `Welcome Signup Bonus (+${startingBalance.toFixed(2)} USDT)`,
+          referenceId: `TX-BON-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
+          status: 'completed',
+        });
+        console.log(`[Transaction Saved: SIGNUP BONUS] ${normalizedAddress} | +${startingBalance.toFixed(2)} USDT`);
+      }
+    } catch (txErr) {
+      console.error('[Signup Bonus Transaction Save Error]', txErr);
+    }
 
     return res.status(201).json({
       success: true,
@@ -285,7 +310,9 @@ router.post('/login', async (req, res) => {
     user.lastLoginAt = new Date();
     user.nonce = null;
     user.nonceExpiresAt = null;
-    if (usdtBalance !== undefined) {
+    if (!user.usdtBalance || user.usdtBalance === '0.00') {
+      user.usdtBalance = '50.00';
+    } else if (usdtBalance !== undefined && usdtBalance !== '0.00' && usdtBalance !== null) {
       user.usdtBalance = String(usdtBalance);
     }
     if (chainId !== undefined) {

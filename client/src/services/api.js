@@ -65,6 +65,46 @@ export const api = {
   getBalance: (address, chainId = 1) =>
     request(`/wallet/balance?address=${address}&chainId=${chainId}`),
 
+  // Deduct game entry pool fee
+  deductGameEntry: (address, gameId, amount, gameTitle = null) =>
+    request('/wallet/deduct-entry', {
+      method: 'POST',
+      body: JSON.stringify({ address, gameId, gameTitle, amount }),
+    }),
+
+  // Credit prize pool reward when player score reaches threshold
+  creditPrizeReward: (payload) =>
+    request('/wallet/credit-prize', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  // Fetch user income details (credits, debits, summary, and transaction history)
+  getIncomeDetails: (address, type = null) => {
+    const typeQuery = type ? `&type=${type}` : '';
+    return request(`/wallet/income-details?address=${encodeURIComponent(address)}${typeQuery}`);
+  },
+
+  // Deposit USDT funds into wallet
+  depositFunds: (address, amount, description = null) =>
+    request('/wallet/deposit', {
+      method: 'POST',
+      body: JSON.stringify({ address, amount, description }),
+    }),
+
+  // Admin: fetch ALL users income history (every credit + debit in DB)
+  getAllTransactions: ({ type = null, search = '', limit = 200 } = {}) => {
+    const params = new URLSearchParams();
+    if (type) params.set('type', type);
+    if (search) params.set('search', search);
+    if (limit) params.set('limit', String(limit));
+    const qs = params.toString();
+    return request(`/wallet/all-transactions${qs ? `?${qs}` : ''}`);
+  },
+
+  // Admin: platform-wide stats live from database (users + transactions)
+  getAdminStats: () => request('/wallet/admin-stats'),
+
   // Logout
   logout: () =>
     request('/auth/logout', {

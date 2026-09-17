@@ -23,11 +23,11 @@ export default function Sidebar() {
   };
 
   const navItems = [
-    { label: 'Games Lobby', icon: <Gamepad2 size={18} />, path: '/games', badge: 'HOT' },
+    { label: 'Games', icon: <Gamepad2 size={18} />, path: '/games', badge: 'HOT' },
     { label: 'Wallet & Account', icon: <LayoutDashboard size={18} />, path: '/dashboard' },
+    { label: 'Income Details', icon: <ArrowLeftRight size={18} />, path: '/income-details', badge: 'Ledger' },
     { label: 'USDT Vault', icon: <Wallet size={18} />, path: '#wallet', badge: 'Live' },
     { label: 'VIP Rewards', icon: <Gift size={18} />, path: '#rewards', badge: 'New' },
-    { label: 'Recent Bets', icon: <ArrowLeftRight size={18} />, path: '#transactions' },
     { label: 'Leaderboard', icon: <TrendingUp size={18} />, path: '#leaderboard' },
     { label: 'Profile Settings', icon: <User size={18} />, path: '#profile' },
   ];

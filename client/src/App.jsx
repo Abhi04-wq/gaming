@@ -6,7 +6,11 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import GamesLobby from './pages/GamesLobby';
 import GamePlay from './pages/GamePlay';
+import AdminLogin from './pages/AdminLogin';
+import AdminDashboard from './pages/AdminDashboard';
+import IncomeDetails from './pages/IncomeDetails';
 import AuthGuard from './components/AuthGuard';
+import AdminGuard from './components/AdminGuard';
 import CursorParticleTrail from './components/CursorParticleTrail';
 
 // Helper component for Root Route redirect - directly leads to Games Lobby upon login
@@ -50,11 +54,30 @@ export default function App() {
             }
           />
           <Route
+            path="/income-details"
+            element={
+              <AuthGuard>
+                <IncomeDetails />
+              </AuthGuard>
+            }
+          />
+          <Route
             path="/play/:gameId"
             element={
               <AuthGuard>
                 <GamePlay />
               </AuthGuard>
+            }
+          />
+          {/* Admin Routes */}
+          <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <AdminGuard>
+                <AdminDashboard />
+              </AdminGuard>
             }
           />
           <Route path="*" element={<Navigate to="/" replace />} />

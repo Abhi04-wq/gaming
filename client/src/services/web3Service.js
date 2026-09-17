@@ -99,6 +99,7 @@ export function detectInjectedProvider(walletName) {
   // Trust Wallet:
   if (walletName === 'Trust Wallet') {
     if (window.trustwallet?.Provider) return window.trustwallet.Provider;
+    if (window.trustwallet) return window.trustwallet;
     if (window.trustWallet) return window.trustWallet;
     const trustInProviders = providers.find((p) => p.isTrust || p.isTrustWallet);
     if (trustInProviders) return trustInProviders;
@@ -124,9 +125,15 @@ export function detectInjectedProvider(walletName) {
     return null;
   }
 
-  // If no walletName is specified or generic EVM requested:
-  // Prefer window.safepalProvider if available, otherwise window.ethereum
-  return window.safepalProvider || eth || null;
+  // If a specific wallet was requested and not found above,
+  // strictly return null so another wallet extension (like SafePal) is never hijacked!
+  if (walletName) {
+    return null;
+  }
+
+  // Generic EVM auto-detect (when no specific walletName is requested):
+  // Prefer standard ethereum over safepalProvider
+  return eth || window.safepalProvider || null;
 }
 
 /**

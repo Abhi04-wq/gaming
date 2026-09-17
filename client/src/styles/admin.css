@@ -1,0 +1,391 @@
+/* =========================================================
+   LOYALTY GAME - ADMIN DASHBOARD INTERACTIVE & ANIMATION SYSTEM
+   Ultra-modern Web3 Admin Console with fluid CSS keyframes,
+   glowing ambient effects, interactive charts, and smooth toggles.
+   ========================================================= */
+
+/* Top Root & Typography */
+.admin-root {
+  min-height: 100vh;
+  background: #07090e;
+  color: #FFFFFF;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Background Animated Aurora Blobs */
+.admin-aurora-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.admin-blob-1 {
+  position: absolute;
+  top: -10%;
+  left: 15%;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 230, 118, 0.08) 0%, rgba(7, 9, 14, 0) 70%);
+  filter: blur(80px);
+  animation: adminBlobFloat 18s ease-in-out infinite alternate;
+}
+
+.admin-blob-2 {
+  position: absolute;
+  top: 40%;
+  right: 10%;
+  width: 550px;
+  height: 550px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.06) 0%, rgba(7, 9, 14, 0) 70%);
+  filter: blur(90px);
+  animation: adminBlobFloat 22s ease-in-out infinite alternate-reverse;
+}
+
+.admin-blob-3 {
+  position: absolute;
+  bottom: -5%;
+  left: 30%;
+  width: 450px;
+  height: 450px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.05) 0%, rgba(7, 9, 14, 0) 70%);
+  filter: blur(85px);
+  animation: adminBlobFloat 25s ease-in-out infinite alternate;
+}
+
+.admin-grid-pattern {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 70% 70% at 50% 40%, #000 40%, transparent 100%);
+}
+
+@keyframes adminBlobFloat {
+  0% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+  }
+  50% {
+    transform: translate(35px, -25px) scale(1.06) rotate(60deg);
+  }
+  100% {
+    transform: translate(-30px, 30px) scale(0.96) rotate(120deg);
+  }
+}
+
+/* Glass Panels with Interactive Hover Lift */
+.admin-card {
+  background: rgba(14, 18, 27, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 20px;
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+              border-color 0.28s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.admin-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(0, 230, 118, 0.35);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5), 0 0 25px rgba(0, 230, 118, 0.12);
+}
+
+.admin-card-interactive {
+  cursor: pointer;
+}
+
+.admin-card-interactive:active {
+  transform: translateY(-1px) scale(0.995);
+}
+
+/* Radar Pulse for Node Status */
+.admin-radar-dot {
+  position: relative;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #00E676;
+}
+
+.admin-radar-dot::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid #00E676;
+  animation: adminRadarPing 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  opacity: 0.8;
+}
+
+@keyframes adminRadarPing {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.9;
+  }
+  75%, 100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+/* Interactive Navigation Tabs Pill */
+.admin-nav-tabs {
+  display: inline-flex;
+  background: rgba(11, 14, 21, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 4px;
+  gap: 4px;
+  backdrop-filter: blur(12px);
+}
+
+.admin-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.admin-tab-btn:hover {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.admin-tab-btn.active {
+  background: linear-gradient(135deg, #00E676 0%, #00B050 100%);
+  color: #07090e;
+  box-shadow: 0 4px 16px rgba(0, 230, 118, 0.35);
+}
+
+.admin-tab-btn .badge-pill {
+  font-size: 0.68rem;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.25);
+  color: inherit;
+  font-weight: 800;
+}
+
+/* Modern iOS-Style Toggle Switch with Green/Red glow */
+.admin-switch-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.admin-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: 20px;
+  background: rgba(239, 68, 68, 0.25);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+}
+
+.admin-switch.active {
+  background: rgba(0, 230, 118, 0.25);
+  border-color: rgba(0, 230, 118, 0.6);
+  box-shadow: 0 0 12px rgba(0, 230, 118, 0.3);
+}
+
+.admin-switch-handle {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f87171;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.25s ease;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+}
+
+.admin-switch.active .admin-switch-handle {
+  transform: translateX(19px);
+  background: #00E676;
+}
+
+/* Animated Spin for Reload */
+.spin-anim {
+  animation: spinCw 0.85s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes spinCw {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Animated SVG Chart Bars */
+.chart-bar-anim {
+  transform-origin: bottom;
+  animation: barGrowUp 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes barGrowUp {
+  0% {
+    transform: scaleY(0);
+    opacity: 0.2;
+  }
+  100% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+/* Modal Animations */
+.admin-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: rgba(3, 5, 8, 0.85);
+  backdrop-filter: blur(14px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: modalFadeIn 0.22s ease-out;
+}
+
+.admin-modal-dialog {
+  animation: modalBounceIn 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.8), 0 0 50px rgba(0, 230, 118, 0.15);
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalBounceIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Quick Action Preset Pill */
+.preset-pill-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.preset-pill-btn:hover {
+  background: rgba(0, 230, 118, 0.15);
+  border-color: #00E676;
+  color: #00E676;
+  transform: translateY(-2px);
+}
+
+.preset-pill-btn.active {
+  background: rgba(0, 230, 118, 0.25);
+  border-color: #00E676;
+  color: #00E676;
+  box-shadow: 0 0 12px rgba(0, 230, 118, 0.3);
+}
+
+/* Interactive Search Field Glow */
+.admin-search-input {
+  transition: all 0.2s ease;
+}
+
+.admin-search-input:focus {
+  border-color: #00E676 !important;
+  box-shadow: 0 0 16px rgba(0, 230, 118, 0.25);
+}
+
+/* Shimmer Loading Skeleton */
+.admin-shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+  background-size: 200% 100%;
+  animation: adminShimmer 1.6s infinite;
+  border-radius: 8px;
+}
+
+@keyframes adminShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Card Image Zoom on Hover */
+.game-card-img-zoom {
+  transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.admin-card:hover .game-card-img-zoom {
+  transform: scale(1.06);
+}
+
+/* Circular Logo Spin on Card Hover */
+.admin-logo-circle {
+  border-radius: 50%;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.admin-card:hover .admin-logo-circle {
+  transform: rotate(10deg) scale(1.05);
+}
+
+/* Custom Webkit Scrollbars for Admin */
+.admin-root ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.admin-root ::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.admin-root ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
+
+.admin-root ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 230, 118, 0.4);
+}

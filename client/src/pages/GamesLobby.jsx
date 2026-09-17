@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../services/api';
 import { fetchLiveUsdtBalance, shortenAddress } from '../services/web3Service';
 import Navbar from '../components/Navbar';
 import Toast from '../components/Toast';
-import LogoC from '../LogoC.png';
+import LogoWebp from '../logo.webp';
 import {
   Gamepad2,
   Flame,
   Sparkles,
-  Rocket,
   Dice5,
   Coins,
   ShieldCheck,
@@ -25,7 +25,6 @@ import {
   RotateCw,
   Wallet,
   X,
-  Radio,
   Layers,
   CheckCircle2,
   AlertTriangle,
@@ -166,50 +165,52 @@ export const GAME_CATALOG = [
     playableType: 'generic',
   },
   {
-    id: 'assassins-hunt',
-    gzCode: '9lpHai56Q',
-    title: "Assassin's Hunt",
-    category: 'crash',
-    categoryLabel: 'Stealth / Action',
-    tag: 'HOT',
-    tagColor: '#FF5252',
-    maxWin: '8,000x',
-    rtp: '98.9%',
-    players: '3,410',
-    description: 'Creep through shadows, evade guards, and strike high-value targets for massive bounty multipliers.',
-    coverUrl: 'https://static.gamezop.com/9lpHai56Q/wall.png',
-    logoUrl: 'https://static.gamezop.com/9lpHai56Q/square.png',
-    screenshots: [
-      { title: 'Stealth Shadow Takedown', url: 'https://static.gamezop.com/9lpHai56Q/wall.png' },
-      { title: 'Perimeter Laser Evasion', url: 'https://static.gamezop.com/9lpHai56Q/square.png' },
-      { title: 'Bounty Extraction Escape', url: 'https://static.gamezop.com/9lpHai56Q/wall.png' },
-    ],
-    videoDuration: '1:02',
-    videoTeaser: 'Stealth Infiltration & High Bounty Clean Extraction',
-    playableType: 'crash',
-  },
-  {
-    id: 'snakes-and-ladders',
-    gzCode: 'rJWyhp79RS',
-    title: 'Snakes & Ladders',
-    category: 'table',
-    categoryLabel: 'Classic Board',
+    id: 'bubble-shooter-classic',
+    gzCode: 'yVywAGBQ6',
+    title: 'Bubble Shooter Classic',
+    category: 'originals',
+    categoryLabel: 'Arcade / Puzzle',
     tag: 'POPULAR',
     tagColor: '#00E676',
-    maxWin: '150x',
-    rtp: '99.0%',
-    players: '2,750',
-    description: 'The traditional race to 100 with smooth climbing ladders and slippery neon serpents. Fun casual multiplayer.',
-    coverUrl: 'https://static.gamezop.com/rJWyhp79RS/wall.png',
-    logoUrl: 'https://static.gamezop.com/rJWyhp79RS/square.png',
+    maxWin: '3,000x',
+    rtp: '99.2%',
+    players: '6,420',
+    description: 'Match colors, aim your bubble cannon, burst matching cluster chains, and trigger cascading avalanche bonuses!',
+    coverUrl: 'https://static.gamezop.com/yVywAGBQ6/wall.png',
+    logoUrl: 'https://static.gamezop.com/yVywAGBQ6/square.png',
     screenshots: [
-      { title: '100-Tile Board Grid', url: 'https://static.gamezop.com/rJWyhp79RS/wall.png' },
-      { title: 'Ladder Climb Super Boost', url: 'https://static.gamezop.com/rJWyhp79RS/square.png' },
-      { title: 'Tile 100 Finish Line', url: 'https://static.gamezop.com/rJWyhp79RS/wall.png' },
+      { title: 'Color Match Cluster Pop', url: 'https://static.gamezop.com/yVywAGBQ6/game-1.png' },
+      { title: 'Wall-Bounce Precision Aim', url: 'https://static.gamezop.com/yVywAGBQ6/game-2.png' },
+      { title: 'Avalanche Cascade Bonus', url: 'https://static.gamezop.com/yVywAGBQ6/game-3.png' },
+      { title: 'Bubble Shooter HD Artwork', url: 'https://static.gamezop.com/yVywAGBQ6/wall.png' },
     ],
-    videoDuration: '0:34',
-    videoTeaser: 'Triple 6 Roll & Epic Ladder Ascent to Victory',
-    playableType: 'generic',
+    videoDuration: '0:42',
+    videoTeaser: 'Bubble Cannon Cluster Burst & Massive Avalanche Drop',
+    playableType: 'bubbleshooter',
+  },
+  {
+    id: 'spell-wizard',
+    gzCode: 'zMxz8LNrp',
+    title: 'Spell Wizard',
+    category: 'originals',
+    categoryLabel: 'Word Puzzle / Logic',
+    tag: 'HOT',
+    tagColor: '#FF5252',
+    maxWin: '2,500x',
+    rtp: '99.0%',
+    players: '4,180',
+    description: 'Pitch your vocabulary and test your spelling wizardry! Connect letter tiles to craft hidden words and score magical multipliers.',
+    coverUrl: 'https://static.gamezop.com/zMxz8LNrp/wall.png',
+    logoUrl: 'https://static.gamezop.com/zMxz8LNrp/square.png',
+    screenshots: [
+      { title: 'Magical Word Grid', url: 'https://static.gamezop.com/zMxz8LNrp/game-1.png' },
+      { title: 'Spell Tile Connections', url: 'https://static.gamezop.com/zMxz8LNrp/game-2.png' },
+      { title: 'Vocabulary Wizardry', url: 'https://static.gamezop.com/zMxz8LNrp/game-3.png' },
+      { title: 'Spell Wizard HD Artwork', url: 'https://static.gamezop.com/zMxz8LNrp/wall.png' },
+    ],
+    videoDuration: '0:40',
+    videoTeaser: 'Spell Wizard Word Combinations & High Score Mystery Run',
+    playableType: 'spellwizard',
   },
   {
     id: 'tic-tac-toe',
@@ -242,8 +243,8 @@ export const GAME_CATALOG = [
     'ludo-dash': 'Q0F6a3Z9Kxk',
     'chess-grandmaster': 'qM2_96N6c6o',
     'sudoku-classic': 'cZ6YvY-c2wU',
-    'assassins-hunt': '1O6QstnCpnc',
-    'snakes-and-ladders': '0kF1_PZ-39I',
+    'bubble-shooter-classic': '1O6QstnCpnc',
+    'spell-wizard': '0kF1_PZ-39I',
     'tic-tac-toe': 'HJ8SnM_3Tnp',
   };
 
@@ -481,70 +482,70 @@ const GAME_RULES = {
       'Use pencil notes for cells that have only 2 possible candidates (pairs). This reveals naked pairs that eliminate possibilities elsewhere.',
     ],
   },
-  'assassins-hunt': {
-    genre: 'Wild West Quick-Draw Action',
-    objective: 'Infiltrate outlaw hideouts, eliminate wanted bandits popping out from saloons and rooftops, protect innocent bystanders, and claim high-roller bounties.',
-    controls: 'Click or tap on bandit targets to fire your revolver. Tap cylinder or wait for brief lulls to reload ammunition.',
+  'bubble-shooter-classic': {
+    genre: 'Classic Color-Match Bubble Arcade',
+    objective: 'Aim and launch colored bubbles to form clusters of 3 or more identical colors, clearing the grid before bubbles descend to the bottom line.',
+    controls: 'Aim with mouse or finger to set trajectory. Click or tap to fire bubble projectile toward target clusters.',
     rules: [
       {
-        title: 'Quick-Draw Target Acquisition',
-        desc: 'Bandits peer out from saloon doors, balconies, and barrels. Neutralize them before their countdown timer expires and they open fire.',
+        title: '3-Match Cluster Burst',
+        desc: 'Connecting 3 or more bubbles of the same color bursts them immediately, earning points and clearing ceiling space.',
       },
       {
-        title: 'Critical Headshot Multipliers',
-        desc: 'Aiming for the head grants a 3x Critical Hit bonus, clearing bandits in 1 shot and boosting your bounty multiplier.',
+        title: 'Avalanche Drop Bonuses',
+        desc: 'Popping anchor bubbles causes all unattached bubbles hanging below them to drop freely, awarding huge avalanche combo multipliers.',
       },
       {
-        title: 'Civilian & Hostage Protection',
-        desc: 'Unarmed townspeople and saloon bartenders will occasionally appear. Firing upon a civilian incurs a heavy -500 bounty penalty.',
+        title: 'Wall Cushion Bank Shots',
+        desc: 'Bounce your bubble off the left or right side walls to reach tricky pockets and hidden matching clusters behind obstacles.',
       },
       {
-        title: 'Chamber Ammo Management',
-        desc: 'Your revolver holds 6 rounds. Running dry during an outlaw firefight leaves you defenseless—always reload during brief lulls in action.',
+        title: 'Foul Counter & Board Descent',
+        desc: 'Shoots that fail to burst any bubbles increment the foul counter. Once filled, a new ceiling row of bubbles descends.',
       },
     ],
     scoring: [
-      { label: 'Bandit Takedown', value: '+150 Bounty' },
-      { label: 'Critical Headshot', value: '+500 Bounty (3x)' },
-      { label: 'Civilian Hit Penalty', value: '-500 Bounty (-1 Life)' },
-      { label: 'Boss Outlaw Defeat', value: '+2,500 Bounty Pool' },
+      { label: 'Cluster Pop (3+ Bubbles)', value: '+30 pts per bubble' },
+      { label: 'Avalanche Drop', value: '+100 pts per hanging bubble' },
+      { label: 'Board Clear Jackpot', value: '+5,000 pts (3.0x)' },
+      { label: 'Bottom Line Breach', value: 'Round Over' },
     ],
     proTips: [
-      'Reload after taking down 3-4 targets rather than waiting until your chamber is empty.',
-      'Identify bandits by their bandanas and raised guns; never shoot immediately without verifying the target is not a civilian.',
+      'Focus on snipping root bubbles high on the grid to drop massive clusters below in a single well-placed shot.',
+      'Always observe the next bubble color in the launcher queue to plan two moves ahead.',
     ],
   },
-  'snakes-and-ladders': {
-    genre: 'Classic Race-to-100 Board Game',
-    objective: 'Be the first player to travel from tile 1 to tile 100 on the grid, climbing ladders for massive leaps and avoiding slippery serpents.',
-    controls: 'Click the animated dice cup to roll 1-6. Your token automatically glides along the numbered tiles.',
+  'spell-wizard': {
+    genre: 'Magical Word Search & Spelling Puzzle',
+    objective: 'Cast your vocabulary spells to find and connect hidden words across letter tile grids, unlocking magical combo multipliers.',
+    controls: 'Click and drag across adjacent letters or tap in sequence to form valid words. Submit to cast the word spell.',
     rules: [
       {
-        title: 'Dice Roll & Movement',
-        desc: 'Roll a 1 through 6 on your turn. Your token advances that exact number of squares following the zigzag path from 1 up to 100.',
+        title: 'Letter Grid Connecting',
+        desc: 'Swipe or click across adjacent letter tiles in horizontal, vertical, or diagonal directions to construct valid English words.',
       },
       {
-        title: 'Ladder Ascent Boost',
-        desc: 'Landing exactly on a square with the base of a ladder automatically propels your token all the way up to the top rung.',
+        title: 'Word Length Multipliers',
+        desc: 'Longer words grant exponentially higher multipliers. Words with 5 or more letters award enchanted bonus points.',
       },
       {
-        title: 'Snake Slide Penalty',
-        desc: 'Landing on a tile containing a snake head causes your token to slide down the serpentine body to the tip of its tail.',
+        title: 'Golden Rune Tiles',
+        desc: 'Incorporate shimmering golden letter tiles into your words to double or triple your spell points for that turn.',
       },
       {
-        title: 'Exact Roll to Win (Tile 100)',
-        desc: 'To finish, you must land on tile 100 by exact dice roll. If your roll exceeds the required spaces, your token bounces backwards.',
+        title: 'Vocabulary Spell Mastery',
+        desc: 'Uncover all targeted theme words in the puzzle board to achieve a clean-sweep victory jackpot of up to 2,500x.',
       },
     ],
     scoring: [
-      { label: 'Ladder Climb', value: 'Super Leap Up (+15 to +40 Tiles)' },
-      { label: 'Snake Slide', value: 'Slide Down (-10 to -35 Tiles)' },
-      { label: 'Roll a 6', value: 'Advance 6 + Bonus Extra Roll' },
-      { label: 'Tile 100 Finish', value: 'Winner Takes All Pot' },
+      { label: '3-Letter Word', value: '+50 pts (1.0x)' },
+      { label: '4-Letter Word', value: '+120 pts (1.5x)' },
+      { label: '5+ Letter Spell', value: '+300 pts (3.0x)' },
+      { label: 'Board Clear Sweep', value: '+2,500 pts Jackpot' },
     ],
     proTips: [
-      'Tile 28 and Tile 71 contain the biggest upward ladders—target rolls that can land on these launchpads.',
-      'Beware of tile 98, which houses the giant boa constrictor that slides you back down to tile 28 right before the finish line.',
+      'Look for common prefixes (un-, re-, pre-) and suffixes (-ing, -ed, -s) to extend short root words into high-scoring long words.',
+      'Always route your word path through glowing bonus tiles whenever possible to maximize round points.',
     ],
   },
   'tic-tac-toe': {
@@ -582,14 +583,6 @@ const GAME_RULES = {
   },
 };
 
-// Simulated Live Feed of Real-time Wins
-const INITIAL_LIVE_WINS = [
-  { id: 1, user: '0x3a91...8c4', game: 'Aether Crash', amount: '+420.50', mult: '3.42x', time: '1s ago' },
-  { id: 2, user: '0x8f14...2e9', game: 'Cyber Mines', amount: '+1,250.00', mult: '12.5x', time: '3s ago' },
-  { id: 3, user: '0x12dc...6b7', game: 'Starlight Rush', amount: '+890.00', mult: '45.0x', time: '6s ago' },
-  { id: 4, user: '0x7b28...4f1', game: 'Crypto Blackjack', amount: '+300.00', mult: '2.0x', time: '10s ago' },
-];
-
 export default function GamesLobby() {
   const { user, updateBalance } = useAuth();
   const navigate = useNavigate();
@@ -603,13 +596,68 @@ export default function GamesLobby() {
   const [isVideoPlaying, setIsVideoPlaying] = useState(true);
   const [videoProgress, setVideoProgress] = useState(25);
   const [toastMessage, setToastMessage] = useState(null);
-  const [liveWins, setLiveWins] = useState(INITIAL_LIVE_WINS);
   const [isTheaterMode, setIsTheaterMode] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [iframeKey, setIframeKey] = useState(1);
   const [isIframeLoading, setIsIframeLoading] = useState(true);
   const [showGameAlert, setShowGameAlert] = useState(false);
   const [isForceLandscape, setIsForceLandscape] = useState(false);
+  const [isRoundDeducted, setIsRoundDeducted] = useState(false);
+  const isRoundDeductedRef = useRef(false);
+  const isDeductingRef = useRef(false);
+  const lobbyCurrentScoreRef = useRef(0);
+  const isPrizeAwardedRef = useRef(false);
+
+  useEffect(() => {
+    isRoundDeductedRef.current = isRoundDeducted;
+  }, [isRoundDeducted]);
+
+  // Core Deduction Function: Triggered strictly when game STARTS or RESTARTS in Lobby Modal
+  const handleGameStartDeduction = async (game, isRestart = false) => {
+    if (!game || !user?.walletAddress) return;
+    if (isRoundDeductedRef.current || isDeductingRef.current) return;
+
+    const fee = parseFloat(game.entryPool || '1.00');
+    const balance = parseFloat(user.usdtBalance || '0');
+
+    if (balance < fee) {
+      setToastMessage({
+        text: `❌ Insufficient USDT balance! Entry pool fee is ${fee.toFixed(2)} USDT, but your balance is ${balance.toFixed(2)} USDT.`,
+        type: 'error',
+      });
+      return;
+    }
+
+    isDeductingRef.current = true;
+
+    try {
+      console.log(`[LobbyGameStart] Initiating entry deduction of ${fee} USDT for game: ${game.id} (isRestart: ${isRestart})`);
+      const res = await api.deductGameEntry(user.walletAddress, game.id, fee, game.title || null);
+
+      if (res.success) {
+        updateBalance(res.newBalance);
+        setIsRoundDeducted(true);
+        isRoundDeductedRef.current = true;
+        setToastMessage({
+          text: isRestart
+            ? `🔄 Round Restarted! Entry fee deducted: -${fee.toFixed(2)} USDT (Balance: ${res.newBalance} USDT)`
+            : `🎮 Game Started! Entry fee deducted: -${fee.toFixed(2)} USDT (Balance: ${res.newBalance} USDT)`,
+          type: 'success',
+        });
+      } else {
+        setToastMessage({
+          text: res.message || 'Failed to deduct entry fee.',
+          type: 'error',
+        });
+      }
+    } catch (err) {
+      console.error('[Lobby GameStart Deduction Error]', err);
+      const msg = err.data?.message || err.message || 'Error processing entry';
+      setToastMessage({ text: `❌ ${msg}`, type: 'error' });
+    } finally {
+      isDeductingRef.current = false;
+    }
+  };
 
   // Show Gamezop notice alert for every game, delayed by 3 seconds
   useEffect(() => {
@@ -649,7 +697,34 @@ export default function GamesLobby() {
     };
   }, [activeGameModal, modalTab, isFullScreen]);
 
-  // Print in console whatever value the game sends back (postMessage, callbacks, custom events)
+  // Prize Pool Credit Function: Triggered when state is 'over' and score >= threshold in Lobby
+  const handlePrizeWon = async (game, score, target, prize) => {
+    if (!game || !user?.walletAddress) return;
+
+    try {
+      console.log(`[Lobby: Over] Score ${score} touched/increased threshold ${target}! Crediting prize of ${prize} USDT...`);
+      const res = await api.creditPrizeReward({
+        address: user.walletAddress,
+        gameId: game.id,
+        gameTitle: game.title || null,
+        score,
+        threshold: target,
+        prizeAmount: prize,
+      });
+
+      if (res.success) {
+        updateBalance(res.newBalance);
+        setToastMessage({
+          text: `🎉 WINNER! You reached the threshold score (${score} >= ${target})! Prize Pool of +${prize} USDT credited!`,
+          type: 'success',
+        });
+      }
+    } catch (err) {
+      console.error('[Credit Prize Error]', err);
+    }
+  };
+
+  // Inspect and check responses from Gamezop
   useEffect(() => {
     const handleGameMessage = (event) => {
       if (!event.data) return;
@@ -664,12 +739,119 @@ export default function GamesLobby() {
         }
       }
 
+      // Check and log all responses received from Gamezop
       console.log(
-        '%c🎮 [GAME RETURN VALUE]',
-        'background: #00E676; color: #000000; font-weight: 900; font-size: 13px; padding: 3px 8px; border-radius: 4px;',
+        '%c🎮 [GAMEZOP RESPONSE RECEIVED]',
+        'background: #00E676; color: #000000; font-weight: 900; font-size: 13px; padding: 4px 10px; border-radius: 4px;',
         parsed
       );
-      console.log('[Game Details] Origin:', event.origin, '| Raw Data:', event.data);
+      console.log('[Gamezop Response Details] Origin:', event.origin, '| Raw Data:', event.data);
+
+      const rawState =
+        parsed?.name ??
+        parsed?.state ??
+        parsed?.status ??
+        parsed?.event ??
+        parsed?.action ??
+        parsed?.type ??
+        (typeof parsed === 'string' ? parsed : '');
+      const stateStr = String(rawState).toLowerCase().trim();
+
+      // Extract numerical score if provided in the event
+      const incomingScore =
+        parsed?.score !== undefined ? Number(parsed.score) :
+        parsed?.data?.score !== undefined ? Number(parsed.data.score) :
+        parsed?.payload?.score !== undefined ? Number(parsed.payload.score) :
+        parsed?.points !== undefined ? Number(parsed.points) :
+        parsed?.value !== undefined ? Number(parsed.value) :
+        null;
+
+      if (incomingScore !== null && !isNaN(incomingScore)) {
+        lobbyCurrentScoreRef.current = Math.max(lobbyCurrentScoreRef.current, incomingScore);
+      }
+
+      // 0. RELOAD & RESTART DETECTION:
+      const isReloadOrRestart =
+        stateStr === 'reload' ||
+        stateStr === 'reloaded' ||
+        stateStr === 'restart' ||
+        stateStr === 'restarted' ||
+        stateStr === 'playagain' ||
+        stateStr === 'play_again' ||
+        stateStr === 'retry' ||
+        stateStr === 'rematch' ||
+        stateStr === 'reset' ||
+        stateStr === 'newgame' ||
+        stateStr === 'new_game' ||
+        Boolean(parsed?.reload) ||
+        Boolean(parsed?.restart);
+
+      const isStart =
+        stateStr === 'start' ||
+        stateStr === 'started' ||
+        stateStr === 'gamestart' ||
+        stateStr === 'game_start' ||
+        stateStr === 'gameplaystart' ||
+        stateStr === 'play' ||
+        stateStr === 'roundstart';
+
+      // If reload/restart occurs OR if previous round was completed and a new start arrives:
+      if (isReloadOrRestart || (isPrizeAwardedRef.current && isStart)) {
+        console.log('%c🔄 [LOBBY: RELOAD / RESTART DETECTED] Resetting round state to enable entry deduction...', 'background: #FFB300; color: #000; font-weight: bold;');
+        setIsRoundDeducted(false);
+        isRoundDeductedRef.current = false;
+        isPrizeAwardedRef.current = false;
+        lobbyCurrentScoreRef.current = 0;
+      }
+
+      // 1. DEDUCT MONEY STRICTLY WHEN RETURN STATUS IS 'START'
+      if (isStart) {
+        console.log('%c🚀 [LOBBY: STATE=START DETECTED] Deducting money from user account...', 'background: #39FF88; color: #000; font-weight: bold;', parsed);
+        if (activeGameModal && modalTab === 'play' && !isRoundDeductedRef.current) {
+          handleGameStartDeduction(activeGameModal, isReloadOrRestart);
+        }
+      }
+
+      // 2. TWO REWARD CONDITIONS:
+      // Condition 1: Exceed score or not? (score >= thresholdScore)
+      // Condition 2: Check game over or not? (isGameOver === true)
+      const isGameOver =
+        stateStr === 'over' ||
+        stateStr === 'gameover' ||
+        stateStr === 'game_over' ||
+        stateStr === 'roundend' ||
+        stateStr === 'end' ||
+        stateStr === 'ended';
+
+      if (isGameOver && activeGameModal) {
+        const finalScore = lobbyCurrentScoreRef.current;
+        const target = parseFloat(activeGameModal.thresholdScore || '500');
+        const prize = parseFloat(activeGameModal.prizePool || '100.00');
+
+        const condition1_exceededScore = finalScore >= target;
+        const condition2_gameOver = true;
+
+        console.log('%c🏁 [LOBBY: GAME OVER DETECTED - EVALUATING TWO CONDITIONS]', 'background: #FFD700; color: #000; font-weight: bold;', {
+          'Condition 1 (Score Exceeded?)': condition1_exceededScore ? 'PASSED ✅' : 'FAILED ❌',
+          'Condition 2 (Game Over?)': 'PASSED ✅',
+          finalScore,
+          targetThreshold: target,
+          prizeReward: prize,
+        });
+
+        // Money is credited ONLY if Condition 1 (Score Exceeded) AND Condition 2 (Game Over) are BOTH met
+        if (condition1_exceededScore && condition2_gameOver) {
+          if (!isPrizeAwardedRef.current) {
+            isPrizeAwardedRef.current = true;
+            handlePrizeWon(activeGameModal, finalScore, target, prize);
+          }
+        } else {
+          setToastMessage({
+            text: `🏁 Game Over! Condition 1 Failed: Score ${finalScore} did not exceed target ${target} PTS. No prize reward.`,
+            type: 'info',
+          });
+        }
+      }
     };
 
     const handleCustomEvent = (e) => {
@@ -701,7 +883,7 @@ export default function GamesLobby() {
       window.removeEventListener('gameover', handleCustomEvent);
       window.removeEventListener('gamescore', handleCustomEvent);
     };
-  }, []);
+  }, [activeGameModal, modalTab, user?.walletAddress]);
 
   // Live Crash Mini-Game Simulation State
   const [crashState, setCrashState] = useState({
@@ -718,41 +900,30 @@ export default function GamesLobby() {
   const [minesWonAmount, setMinesWonAmount] = useState(0);
   const [minesGameOver, setMinesGameOver] = useState(false);
 
-  // Periodic random live bets in feed
-  useEffect(() => {
-    const games = ['Aether Crash', 'Cyber Mines', 'Starlight Rush', 'Plinko Galaxy', 'Pixel Dice'];
-    const interval = setInterval(() => {
-      const randGame = games[Math.floor(Math.random() * games.length)];
-      const randAmt = (Math.random() * 250 + 15).toFixed(2);
-      const randMult = (Math.random() * 5 + 1.2).toFixed(2);
-      const randAddr = `0x${Math.random().toString(16).substring(2, 6)}...${Math.random().toString(16).substring(2, 5)}`;
-
-      setLiveWins((prev) => [
-        {
-          id: Date.now(),
-          user: randAddr,
-          game: randGame,
-          amount: `+${randAmt}`,
-          mult: `${randMult}x`,
-          time: 'Just now',
-        },
-        ...prev.slice(0, 5),
-      ]);
-    }, 4500);
-
-    return () => clearInterval(interval);
-  }, []);
-
   // Filter and sort games
   const filteredGames = useMemo(() => {
+    let rawOverrides = {};
+    try {
+      const saved = localStorage.getItem('loyalty_admin_game_overrides');
+      if (saved) rawOverrides = JSON.parse(saved);
+    } catch (_) {}
+
     let list = GAME_CATALOG.filter((game) => {
+      // Hide games paused by admin
+      if (rawOverrides[game.id]?.status === 'paused') return false;
+
       const matchesCategory = selectedCategory === 'all' || game.category === selectedCategory;
       const matchesSearch =
         game.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         game.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         game.categoryLabel.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
-    });
+    }).map((game) => ({
+      ...game,
+      entryPool: rawOverrides[game.id]?.entryPool !== undefined ? rawOverrides[game.id].entryPool : (game.entryPool || '1.00'),
+      prizePool: rawOverrides[game.id]?.prizePool !== undefined ? rawOverrides[game.id].prizePool : (game.prizePool || '100.00'),
+      thresholdScore: rawOverrides[game.id]?.thresholdScore !== undefined ? rawOverrides[game.id].thresholdScore : (game.thresholdScore || '500'),
+    }));
 
     if (sortBy === 'rtp') {
       list.sort((a, b) => parseFloat(b.rtp) - parseFloat(a.rtp));
@@ -768,15 +939,21 @@ export default function GamesLobby() {
   const [tttTurn, setTttTurn] = useState('X');
   const [tttWinner, setTttWinner] = useState(null);
 
-  // Open Game Launcher Modal
+  // Open Game Launcher Modal (does NOT deduct on button click)
   const handleLaunchGame = (game, defaultTab = 'play') => {
+    if (!game) return;
+
+    setIsRoundDeducted(false);
+    isRoundDeductedRef.current = false;
+    isPrizeAwardedRef.current = false;
+    lobbyCurrentScoreRef.current = 0;
     setActiveGameModal(game);
     setModalTab(defaultTab);
     setActiveScreenshotIndex(0);
     setIsVideoPlaying(true);
     setVideoProgress(18);
     setIsIframeLoading(true);
-    console.log('[GameLaunch] Opening game:', {
+    console.log('[GameLaunch] Opening game modal (deduction will trigger strictly on status start):', {
       id: game?.id,
       title: game?.title,
       gzCode: game?.gzCode,
@@ -809,6 +986,27 @@ export default function GamesLobby() {
     setTttBoard(Array(9).fill(null));
     setTttTurn('X');
     setTttWinner(null);
+  };
+
+  const handleSwitchToPlayTab = () => {
+    setModalTab('play');
+    setIsIframeLoading(true);
+    setIsRoundDeducted(false);
+    isRoundDeductedRef.current = false;
+    isPrizeAwardedRef.current = false;
+    lobbyCurrentScoreRef.current = 0;
+    setIframeKey((prev) => prev + 1);
+  };
+
+  // Dedicated Restart Function: Resets round state and waits for return status 'start'
+  const handleRestartGameModal = () => {
+    console.log('[GameModal] Restarting game round: will wait for return status "start" to deduct');
+    setIsRoundDeducted(false);
+    isRoundDeductedRef.current = false;
+    isPrizeAwardedRef.current = false;
+    lobbyCurrentScoreRef.current = 0;
+    setIsIframeLoading(true);
+    setIframeKey((prev) => prev + 1);
   };
 
   // Check TicTacToe winner
@@ -951,16 +1149,16 @@ export default function GamesLobby() {
           <div className="hero-grid-overlay" />
           <div className="hero-ambient-glow" />
 
-          {/* Right Side Rotating LXT 3D Emblem with slow rotation */}
-          <div className="hero-rotating-logo-container" aria-label="LXT Rotating Emblem">
+          {/* Right Side Rotating Loyalty Game 3D Emblem with slow rotation */}
+          <div className="hero-rotating-logo-container" aria-label="Loyalty Game Rotating Emblem">
             <div className="rotating-logo-glow" />
             <div className="rotating-logo-ring outer-ring" />
             <div className="rotating-logo-ring inner-ring" />
             <div className="rotating-logo-core">
               <div className="rotating-logo-face">
-                <img src={LogoC} alt="LXT Token Emblem" className="spinning-lxt-logo" />
+                <img src={LogoWebp} alt="Loyalty Game Emblem" className="spinning-lxt-logo" />
                 <div className="rotating-brand-text">
-                  <span>L</span><span className="highlight-green">XT</span>
+                  <span>Loyalty </span><span className="highlight-green">Game</span>
                 </div>
                 <div className="rotating-brand-sub">WEB3 GAMING</div>
               </div>
@@ -1057,31 +1255,12 @@ export default function GamesLobby() {
           </div>
         </section>
 
-        {/* RECENT LIVE WINS TICKER */}
-        <div className="live-ticker-bar">
-          <div className="ticker-label">
-            <Radio size={14} color="#00E676" className="pulse-icon" />
-            <span>LIVE WINNERS</span>
-          </div>
-          <div className="ticker-items-scroller">
-            {liveWins.map((win) => (
-              <div key={win.id} className="ticker-item">
-                <span className="ticker-user">{win.user}</span>
-                <span className="ticker-game">{win.game}</span>
-                <span className="ticker-amount">{win.amount} USDT</span>
-                <span className="ticker-mult">({win.mult})</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* GAMES FILTER & SEARCH BAR */}
         <div className="lobby-controls">
           {/* Category Tabs */}
           <div className="category-tabs">
             {[
               { id: 'all', label: 'All Games', icon: <Gamepad2 size={16} /> },
-              { id: 'crash', label: 'Crash', icon: <Rocket size={16} /> },
               { id: 'originals', label: 'Originals', icon: <Flame size={16} /> },
               { id: 'table', label: 'Table & Cards', icon: <Dice5 size={16} /> },
             ].map((tab) => (
@@ -1214,6 +1393,34 @@ export default function GamesLobby() {
 
                     <p className="game-desc">{game.description}</p>
 
+                    {/* Entry & Prize Pool Info */}
+                    {(game.entryPool || game.prizePool) && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '6px',
+                          background: 'rgba(0, 230, 118, 0.06)',
+                          border: '1px solid rgba(0, 230, 118, 0.2)',
+                          padding: '6px 10px',
+                          borderRadius: '8px',
+                          marginBottom: '12px',
+                          fontSize: '0.78rem',
+                        }}
+                      >
+                        <span style={{ color: '#94a3b8' }}>
+                          Entry: <strong style={{ color: '#FFFFFF' }}>{game.entryPool || '1.00'} USDT</strong>
+                        </span>
+                        <span style={{ color: '#38bdf8', fontWeight: 600 }}>
+                          Win: <strong style={{ color: '#FFFFFF' }}>≥{game.thresholdScore || '500'}</strong> pts
+                        </span>
+                        <span style={{ color: '#00E676', fontWeight: 700 }}>
+                          Pool: {game.prizePool || '100.00'} USDT
+                        </span>
+                      </div>
+                    )}
+
                     {/* Spec Metrics Row (MAX WIN, RTP, ONLINE with user icon) */}
                     <div className="game-specs-panel">
                       <div className="spec-col">
@@ -1315,12 +1522,9 @@ export default function GamesLobby() {
               <div className="modal-header-actions">
                 {/* Mobile-only action buttons (on desktop, these are in the toolbar below) */}
                 <button
-                  onClick={() => {
-                    setIsIframeLoading(true);
-                    setIframeKey((prev) => prev + 1);
-                  }}
+                  onClick={handleRestartGameModal}
                   className="modal-ctrl-btn restart-btn mobile-only-btn"
-                  title="Restart Game"
+                  title="Restart Game (deducts entry fee for new round)"
                 >
                   <RotateCw size={14} />
                 </button>
@@ -1349,9 +1553,21 @@ export default function GamesLobby() {
                 >
                   <Maximize size={15} />
                 </button>
-                <div className="modal-balance-pill">
+                <div className="modal-pool-pill entry-pill" title="Required Entry Pool Fee">
+                  <span style={{ fontSize: '0.68rem', color: '#8D9993' }}>ENTRY:</span>
+                  <span className="pool-pill-val">{activeGameModal.entryPool || '1.00'} USDT</span>
+                </div>
+                <div className="modal-pool-pill" style={{ background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', color: '#38bdf8' }} title="Target Score needed to win Prize Pool">
+                  <span style={{ fontSize: '0.68rem', color: '#7dd3fc' }}>WIN SCORE:</span>
+                  <span className="pool-pill-val" style={{ color: '#ffffff', fontWeight: 700 }}>≥{activeGameModal.thresholdScore || '500'}</span>
+                </div>
+                <div className="modal-pool-pill prize-pill" title="Total Prize Pool">
+                  <Trophy size={13} color="#FFB300" />
+                  <span className="pool-pill-val">{activeGameModal.prizePool || '100.00'} USDT</span>
+                </div>
+                <div className="modal-balance-pill" title="Your Account USDT Balance">
                   <Wallet size={13} color="#00E676" />
-                  <span>{user?.usdtBalance || '0.00'} USDT</span>
+                  <span>{user?.usdtBalance || '50.00'} USDT</span>
                 </div>
                 <button
                   onClick={() => {
@@ -1370,7 +1586,7 @@ export default function GamesLobby() {
             {/* DEMO NAVIGATION TABS (Play Game [LIVE] | Video Trailer | Screenshots | Rules & Specs) */}
             <div className="demo-tabs-nav">
               <button
-                onClick={() => setModalTab('play')}
+                onClick={handleSwitchToPlayTab}
                 className={`demo-tab-btn ${modalTab === 'play' ? 'active' : ''}`}
               >
                 <PlaySquare size={16} />
@@ -1407,12 +1623,9 @@ export default function GamesLobby() {
                     </div>
                     <div className="gz-embed-actions">
                       <button
-                        onClick={() => {
-                          setIsIframeLoading(true);
-                          setIframeKey((prev) => prev + 1);
-                        }}
+                        onClick={handleRestartGameModal}
                         className="gz-action-btn"
-                        title="Restart Game"
+                        title="Restart Game (deducts entry fee for new round)"
                       >
                         <RotateCw size={13} />
                         <span>Restart</span>
@@ -1437,7 +1650,7 @@ export default function GamesLobby() {
                       </a>
                       <div className="modal-balance-pill gz-balance-mobile-inline">
                         <Wallet size={12} color="#00E676" />
-                        <span>{user?.usdtBalance || '0.00'} USDT</span>
+                        <span>{user?.usdtBalance || '50.00'} USDT</span>
                       </div>
                       <button
                         onClick={() => {
@@ -1502,7 +1715,11 @@ export default function GamesLobby() {
                       sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-pointer-lock allow-modals allow-orientation-lock"
                       onLoad={() => {
                         setIsIframeLoading(false);
-                        console.log('[GameIframe] Modal iframe loaded:', activeGameModal.embedUrl);
+                        console.log('[GameIframe] Modal iframe loaded/reloaded (Ready to deduct on status "start"):', activeGameModal.embedUrl);
+                        setIsRoundDeducted(false);
+                        isRoundDeductedRef.current = false;
+                        isPrizeAwardedRef.current = false;
+                        lobbyCurrentScoreRef.current = 0;
                       }}
                     />
                   </div>
@@ -1750,14 +1967,29 @@ export default function GamesLobby() {
               </div>
             </div>
 
+            {/* Prize Pool, Entry Pool & Balance Badges */}
+            <div className="fullscreen-hud-pools">
+              <div className="hud-pool-badge entry-badge" title="Entry Pool Fee">
+                <span className="hud-badge-label">Entry:</span>
+                <span className="hud-badge-value">{activeGameModal.entryPool || '1.00'} USDT</span>
+              </div>
+              <div className="hud-pool-badge prize-badge" title="Total Prize Pool">
+                <Trophy size={13} color="#FFB300" />
+                <span className="hud-badge-label">Prize Pool:</span>
+                <span className="hud-badge-value">{activeGameModal.prizePool || '100.00'} USDT</span>
+              </div>
+              <div className="hud-pool-badge balance-badge" title="Your Account Balance">
+                <Wallet size={13} color="#39FF88" />
+                <span className="hud-badge-label">Balance:</span>
+                <span className="hud-badge-value">{user?.usdtBalance || '50.00'} USDT</span>
+              </div>
+            </div>
+
             <div className="fullscreen-hud-right">
               <button
-                onClick={() => {
-                  setIsIframeLoading(true);
-                  setIframeKey((prev) => prev + 1);
-                }}
+                onClick={handleRestartGameModal}
                 className="fullscreen-hud-btn"
-                title="Restart Game"
+                title="Restart Game (deducts entry fee for new round)"
               >
                 <RotateCw size={14} />
                 <span>Restart</span>

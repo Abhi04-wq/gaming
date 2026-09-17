@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { shortenAddress } from '../services/web3Service';
-import LogoC from '../LogoC.png';
+import LogoWebp from '../logo.webp';
 import {
   LogOut,
   Copy,
@@ -10,6 +10,7 @@ import {
   Zap,
   Globe,
   Wallet,
+  BarChart3,
   Gamepad2,
 } from 'lucide-react';
 
@@ -19,11 +20,15 @@ export default function Navbar({ onCopyToast }) {
   const location = useLocation();
   const [copied, setCopied] = useState(false);
 
+  // Tab active state: Games active on lobby + in-game pages, Income Details on ledger page
+  const isGamesActive = location.pathname === '/games' || location.pathname.startsWith('/play');
+  const isIncomeActive = location.pathname === '/income-details';
+
   const handleCopy = () => {
     if (user?.walletAddress) {
       navigator.clipboard.writeText(user.walletAddress);
       setCopied(true);
-      if (onCopyToast) onCopyToast('Wallet address copied to clipboard!');
+      if (onCopyToast) onCopyToast('Wallet address copied to clipboard');
       setTimeout(() => setCopied(false), 2000);
     }
   };
@@ -33,14 +38,17 @@ export default function Navbar({ onCopyToast }) {
     navigate('/login');
   };
 
-  const getNetworkName = (chainId) => {
-    switch (chainId) {
+  // Get user-friendly network badge
+  const getNetworkBadge = (chainId) => {
+    switch (Number(chainId)) {
       case 1:
         return 'Ethereum';
       case 56:
-        return 'BNB Chain';
+        return 'BSC Mainnet';
       case 137:
         return 'Polygon';
+      case 42161:
+        return 'Arbitrum';
       case 11155111:
         return 'Sepolia';
       default:
@@ -54,30 +62,101 @@ export default function Navbar({ onCopyToast }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
           <Link to="/games" className="logo-brand">
             <div className="logo-icon logo-icon-img-wrap">
-              <img src={LogoC} alt="LXT Logo" className="navbar-lxt-logo" />
+              <img src={LogoWebp} alt="Loyalty Game Logo" className="navbar-lxt-logo" />
             </div>
             <span>
-              L<span style={{ color: '#00E676' }}>XT</span>
+              Loyalty <span style={{ color: '#00E676' }}>Game</span>
             </span>
           </Link>
-
-          {/* Primary Navigation Menu */}
-          {user && (
-            <nav className="navbar-links">
-              <Link
-                to="/games"
-                className={`nav-item-link ${location.pathname === '/games' || location.pathname === '/' ? 'active' : ''}`}
-              >
-                <Gamepad2 size={16} />
-                <span>Games Lobby</span>
-              </Link>
-            </nav>
-          )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {user ? (
             <>
+              {/* Right-side Toggle: Income Details | Game (active follows current route) */}
+              <nav
+                aria-label="Primary"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: 'rgba(8, 13, 10, 0.92)',
+                  border: '1.5px solid rgba(0, 230, 118, 0.55)',
+                  borderRadius: '999px',
+                  padding: '4px',
+                  boxShadow: '0 0 14px rgba(0, 230, 118, 0.18)',
+                }}
+              >
+                <Link
+                  to="/income-details"
+                  title="View Income Details - Credits, Debits & Transaction History"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '7px 16px',
+                    borderRadius: '999px',
+                    fontSize: '0.74rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                    textDecoration: 'none',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.2s ease',
+                    ...(isIncomeActive
+                      ? {
+                          background: 'rgba(0, 230, 118, 0.20)',
+                          border: '1.5px solid #00E676',
+                          color: '#00E676',
+                          boxShadow:
+                            '0 0 14px rgba(0, 230, 118, 0.55), inset 0 0 10px rgba(0, 230, 118, 0.18)',
+                        }
+                      : {
+                          background: 'transparent',
+                          border: '1.5px solid transparent',
+                          color: '#7d8f87',
+                        }),
+                  }}
+                >
+                  <BarChart3 size={13} />
+                  <span>Income</span>
+                </Link>
+                <Link
+                  to="/games"
+                  title="Go to Games Lobby"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '7px 16px',
+                    borderRadius: '999px',
+                    fontSize: '0.74rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                    textDecoration: 'none',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.2s ease',
+                    ...(isGamesActive
+                      ? {
+                          background: 'rgba(0, 230, 118, 0.20)',
+                          border: '1.5px solid #00E676',
+                          color: '#00E676',
+                          boxShadow:
+                            '0 0 14px rgba(0, 230, 118, 0.55), inset 0 0 10px rgba(0, 230, 118, 0.18)',
+                        }
+                      : {
+                          background: 'transparent',
+                          border: '1.5px solid transparent',
+                          color: '#7d8f87',
+                        }),
+                  }}
+                >
+                  <Gamepad2 size={13} />
+                  <span>Game</span>
+                </Link>
+              </nav>
+
               {/* Live USDT Balance Chip */}
               <Link
                 to="/dashboard"
@@ -87,7 +166,7 @@ export default function Navbar({ onCopyToast }) {
                 <div className="balance-dot" />
                 <div className="balance-info">
                   <span className="balance-label">USDT</span>
-                  <span className="balance-val">{user?.usdtBalance || '0.00'}</span>
+                  <span className="balance-val">{user?.usdtBalance || '50.00'}</span>
                 </div>
               </Link>
 

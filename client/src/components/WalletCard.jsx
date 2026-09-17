@@ -1,12 +1,11 @@
 import React from 'react';
-import { Loader2, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react';
+import { Loader2, ArrowRight, ShieldCheck } from 'lucide-react';
 
 export default function WalletCard({
   wallet,
   isConnecting,
   isDetected,
   onConnect,
-  onDemoConnect,
 }) {
   const getWalletIcon = (name) => {
     switch (name) {
@@ -79,6 +78,24 @@ export default function WalletCard({
             <span className="wallet-badge">
               {wallet.badge}
             </span>
+            {isDetected && (
+              <span
+                style={{
+                  background: 'rgba(0, 230, 118, 0.15)',
+                  color: '#00E676',
+                  border: '1px solid rgba(0, 230, 118, 0.4)',
+                  fontSize: '0.68rem',
+                  fontWeight: 600,
+                  padding: '2px 7px',
+                  borderRadius: '10px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                ● Detected
+              </span>
+            )}
           </div>
           <p className="wallet-desc">{wallet.description}</p>
         </div>
@@ -91,24 +108,13 @@ export default function WalletCard({
             <span>Connecting...</span>
           </button>
         ) : (
-          <>
-            <button
-              onClick={() => onConnect(wallet.name)}
-              className="btn-primary wallet-connect-btn"
-            >
-              <span>Connect</span>
-              <ArrowRight size={14} />
-            </button>
-
-            <button
-              onClick={() => onDemoConnect(wallet.name)}
-              title="Instant demo connection using cryptographic ethers.js wallet"
-              className="btn-secondary wallet-demo-btn"
-            >
-              <Sparkles size={13} color="#00E676" />
-              <span>Demo</span>
-            </button>
-          </>
+          <button
+            onClick={() => onConnect(wallet.name)}
+            className="btn-primary wallet-connect-btn"
+          >
+            <span>Connect</span>
+            <ArrowRight size={14} />
+          </button>
         )}
       </div>
 

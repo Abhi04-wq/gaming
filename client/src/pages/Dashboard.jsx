@@ -17,43 +17,37 @@ import {
   Sparkles,
   ExternalLink,
   Layers,
-  ArrowUpRight,
   TrendingUp,
 } from 'lucide-react';
 
 export default function Dashboard() {
-  const { user, updateBalance } = useAuth();
+  const { user, updateBalance, refreshProfile } = useAuth();
 
-  const [liveBalance, setLiveBalance] = useState(user?.usdtBalance || '0.00');
+  const [liveBalance, setLiveBalance] = useState(user?.usdtBalance || '50.00');
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
 
-  // Sync blockchain USDT balance on load
   useEffect(() => {
-    if (user?.walletAddress) {
-      handleRefreshBalance();
+    if (user?.usdtBalance) {
+      setLiveBalance(user.usdtBalance);
     }
-  }, [user?.walletAddress]);
+  }, [user?.usdtBalance]);
 
   const handleRefreshBalance = async () => {
     if (!user?.walletAddress) return;
     setBalanceLoading(true);
 
     try {
-      const result = await fetchLiveUsdtBalance(user.walletAddress, user.chainId || 1);
-      setLiveBalance(result.formatted);
-      updateBalance(result.formatted);
+      if (refreshProfile) {
+        await refreshProfile();
+      }
       setToastMessage({
-        text: `USDT Balance synced with blockchain: ${result.formatted} USDT`,
+        text: `USDT Token balance updated: ${user?.usdtBalance || liveBalance} USDT`,
         type: 'success',
       });
     } catch (err) {
-      console.error('[Failed to refresh USDT balance]', err);
-      setToastMessage({
-        text: 'Could not sync live balance from RPC. Using cached balance.',
-        type: 'info',
-      });
+      console.error('[Failed to refresh balance]', err);
     } finally {
       setBalanceLoading(false);
     }
@@ -162,7 +156,7 @@ export default function Dashboard() {
                 <span>Web3 Session Active</span>
               </div>
               <h1 style={{ fontSize: '2.2rem', marginBottom: '6px', color: '#FFFFFF' }}>
-                Welcome to <span className="gradient-text">LXT</span>
+                Welcome to <span className="gradient-text">Loyalty Game</span>
               </h1>
               <p style={{ color: '#A3A3A3', fontSize: '0.95rem' }}>
                 Manage your decentralized wallet identity, USDT balance, and Web3 portfolio.
@@ -213,7 +207,7 @@ export default function Dashboard() {
           </div>
 
           {/* Large Hero Card: USDT Balance */}
-          <div style={{ marginBottom: '32px' }}>
+          <div style={{ marginBottom: '24px' }}>
             <UsdtCard
               balance={liveBalance}
               walletAddress={user?.walletAddress || '0x742d...8f44'}
