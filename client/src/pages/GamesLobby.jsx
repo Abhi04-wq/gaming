@@ -3,9 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { fetchLiveUsdtBalance, shortenAddress } from '../services/web3Service';
+import { fetchGameConfigs } from '../services/gameConfigService';
+import { getLudoSocket } from '../services/ludoSocket';
 import Navbar from '../components/Navbar';
 import Toast from '../components/Toast';
 import LogoWebp from '../logo.webp';
+import LudoGameBoard from '../components/games/ludo/LudoGameBoard';
 import {
   Gamepad2,
   Flame,
@@ -72,27 +75,28 @@ export const GAME_CATALOG = [
     playableType: 'valleyofterror',
   },
   {
-    id: 'fruit-chop',
-    gzCode: 'rkWfy2pXq0r',
-    title: 'Fruit Chop',
+    id: 'bottle-shoot',
+    gzCode: 'B1fSpMkP51m',
+    title: 'Bottle Shoot',
     category: 'originals',
-    categoryLabel: 'Arcade Slicer',
-    tag: 'POPULAR',
-    tagColor: '#00E676',
-    maxWin: '1,800x',
-    rtp: '99.1%',
-    players: '5,290',
-    description: 'Slash through airborne watermelons, pineapples, and oranges in record speed. Dodge bombs to chain slicing combos.',
-    coverUrl: 'https://static.gamezop.com/rkWfy2pXq0r/wall.png',
-    logoUrl: 'https://static.gamezop.com/rkWfy2pXq0r/square.png',
+    categoryLabel: 'Target Shooting / Action',
+    tag: 'HOT',
+    tagColor: '#FF5252',
+    maxWin: '2,800x',
+    rtp: '99.2%',
+    players: '6,380',
+    description: 'Bring out the cowboy in you and shatter flying bottles with precision marksmanship. Keep a level head, dodge penalties, and rack up combo multipliers!',
+    coverUrl: 'https://static.gamezop.com/B1fSpMkP51m/wall.png',
+    logoUrl: 'https://static.gamezop.com/B1fSpMkP51m/square.png',
     screenshots: [
-      { title: 'Blade Slice Combo', url: 'https://static.gamezop.com/rkWfy2pXq0r/wall.png' },
-      { title: 'Juicy Splash Bonus', url: 'https://static.gamezop.com/rkWfy2pXq0r/square.png' },
-      { title: 'Frenzy Multiplier Mode', url: 'https://static.gamezop.com/rkWfy2pXq0r/wall.png' },
+      { title: 'Rapid-Fire Bottle Shatter', url: 'https://static.gamezop.com/B1fSpMkP51m/game-1.png' },
+      { title: 'Bullseye Shooting Accuracy', url: 'https://static.gamezop.com/B1fSpMkP51m/game-2.png' },
+      { title: 'Glass Breaking Streak', url: 'https://static.gamezop.com/B1fSpMkP51m/game-3.png' },
+      { title: 'Bottle Shoot HD Artwork', url: 'https://static.gamezop.com/B1fSpMkP51m/wall.png' },
     ],
     videoDuration: '0:38',
-    videoTeaser: 'Fruit Blade Frenzy & 10x Juicy Critical Slice',
-    playableType: 'fruitchop',
+    videoTeaser: 'Rapid-Fire Bottle Shatter & Bullseye Shooting Streak',
+    playableType: 'bottleshoot',
   },
   {
     id: 'chess-grandmaster',
@@ -139,7 +143,7 @@ export const GAME_CATALOG = [
     ],
     videoDuration: '1:10',
     videoTeaser: 'Live 4-Player Ludo Tournament & Pawn Knockout',
-    playableType: 'generic',
+    playableType: 'native-ludo',
   },
   {
     id: 'sudoku-classic',
@@ -165,97 +169,102 @@ export const GAME_CATALOG = [
     playableType: 'generic',
   },
   {
-    id: 'bubble-shooter-classic',
-    gzCode: 'yVywAGBQ6',
-    title: 'Bubble Shooter Classic',
+    id: 'shade-shuffle',
+    gzCode: 'SyFcNzAX6',
+    title: 'Shade Shuffle',
     category: 'originals',
-    categoryLabel: 'Arcade / Puzzle',
+    categoryLabel: 'Arcade / Reflex & Color',
     tag: 'POPULAR',
     tagColor: '#00E676',
-    maxWin: '3,000x',
-    rtp: '99.2%',
-    players: '6,420',
-    description: 'Match colors, aim your bubble cannon, burst matching cluster chains, and trigger cascading avalanche bonuses!',
-    coverUrl: 'https://static.gamezop.com/yVywAGBQ6/wall.png',
-    logoUrl: 'https://static.gamezop.com/yVywAGBQ6/square.png',
+    maxWin: '3,200x',
+    rtp: '99.1%',
+    players: '5,140',
+    description: 'Balance and rotate dual color wheels to match cascading cosmic meteors. Test your lightning reflexes and build massive combo streaks!',
+    coverUrl: 'https://static.gamezop.com/SyFcNzAX6/wall.png',
+    logoUrl: 'https://static.gamezop.com/SyFcNzAX6/square.png',
     screenshots: [
-      { title: 'Color Match Cluster Pop', url: 'https://static.gamezop.com/yVywAGBQ6/game-1.png' },
-      { title: 'Wall-Bounce Precision Aim', url: 'https://static.gamezop.com/yVywAGBQ6/game-2.png' },
-      { title: 'Avalanche Cascade Bonus', url: 'https://static.gamezop.com/yVywAGBQ6/game-3.png' },
-      { title: 'Bubble Shooter HD Artwork', url: 'https://static.gamezop.com/yVywAGBQ6/wall.png' },
+      { title: 'Dual Neon Wheel Rotation', url: 'https://static.gamezop.com/SyFcNzAX6/game-1.png' },
+      { title: 'Color Match Pulse Frenzy', url: 'https://static.gamezop.com/SyFcNzAX6/game-2.png' },
+      { title: 'High-Speed Orbit Reflexes', url: 'https://static.gamezop.com/SyFcNzAX6/game-3.png' },
+      { title: 'Shade Shuffle HD Artwork', url: 'https://static.gamezop.com/SyFcNzAX6/wall.png' },
     ],
-    videoDuration: '0:42',
-    videoTeaser: 'Bubble Cannon Cluster Burst & Massive Avalanche Drop',
-    playableType: 'bubbleshooter',
+    videoDuration: '0:35',
+    videoTeaser: 'Neon Wheel Rotation & Perfect Color Match Combo Frenzy',
+    playableType: 'shadeshuffle',
   },
   {
-    id: 'spell-wizard',
-    gzCode: 'zMxz8LNrp',
-    title: 'Spell Wizard',
+    id: 'word-finder',
+    gzCode: 'r1K-J3TQ5Ar',
+    title: 'Word Finder',
     category: 'originals',
     categoryLabel: 'Word Puzzle / Logic',
-    tag: 'HOT',
-    tagColor: '#FF5252',
+    tag: 'PROVABLE',
+    tagColor: '#00E676',
     maxWin: '2,500x',
-    rtp: '99.0%',
-    players: '4,180',
-    description: 'Pitch your vocabulary and test your spelling wizardry! Connect letter tiles to craft hidden words and score magical multipliers.',
-    coverUrl: 'https://static.gamezop.com/zMxz8LNrp/wall.png',
-    logoUrl: 'https://static.gamezop.com/zMxz8LNrp/square.png',
+    rtp: '99.3%',
+    players: '4,890',
+    description: 'Sharpen your mind and uncover hidden words in dynamic letter grids. Connect adjacent letters, hunt down thematic vocabulary, and claim high-score multipliers!',
+    coverUrl: 'https://static.gamezop.com/r1K-J3TQ5Ar/wall.png',
+    logoUrl: 'https://static.gamezop.com/r1K-J3TQ5Ar/square.png',
     screenshots: [
-      { title: 'Magical Word Grid', url: 'https://static.gamezop.com/zMxz8LNrp/game-1.png' },
-      { title: 'Spell Tile Connections', url: 'https://static.gamezop.com/zMxz8LNrp/game-2.png' },
-      { title: 'Vocabulary Wizardry', url: 'https://static.gamezop.com/zMxz8LNrp/game-3.png' },
-      { title: 'Spell Wizard HD Artwork', url: 'https://static.gamezop.com/zMxz8LNrp/wall.png' },
+      { title: 'Letter Grid Word Matrix', url: 'https://static.gamezop.com/r1K-J3TQ5Ar/game-1.png' },
+      { title: 'Omnidirectional Word Trace', url: 'https://static.gamezop.com/r1K-J3TQ5Ar/game-2.png' },
+      { title: 'Thematic Word Unveil', url: 'https://static.gamezop.com/r1K-J3TQ5Ar/game-3.png' },
+      { title: 'Word Finder HD Artwork', url: 'https://static.gamezop.com/r1K-J3TQ5Ar/wall.png' },
     ],
-    videoDuration: '0:40',
-    videoTeaser: 'Spell Wizard Word Combinations & High Score Mystery Run',
-    playableType: 'spellwizard',
+    videoDuration: '0:42',
+    videoTeaser: 'Word Search Grid Solving & Consecutive Word Find Blitz',
+    playableType: 'wordfinder',
   },
   {
-    id: 'tic-tac-toe',
-    gzCode: 'H1WmafkP9JQ',
-    title: 'Tic Tac Toe Master',
-    category: 'originals',
-    categoryLabel: 'Quick Duel',
-    tag: 'INSTANT',
+    id: 'carrom-hero',
+    gzCode: 'H1Hgyn6XqAS',
+    title: 'Carrom Hero',
+    category: 'table',
+    categoryLabel: 'Board / Strategy Duel',
+    tag: 'VIP',
     tagColor: '#39FF88',
-    maxWin: '2.0x',
-    rtp: '99.5%',
-    players: '1,680',
-    description: '3x3 neon grid showdown. Play X or O, block opponent angles, and trigger consecutive win streak jackpots.',
-    coverUrl: 'https://static.gamezop.com/H1WmafkP9JQ/wall.png',
-    logoUrl: 'https://static.gamezop.com/H1WmafkP9JQ/square.png',
+    maxWin: '4,000x',
+    rtp: '99.4%',
+    players: '7,920',
+    description: 'The premier online Carrom showdown! Strike, pocket carrom men, sink the Queen with cover, and conquer rivals across Freestyle and Professional modes.',
+    coverUrl: 'https://static.gamezop.com/H1Hgyn6XqAS/wall.png',
+    logoUrl: 'https://static.gamezop.com/H1Hgyn6XqAS/square.png',
     screenshots: [
-      { title: '3x3 Neon Grid Arena', url: 'https://static.gamezop.com/H1WmafkP9JQ/wall.png' },
-      { title: 'Diagonal Win Combo', url: 'https://static.gamezop.com/H1WmafkP9JQ/square.png' },
-      { title: 'Streak Multiplier Bonus', url: 'https://static.gamezop.com/H1WmafkP9JQ/wall.png' },
+      { title: 'Classic Board Striker Setup', url: 'https://static.gamezop.com/H1Hgyn6XqAS/game-1.png' },
+      { title: 'Queen Pocket & Cover Aim', url: 'https://static.gamezop.com/H1Hgyn6XqAS/game-2.png' },
+      { title: 'Freestyle Tournament Arena', url: 'https://static.gamezop.com/H1Hgyn6XqAS/game-3.png' },
+      { title: 'Carrom Hero HD Artwork', url: 'https://static.gamezop.com/H1Hgyn6XqAS/wall.png' },
     ],
-    videoDuration: '0:25',
-    videoTeaser: 'Unbeatable AI Duel & Fast Win Streak Strategy',
-    playableType: 'tictactoe',
+    videoDuration: '0:45',
+    videoTeaser: 'Carrom Hero Master Trick Shots & Queen Cover Pocket Blitz',
+    playableType: 'carrom',
   },
 ].map((game) => {
   const youtubeMap = {
     'valley-of-terror': '1O6QstnCpnc',
+    'bottle-shoot': '1O6QstnCpnc',
     'fruit-chop': 'M8Xog3seOU8',
     'ludo-with-friends': 'Q0F6a3Z9Kxk',
     'ludo-dash': 'Q0F6a3Z9Kxk',
     'chess-grandmaster': 'qM2_96N6c6o',
     'sudoku-classic': 'cZ6YvY-c2wU',
+    'shade-shuffle': 'p5-C3LCCkfM',
     'bubble-shooter-classic': '1O6QstnCpnc',
+    'word-finder': '0kF1_PZ-39I',
     'spell-wizard': '0kF1_PZ-39I',
+    'carrom-hero': 'HJ8SnM_3Tnp',
+    'carrom': 'HJ8SnM_3Tnp',
     'tic-tac-toe': 'HJ8SnM_3Tnp',
   };
 
   const yId = youtubeMap[game.id] || 'p5-C3LCCkfM';
-  const directUrl =
-    game.id === 'ludo-with-friends' || game.id === 'ludo-dash'
-      ? 'https://gamescdn.gamezop.com/_game-files/SJRX12TXcRH/index.html'
-      : `https://gamescdn.gamezop.com/_game-files/${game.gzCode}/index.html`;
+  const directUrl = `/play/${game.id}`;
 
+  const isFixedThreshold = game.id === 'carrom-hero' || game.id === 'carrom' || game.id === 'chess-grandmaster' || game.id === 'chess';
   return {
     ...game,
+    thresholdScore: isFixedThreshold ? '1' : (game.thresholdScore || '500'),
     embedUrl: `https://gamescdn.gamezop.com/_game-files/${game.gzCode}/index.html`,
     directUrl,
     youtubeId: yId,
@@ -270,11 +279,8 @@ export const GAME_CATALOG = [
 });
 
 export const getGameRedirectUrl = (game) => {
-  if (!game) return 'https://gamescdn.gamezop.com/_game-files/SJRX12TXcRH/index.html';
-  if (game.id === 'ludo-with-friends' || game.id === 'ludo-dash') {
-    return 'https://gamescdn.gamezop.com/_game-files/SJRX12TXcRH/index.html';
-  }
-  return game.directUrl || game.embedUrl || `https://gamescdn.gamezop.com/_game-files/${game.gzCode}/index.html`;
+  if (!game) return '/games';
+  return `/play/${game.id}`;
 };
 
 // In-app play page path (your own domain) - keeps your URL in the address
@@ -316,37 +322,37 @@ const GAME_RULES = {
       'Reload preemptively when you have 1-2 bullets remaining rather than waiting for an empty chamber during a zombie swarm.',
     ],
   },
-  'fruit-chop': {
-    genre: 'Fast-Paced Fruit Slicer',
-    objective: 'Slice airborne fruits in rapid succession to trigger combo blitzes, maintain clean blade streaks, and dodge floating explosive bombs.',
-    controls: 'Click & drag or swipe finger across multiple airborne fruits simultaneously to perform combo cuts.',
+  'bottle-shoot': {
+    genre: 'Target Precision & Reflex Shooting',
+    objective: 'Aim your firearm to shatter flying glass bottles in mid-air with lightning precision while avoiding penalty obstacles to build massive combo multipliers.',
+    controls: 'Click or tap on bottles at the exact instant they cross your crosshair to fire bullets and shatter them.',
     rules: [
       {
-        title: 'Airborne Blade Slicing',
-        desc: 'Watermelons, pineapples, apples, and oranges launch upwards. Slice through them before they drop below the screen.',
+        title: 'Airborne Target Shatter',
+        desc: 'Glass bottles launch into the air. Tap or click to shoot them before they fall back down past the lower screen border.',
       },
       {
-        title: 'Multi-Fruit Combo Slices',
-        desc: 'Slicing 3 or more fruits in a single unbroken swipe activates Combo Blitz bonuses (+30 to +100 bonus multiplier points).',
+        title: 'Red Warning Bottles & Hazards',
+        desc: 'Avoid shooting red hazard bottles or explosive decoy containers which incur harsh score penalties and life deductions.',
       },
       {
-        title: 'Avoid Spiked Bombs',
-        desc: 'Black spiked bombs launch mixed with fruits. Cutting any bomb causes an immediate explosion and incurs a strike.',
+        title: 'Bullet Ammo & Reload Rhythm',
+        desc: 'Manage your active bullet chambers. Time reloads when no bottles are airborne to never get caught with an empty cylinder.',
       },
       {
-        title: 'Life & Drop Penalties',
-        desc: 'Allowing 3 un-sliced fruits to drop past the bottom border ends the round. Reaching 5,000 pts awards an extra life.',
+        title: 'Precision Bullseye Streak',
+        desc: 'Consecutive direct hits without missing a shot chain high-scoring cowboy combo multipliers up to 2,800x.',
       },
     ],
     scoring: [
-      { label: 'Single Fruit Cut', value: '+10 pts' },
-      { label: '3-Fruit Combo', value: '+30 pts (+2x)' },
-      { label: '5-Fruit Combo Blitz', value: '+100 pts (+5x)' },
-      { label: 'Spiked Bomb Strike', value: 'Instant Round Penalty' },
+      { label: 'Green Bottle Shatter', value: '+100 pts' },
+      { label: 'Gold Bottle Jackpot', value: '+300 pts (2.0x)' },
+      { label: '5-Bottle Hit Streak', value: '+500 pts Bonus' },
+      { label: 'Red Decoy / Hazard Hit', value: '-1 Life Strike' },
     ],
     proTips: [
-      'Wait for fruits to reach the apex (highest point) of their arc where their vertical speed slows to zero before slicing.',
-      'Make short, precise diagonal swipes rather than wild sweeping strokes to avoid accidentally clipping bombs.',
+      'Fire right when a bottle reaches the peak of its trajectory (apex) when it momentarily decelerates to zero vertical velocity.',
+      'Avoid spam-clicking; every missed shot resets your accuracy streak bonus.',
     ],
   },
   'ludo-with-friends': {
@@ -482,103 +488,136 @@ const GAME_RULES = {
       'Use pencil notes for cells that have only 2 possible candidates (pairs). This reveals naked pairs that eliminate possibilities elsewhere.',
     ],
   },
-  'bubble-shooter-classic': {
-    genre: 'Classic Color-Match Bubble Arcade',
-    objective: 'Aim and launch colored bubbles to form clusters of 3 or more identical colors, clearing the grid before bubbles descend to the bottom line.',
-    controls: 'Aim with mouse or finger to set trajectory. Click or tap to fire bubble projectile toward target clusters.',
+  'shade-shuffle': {
+    genre: 'Fast-Paced Color Matching & Reflex Arcade',
+    objective: 'Rotate dual neon wheel segments to match the hue of oncoming descending cosmic orbs before collision, surviving escalating orbit speeds.',
+    controls: 'Click or tap left/right halves of the screen (or use arrow keys / swipe) to rotate the matching colored segments into position.',
     rules: [
       {
-        title: '3-Match Cluster Burst',
-        desc: 'Connecting 3 or more bubbles of the same color bursts them immediately, earning points and clearing ceiling space.',
+        title: 'Color Wheel Alignment',
+        desc: 'Incoming colored orbs plunge toward the central hub. Rotate wheel segments so the matching color absorbs the falling orb.',
       },
       {
-        title: 'Avalanche Drop Bonuses',
-        desc: 'Popping anchor bubbles causes all unattached bubbles hanging below them to drop freely, awarding huge avalanche combo multipliers.',
+        title: 'Combo Streak Multipliers',
+        desc: 'Successfully absorbing consecutive orbs without a miscue raises your multiplier gauge from 1.0x up to 3,200x.',
       },
       {
-        title: 'Wall Cushion Bank Shots',
-        desc: 'Bounce your bubble off the left or right side walls to reach tricky pockets and hidden matching clusters behind obstacles.',
+        title: 'Escalating Orbit Velocity',
+        desc: 'As your score climbs, orbs spawn faster and alternate drop angles, requiring split-second reaction times.',
       },
       {
-        title: 'Foul Counter & Board Descent',
-        desc: 'Shoots that fail to burst any bubbles increment the foul counter. Once filled, a new ceiling row of bubbles descends.',
+        title: 'Color Mismatch Game Over',
+        desc: 'Allowing an orb to collide with a mismatching color segment shatters the wheel and ends the current round.',
       },
     ],
     scoring: [
-      { label: 'Cluster Pop (3+ Bubbles)', value: '+30 pts per bubble' },
-      { label: 'Avalanche Drop', value: '+100 pts per hanging bubble' },
-      { label: 'Board Clear Jackpot', value: '+5,000 pts (3.0x)' },
-      { label: 'Bottom Line Breach', value: 'Round Over' },
+      { label: 'Correct Color Match', value: '+50 pts' },
+      { label: '5x Clean Streak', value: '+250 pts Combo' },
+      { label: '10x Speed Frenzy', value: '+1,000 pts (3.0x)' },
+      { label: 'Color Mismatch', value: 'Round Over' },
     ],
     proTips: [
-      'Focus on snipping root bubbles high on the grid to drop massive clusters below in a single well-placed shot.',
-      'Always observe the next bubble color in the launcher queue to plan two moves ahead.',
+      'Keep your eyes fixed slightly above the wheel rim so you can anticipate the color order of approaching orbs early.',
+      'Develop a steady double-tap rhythm to quickly flip opposite color segments with minimal delay.',
     ],
   },
-  'spell-wizard': {
-    genre: 'Magical Word Search & Spelling Puzzle',
-    objective: 'Cast your vocabulary spells to find and connect hidden words across letter tile grids, unlocking magical combo multipliers.',
-    controls: 'Click and drag across adjacent letters or tap in sequence to form valid words. Submit to cast the word spell.',
+  'word-finder': {
+    genre: 'Vocabulary Search & Matrix Deductive Logic',
+    objective: 'Scan the grid of alphabet letters to detect and highlight hidden words across all directions before time runs out.',
+    controls: 'Click and drag or swipe your finger across adjacent letter tiles (horizontal, vertical, or diagonal) to highlight valid words.',
     rules: [
       {
-        title: 'Letter Grid Connecting',
-        desc: 'Swipe or click across adjacent letter tiles in horizontal, vertical, or diagonal directions to construct valid English words.',
+        title: 'Omnidirectional Word Hunting',
+        desc: 'Words can be laid out forwards, backwards, vertically, horizontally, or diagonally across the letter matrix.',
       },
       {
-        title: 'Word Length Multipliers',
-        desc: 'Longer words grant exponentially higher multipliers. Words with 5 or more letters award enchanted bonus points.',
+        title: 'Word Length Scoring',
+        desc: 'Finding longer words (5+ letters) grants exponential bonus points and charges your hints and timer multipliers.',
       },
       {
-        title: 'Golden Rune Tiles',
-        desc: 'Incorporate shimmering golden letter tiles into your words to double or triple your spell points for that turn.',
+        title: 'Theme Target Lists',
+        desc: 'Clear all listed target vocabulary words to earn the board completion sweep bonus and trigger progressive win multipliers.',
       },
       {
-        title: 'Vocabulary Spell Mastery',
-        desc: 'Uncover all targeted theme words in the puzzle board to achieve a clean-sweep victory jackpot of up to 2,500x.',
+        title: 'Time Extension Milestones',
+        desc: 'Finding hidden bonus words not on the primary list adds extra seconds to your round clock.',
       },
     ],
     scoring: [
-      { label: '3-Letter Word', value: '+50 pts (1.0x)' },
-      { label: '4-Letter Word', value: '+120 pts (1.5x)' },
-      { label: '5+ Letter Spell', value: '+300 pts (3.0x)' },
-      { label: 'Board Clear Sweep', value: '+2,500 pts Jackpot' },
+      { label: '3-4 Letter Word', value: '+80 pts' },
+      { label: '5-6 Letter Word', value: '+200 pts (1.5x)' },
+      { label: '7+ Letter Master Word', value: '+500 pts (3.0x)' },
+      { label: 'Full Board Clearance', value: '+2,500 pts Jackpot' },
     ],
     proTips: [
-      'Look for common prefixes (un-, re-, pre-) and suffixes (-ing, -ed, -s) to extend short root words into high-scoring long words.',
-      'Always route your word path through glowing bonus tiles whenever possible to maximize round points.',
+      'Scan the grid for uncommon letters (Z, X, Q, J, K) first; words containing them are easier to locate quickly.',
+      'Follow letter pairs or common phonics (TH, CH, SH, ING) to spot diagonal and reverse words effortlessly.',
     ],
   },
-  'tic-tac-toe': {
-    genre: 'Neon Grid Strategy Duel',
-    objective: 'Place 3 of your marks (X or O) in a horizontal, vertical, or diagonal line on the 3x3 grid while blocking your opponent from doing the same.',
-    controls: 'Click any empty cell on the 3x3 grid on your turn to place your neon symbol.',
+  'carrom-hero': {
+    genre: 'Turn-Based Precision Board Strategy',
+    objective: 'Strike and pocket your designated carrom men (Black or White) and the red Queen before your opponent does to win the board jackpot.',
+    controls: 'Position striker along baseline, drag back to adjust shot power and angle line, then release to strike coins.',
     rules: [
       {
-        title: 'Turn-Based Grid Placement',
-        desc: 'Players take turns marking empty cells. Player 1 plays green neon "X", Player 2 (or AI bot) plays cyan neon "O".',
+        title: 'Striker Placement & Aiming',
+        desc: 'Position your striker on the baseline touching both lines. Drag back to align your target vector and adjust shot velocity.',
       },
       {
-        title: 'Winning 3-in-a-Row Line',
-        desc: 'The first player to align 3 matching symbols horizontally, vertically, or diagonally wins the round and claims the win multiplier.',
+        title: 'Queen Pocket & Cover Rule',
+        desc: 'Sinking the red Queen requires potting a cover coin on the same or immediately subsequent shot to secure Queen bonus points.',
       },
       {
-        title: 'Draw / Push Stalemate',
-        desc: 'If all 9 cells are filled and neither player has achieved a 3-in-a-row line, the match is declared a Draw (Push) and bets are returned.',
+        title: 'Freestyle vs Professional Modes',
+        desc: 'Freestyle allows pocketing any coin for points (White = 10, Black = 5, Queen = 30). Professional designates black or white to each player.',
       },
       {
-        title: 'Consecutive Streak Multipliers',
-        desc: 'Winning multiple consecutive rounds builds up a streak multiplier, multiplying payouts from 2.0x up to 10.0x.',
+        title: 'Foul & Penalty Pockets',
+        desc: 'Pocketing the striker incurs a foul penalty: one of your previously pocketed carrom men returns to the center circle.',
       },
     ],
     scoring: [
-      { label: 'Round Win (3-in-a-Row)', value: '2.0x Payout' },
-      { label: '3-Round Win Streak', value: '3.5x Multiplier' },
-      { label: '5-Round Win Streak', value: '10.0x Jackpot' },
-      { label: 'Tie / Draw', value: 'Push (100% Bet Refunded)' },
+      { label: 'White Coin Pocketed', value: '+10 pts (Freestyle)' },
+      { label: 'Black Coin Pocketed', value: '+5 pts (Freestyle)' },
+      { label: 'Queen + Cover Shot', value: '+30 pts Bonus' },
+      { label: 'Striker Foul Penalty', value: '-1 Coin Returned' },
     ],
     proTips: [
-      'First move advantage: If you go first, claim the center square (tile 5) or one of the 4 corner squares to establish a fork setup.',
-      'Create a "Fork": Aim to place two non-adjacent marks so that you threaten two different winning lines simultaneously; opponent can only block one.',
+      'Use gentle rebound bank shots off the side cushions to loosen tight clusters around the center circle.',
+      'Never pocket the Queen unless you have a straightforward, high-probability cover shot lined up for the next turn.',
+    ],
+  },
+  'carrom': {
+    genre: 'Turn-Based Precision Board Strategy',
+    objective: 'Strike and pocket your designated carrom men (Black or White) and the red Queen before your opponent does to win the board jackpot.',
+    controls: 'Position striker along baseline, drag back to adjust shot power and angle line, then release to strike coins.',
+    rules: [
+      {
+        title: 'Striker Placement & Aiming',
+        desc: 'Position your striker on the baseline touching both lines. Drag back to align your target vector and adjust shot velocity.',
+      },
+      {
+        title: 'Queen Pocket & Cover Rule',
+        desc: 'Sinking the red Queen requires potting a cover coin on the same or immediately subsequent shot to secure Queen bonus points.',
+      },
+      {
+        title: 'Freestyle vs Professional Modes',
+        desc: 'Freestyle allows pocketing any coin for points (White = 10, Black = 5, Queen = 30). Professional designates black or white to each player.',
+      },
+      {
+        title: 'Foul & Penalty Pockets',
+        desc: 'Pocketing the striker incurs a foul penalty: one of your previously pocketed carrom men returns to the center circle.',
+      },
+    ],
+    scoring: [
+      { label: 'White Coin Pocketed', value: '+10 pts (Freestyle)' },
+      { label: 'Black Coin Pocketed', value: '+5 pts (Freestyle)' },
+      { label: 'Queen + Cover Shot', value: '+30 pts Bonus' },
+      { label: 'Striker Foul Penalty', value: '-1 Coin Returned' },
+    ],
+    proTips: [
+      'Use gentle rebound bank shots off the side cushions to loosen tight clusters around the center circle.',
+      'Never pocket the Queen unless you have a straightforward, high-probability cover shot lined up for the next turn.',
     ],
   },
 };
@@ -600,24 +639,73 @@ export default function GamesLobby() {
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [iframeKey, setIframeKey] = useState(1);
   const [isIframeLoading, setIsIframeLoading] = useState(true);
-  const [showGameAlert, setShowGameAlert] = useState(false);
   const [isForceLandscape, setIsForceLandscape] = useState(false);
   const [isRoundDeducted, setIsRoundDeducted] = useState(false);
   const isRoundDeductedRef = useRef(false);
   const isDeductingRef = useRef(false);
   const lobbyCurrentScoreRef = useRef(0);
   const isPrizeAwardedRef = useRef(false);
+  // Agher round sesh (win OR lose) — restart-er 'start'-e round reset + abar deduct hobe
+  const lobbyGameOverRef = useRef(false);
+  const [isDailyChallenge, setIsDailyChallenge] = useState(false);
+  const isDailyChallengeRef = useRef(false);
+  const isChessMode1SelectedRef = useRef(false);
+  const isChessFreeModeRef = useRef(false);
+  const lastDeductedAmountRef = useRef(0);
+  const [gameConfigs, setGameConfigs] = useState({}); // DB pools (every browser same)
+
+  // Admin pools database theke ano — lobby + modal-e admin value dekhabe.
+  // Admin save korle server socket event pathay, sathe sathe refresh hobe.
+  useEffect(() => {
+    let cancelled = false;
+    fetchGameConfigs()
+      .then((cfg) => { if (!cancelled) setGameConfigs(cfg); })
+      .catch(() => {});
+    let sock = null;
+    try { sock = getLudoSocket(); } catch (_) {}
+    const onCfg = () => {
+      fetchGameConfigs()
+        .then((cfg) => { if (!cancelled) setGameConfigs(cfg); })
+        .catch(() => {});
+    };
+    if (sock) sock.on('game-config:updated', onCfg);
+    return () => {
+      cancelled = true;
+      try { sock?.off('game-config:updated', onCfg); } catch (_) {}
+    };
+  }, []);
+
+  useEffect(() => {
+    isDailyChallengeRef.current = isDailyChallenge;
+  }, [isDailyChallenge]);
 
   useEffect(() => {
     isRoundDeductedRef.current = isRoundDeducted;
   }, [isRoundDeducted]);
 
   // Core Deduction Function: Triggered strictly when game STARTS or RESTARTS in Lobby Modal
-  const handleGameStartDeduction = async (game, isRestart = false) => {
+  const handleGameStartDeduction = async (game, isRestart = false, force = false, feeOverride = null) => {
     if (!game || !user?.walletAddress) return;
-    if (isRoundDeductedRef.current || isDeductingRef.current) return;
 
-    const fee = parseFloat(game.entryPool || '1.00');
+    // Strict Daily Challenge & Chess Free Mode Guard: NEVER deduct money for challenge or chess free moves
+    if ((isDailyChallengeRef.current || isChessFreeModeRef.current) && !force) {
+      console.log('user start challenge / chess free moves');
+      console.log('%c🌟 [LOBBY DEDUCTION ABORTED] Free Play Mode is active (0 USDT deducted)', 'background: #38BDF8; color: #000; font-weight: bold;');
+      return;
+    }
+
+    // In Chess: If free moves mode is active, do not deduct unless force=true
+    const isChess = Boolean(game?.id?.includes('chess') || game?.id === 'chess-grandmaster');
+    if (isChess && (isChessFreeModeRef.current || isDailyChallengeRef.current) && !force) {
+      console.log('%c♟️ [LOBBY CHESS DEDUCTION HELD] Free practice mode active.', 'background: #FFB300; color: #000; font-weight: bold;');
+      return;
+    }
+
+    if (!force && (isRoundDeductedRef.current || isDeductingRef.current)) return;
+
+    const fee = feeOverride !== null && feeOverride !== undefined && !isNaN(parseFloat(feeOverride))
+      ? parseFloat(feeOverride)
+      : parseFloat(game.entryPool || '1.00');
     const balance = parseFloat(user.usdtBalance || '0');
 
     if (balance < fee) {
@@ -635,6 +723,7 @@ export default function GamesLobby() {
       const res = await api.deductGameEntry(user.walletAddress, game.id, fee, game.title || null);
 
       if (res.success) {
+        lastDeductedAmountRef.current = fee;
         updateBalance(res.newBalance);
         setIsRoundDeducted(true);
         isRoundDeductedRef.current = true;
@@ -659,14 +748,9 @@ export default function GamesLobby() {
     }
   };
 
-  // Show Gamezop notice alert for every game, delayed by 3 seconds
+  // Reset forced landscape when switching game/tab/reload
   useEffect(() => {
-    setShowGameAlert(false);
     setIsForceLandscape(false);
-    if (activeGameModal && modalTab === 'play') {
-      const timer = setTimeout(() => setShowGameAlert(true), 3000);
-      return () => clearTimeout(timer);
-    }
   }, [activeGameModal, modalTab, iframeKey]);
 
   // Disable cursor particle trail & listen for ESC key when playing game or in full screen
@@ -714,8 +798,11 @@ export default function GamesLobby() {
 
       if (res.success) {
         updateBalance(res.newBalance);
+        const gross = res.grossReward || prize;
+        const cut = res.deductionAmount || (parseFloat(gross) * 0.25).toFixed(2);
+        const net = res.netReward || res.prizeCredited || (parseFloat(gross) * 0.75).toFixed(2);
         setToastMessage({
-          text: `🎉 WINNER! You reached the threshold score (${score} >= ${target})! Prize Pool of +${prize} USDT credited!`,
+          text: `🎉 WINNER! Score: ${score} >= ${target}! Gross: ${gross} USDT | -25% Platform Cut: -${cut} USDT | +${net} USDT (75%) credited to your balance!`,
           type: 'success',
         });
       }
@@ -730,6 +817,8 @@ export default function GamesLobby() {
       if (!event.data) return;
       if (typeof event.data === 'string' && event.data.startsWith('webpack')) return;
 
+      console.log('%c📨 [LOBBY GAME MESSAGE EVENT]', 'background: #2563EB; color: #fff; font-weight: bold;', event.data);
+
       let parsed = event.data;
       if (typeof event.data === 'string') {
         try {
@@ -737,6 +826,58 @@ export default function GamesLobby() {
         } catch (_) {
           parsed = event.data;
         }
+      }
+
+      // Immediate check for challenge event at listener entry
+      const msgStr = typeof event.data === 'string' ? event.data.toLowerCase() : '';
+      let msgJson = '';
+      try {
+        msgJson = typeof event.data === 'object' && event.data !== null ? JSON.stringify(event.data).toLowerCase() : '';
+      } catch (_) {}
+
+      if (msgStr.includes('challenge') || msgJson.includes('challenge')) {
+        console.log('user start challenge');
+        console.log('%c🎯 [LOBBY ENTRY] user start challenge', 'background: #00E676; color: #000; font-weight: 900; font-size: 16px; padding: 4px 10px; border-radius: 4px;');
+        setIsDailyChallenge(true);
+        isDailyChallengeRef.current = true;
+      }
+
+      // Immediate check for chess moves mode (2 moves, 3 moves, 4 moves) at listener entry
+      const chessEntryMatch = (msgStr + ' ' + msgJson).match(/(?:session:menu:click:)?mode[:_]([234])/i);
+      if (
+        chessEntryMatch ||
+        msgStr.includes('session:menu:click:mode:2') || msgJson.includes('session:menu:click:mode:2') ||
+        msgStr.includes('session:menu:click:mode:3') || msgJson.includes('session:menu:click:mode:3') ||
+        msgStr.includes('session:menu:click:mode:4') || msgJson.includes('session:menu:click:mode:4')
+      ) {
+        const modeNum = chessEntryMatch ? chessEntryMatch[1] : '2/3/4';
+        console.log(`user start free mode: chess mode ${modeNum}`);
+        console.log(`%c♟️ [LOBBY ENTRY] user start free mode: chess mode ${modeNum} (${modeNum} Moves - No money deducted)`, 'background: #0284C7; color: #fff; font-weight: 900; font-size: 16px; padding: 4px 10px; border-radius: 4px;');
+        setIsDailyChallenge(true);
+        isDailyChallengeRef.current = true;
+        isChessFreeModeRef.current = true;
+        isChessMode1SelectedRef.current = false;
+      }
+
+      // Immediate check for quick match / quickgame
+      const isQuickGame =
+        msgStr.includes('quickgame') ||
+        msgJson.includes('quickgame') ||
+        msgStr.includes('quickmatch') ||
+        msgJson.includes('quickmatch') ||
+        msgStr.includes('session:menu:click:quickgame') ||
+        msgJson.includes('session:menu:click:quickgame');
+
+      if (isQuickGame) {
+        console.log('user start quickgame: paid match');
+        console.log(
+          '%c♟️ [LOBBY ENTRY] Chess Quick Match - Paid Match (Entry fee will be deducted, rewards active)',
+          'background: #00E676; color: #000; font-weight: 900; font-size: 16px; padding: 4px 10px; border-radius: 4px;'
+        );
+        setIsDailyChallenge(false);
+        isDailyChallengeRef.current = false;
+        isChessFreeModeRef.current = false;
+        isChessMode1SelectedRef.current = true;
       }
 
       // Check and log all responses received from Gamezop
@@ -770,6 +911,166 @@ export default function GamesLobby() {
         lobbyCurrentScoreRef.current = Math.max(lobbyCurrentScoreRef.current, incomingScore);
       }
 
+      // Detect Sudoku / Gamezop Daily Challenge events:
+      // Handles object format: { eventId: 'challenge_started', value: 0 }, { eventKey: 'challenge_started' }, etc.
+      // Handles string format: "info/GameAnalytics: Add DESIGN event: {eventId:challenge_started, value:0}"
+      const rawDataStr = typeof event.data === 'string' ? event.data.toLowerCase() : '';
+      const parsedStr = typeof parsed === 'string' ? parsed.toLowerCase() : '';
+
+      const rawEventId = String(
+        parsed?.eventId ??
+        parsed?.event_id ??
+        parsed?.eventID ??
+        parsed?.eventKey ??
+        parsed?.event_key ??
+        parsed?.data?.eventId ??
+        parsed?.data?.eventKey ??
+        parsed?.payload?.eventId ??
+        ''
+      ).toLowerCase().trim();
+
+      let jsonStr = '';
+      try {
+        jsonStr = typeof parsed === 'object' && parsed !== null ? JSON.stringify(parsed).toLowerCase() : '';
+      } catch (_) {}
+
+      const isChallengeEvent =
+        rawDataStr.includes('challenge') ||
+        parsedStr.includes('challenge') ||
+        jsonStr.includes('challenge') ||
+        rawEventId.includes('challenge') ||
+        stateStr.includes('challenge');
+
+      // Detect Chess 2-moves, 3-moves, and 4-moves events (Free Play Mode — No entry deduction from wallet)
+      // Game returns: 'session:menu:click:mode:2:level_1' (2 moves), 'session:menu:click:mode:3:level_1' (3 moves), 'session:menu:click:mode:4:level_1' (4 moves)
+      const chessModeMatch =
+        (rawDataStr + ' ' + parsedStr + ' ' + jsonStr + ' ' + rawEventId).match(/(?:session:menu:click:)?mode[:_]([234])/i);
+
+      const isChessFreeMovesEvent =
+        Boolean(chessModeMatch) ||
+        rawDataStr.includes('session:menu:click:mode:2') ||
+        jsonStr.includes('session:menu:click:mode:2') ||
+        rawDataStr.includes('session:menu:click:mode:3') ||
+        jsonStr.includes('session:menu:click:mode:3') ||
+        rawDataStr.includes('session:menu:click:mode:4') ||
+        jsonStr.includes('session:menu:click:mode:4') ||
+        rawEventId.includes('mode:2') || rawEventId.includes('mode_2') ||
+        rawEventId.includes('mode:3') || rawEventId.includes('mode_3') ||
+        rawEventId.includes('mode:4') || rawEventId.includes('mode_4');
+
+      if (isChallengeEvent) {
+        console.log('user start challenge');
+        console.log(
+          '%c🎯 [LOBBY: SUDOKU DAILY CHALLENGE DETECTED] user start challenge',
+          'background: #00E676; color: #000; font-weight: 900; font-size: 16px; padding: 4px 10px; border-radius: 4px;'
+        );
+        setIsDailyChallenge(true);
+        isDailyChallengeRef.current = true;
+        setToastMessage({
+          text: '🌟 Sudoku Daily Challenge Activated! Free Play Mode: No entry fee deducted from your wallet.',
+          type: 'info',
+        });
+        return;
+      }
+
+      if (isChessFreeMovesEvent) {
+        const combined = `${rawDataStr} ${parsedStr} ${jsonStr} ${rawEventId}`;
+        const modeNum = chessModeMatch ? chessModeMatch[1] : (
+          combined.includes('mode:3') || combined.includes('mode_3') ? '3' :
+          combined.includes('mode:4') || combined.includes('mode_4') ? '4' : '2'
+        );
+        console.log(`user start free mode: chess mode ${modeNum}`);
+        console.log(
+          `%c♟️ [LOBBY: CHESS MODE ${modeNum} DETECTED] {eventKey: session:menu:click:mode:${modeNum}:level_1} Free Play Mode — No entry fee will be deducted.`,
+          'background: #0284C7; color: #FFFFFF; font-weight: 800; padding: 4px 8px; border-radius: 4px;'
+        );
+        setIsDailyChallenge(true);
+        isDailyChallengeRef.current = true;
+        isChessFreeModeRef.current = true;
+        isChessMode1SelectedRef.current = false;
+        setIsRoundDeducted(false);
+        isRoundDeductedRef.current = false;
+
+        // Auto-Refund Guard: If money was previously deducted on initial menu load before mode selection, refund it now!
+        if (lastDeductedAmountRef.current > 0 && user?.walletAddress) {
+          const refundAmt = lastDeductedAmountRef.current;
+          lastDeductedAmountRef.current = 0;
+          console.log(`%c💸 [LOBBY: CHESS AUTO-REFUND] Refunding ${refundAmt} USDT because player selected free chess mode ${modeNum}.`, 'background: #00E676; color: #000; font-weight: bold;');
+          api.depositFunds(user.walletAddress, refundAmt, `Refund: Chess Free Moves Mode (Mode ${modeNum}) Activated`)
+            .then((res) => {
+              if (res.success) {
+                updateBalance(res.newBalance);
+                setToastMessage({
+                  text: `♟️ Chess ${modeNum} Moves (Free Play): ${refundAmt} USDT refunded to your wallet!`,
+                  type: 'success',
+                });
+              }
+            })
+            .catch((err) => console.error('[Lobby Chess Refund Error]', err));
+        } else {
+          setToastMessage({
+            text: `♟️ Chess ${modeNum} Moves Practice Mode (Mode ${modeNum}): Free Play! No entry fee deducted from your wallet.`,
+            type: 'info',
+          });
+        }
+        return;
+      }
+
+      // Detect Chess Quick Match / Paid Game:
+      // Event: 'session:menu:click:quickgame' or { eventId: 'session:menu:click:quickgame', value: 0 }
+      const isQuickGameEvent =
+        rawEventId.includes('quickgame') ||
+        rawEventId.includes('quickmatch') ||
+        rawDataStr.includes('quickgame') ||
+        rawDataStr.includes('quickmatch') ||
+        jsonStr.includes('quickgame') ||
+        jsonStr.includes('quickmatch') ||
+        rawDataStr.includes('session:menu:click:quickgame') ||
+        jsonStr.includes('session:menu:click:quickgame');
+
+      if (isQuickGameEvent) {
+        console.log('user start quickgame: paid match');
+        console.log(
+          '%c♟️ [LOBBY: CHESS QUICK MATCH DETECTED] {eventId: session:menu:click:quickgame} Paid Match — Deducting entry fee, prize pool rewards enabled.',
+          'background: #00E676; color: #000; font-weight: 900; font-size: 14px; padding: 4px 8px; border-radius: 4px;'
+        );
+        setIsDailyChallenge(false);
+        isDailyChallengeRef.current = false;
+        isChessFreeModeRef.current = false;
+        isChessMode1SelectedRef.current = true;
+        setIsRoundDeducted(false);
+        isRoundDeductedRef.current = false;
+        isDeductingRef.current = false;
+
+        if (activeGameModal && modalTab === 'play') {
+          handleGameStartDeduction(activeGameModal, false, true);
+        }
+        return;
+      }
+
+      // Check Normal Play event: In Chess, Mode 1 or Quick Game resets to normal play!
+      const isChess = Boolean(activeGameModal?.id?.includes('chess') || activeGameModal?.id === 'chess-grandmaster');
+      const isNormalPlayEvent = isChess
+        ? (/(?:session:menu:click:)?mode[:_]1(?::|$)/i.test(rawDataStr + ' ' + jsonStr + ' ' + rawEventId) ||
+           isQuickGameEvent)
+        : (
+            rawEventId === 'normal_started' ||
+            rawEventId === 'classic_started' ||
+            rawEventId === 'difficulty_selected' ||
+            rawEventId.includes('normal') ||
+            rawEventId.includes('classic')
+          );
+
+      if (isNormalPlayEvent) {
+        console.log('%c🎮 [LOBBY: NORMAL PLAY DETECTED] Setting to Normal Play Mode (Entry fee will be deducted on start).', 'background: #00E676; color: #000; font-weight: bold;');
+        setIsDailyChallenge(false);
+        isDailyChallengeRef.current = false;
+        if (isChess) {
+          isChessMode1SelectedRef.current = true;
+          isChessFreeModeRef.current = false;
+        }
+      }
+
       // 0. RELOAD & RESTART DETECTION:
       const isReloadOrRestart =
         stateStr === 'reload' ||
@@ -795,20 +1096,34 @@ export default function GamesLobby() {
         stateStr === 'play' ||
         stateStr === 'roundstart';
 
-      // If reload/restart occurs OR if previous round was completed and a new start arrives:
-      if (isReloadOrRestart || (isPrizeAwardedRef.current && isStart)) {
-        console.log('%c🔄 [LOBBY: RELOAD / RESTART DETECTED] Resetting round state to enable entry deduction...', 'background: #FFB300; color: #000; font-weight: bold;');
+      // If reload/restart occurs OR previous round ended (win OR lose) and a new start arrives:
+      // Age sudhu win (prize awarded) hole reset hoto — harle restart-e taka katto na (bug fix)
+      if (isReloadOrRestart || ((isPrizeAwardedRef.current || lobbyGameOverRef.current) && isStart)) {
+        console.log('%c🔄 [LOBBY: RELOAD / RESTART DETECTED] Resetting round state...', 'background: #FFB300; color: #000; font-weight: bold;');
         setIsRoundDeducted(false);
         isRoundDeductedRef.current = false;
         isPrizeAwardedRef.current = false;
+        lobbyGameOverRef.current = false;
         lobbyCurrentScoreRef.current = 0;
+        // isDailyChallenge is preserved during round setup of daily challenge
       }
 
-      // 1. DEDUCT MONEY STRICTLY WHEN RETURN STATUS IS 'START'
+      // 1. DEDUCT MONEY STRICTLY WHEN RETURN STATUS IS 'START' AND NOT IN DAILY CHALLENGE
       if (isStart) {
-        console.log('%c🚀 [LOBBY: STATE=START DETECTED] Deducting money from user account...', 'background: #39FF88; color: #000; font-weight: bold;', parsed);
-        if (activeGameModal && modalTab === 'play' && !isRoundDeductedRef.current) {
-          handleGameStartDeduction(activeGameModal, isReloadOrRestart);
+        if (isDailyChallengeRef.current) {
+          console.log(
+            '%c🌟 [LOBBY: DAILY CHALLENGE ACTIVE - FREE PLAY] Skipping wallet entry pool deduction for daily challenge round.',
+            'background: #38BDF8; color: #000; font-weight: bold;'
+          );
+          setToastMessage({
+            text: '🌟 Daily Challenge Mode Active: Free Play round! No entry fee deducted from your wallet.',
+            type: 'info',
+          });
+        } else {
+          console.log('%c🚀 [LOBBY: NORMAL PLAY: STATE=START DETECTED] Deducting money from user account...', 'background: #39FF88; color: #000; font-weight: bold;', parsed);
+          if (activeGameModal && modalTab === 'play' && !isRoundDeductedRef.current) {
+            handleGameStartDeduction(activeGameModal, isReloadOrRestart);
+          }
         }
       }
 
@@ -827,6 +1142,8 @@ export default function GamesLobby() {
         const finalScore = lobbyCurrentScoreRef.current;
         const target = parseFloat(activeGameModal.thresholdScore || '500');
         const prize = parseFloat(activeGameModal.prizePool || '100.00');
+        // Round sesh (win hok ba lose) — porer 'start'-e notun round hisebe deduct hobe
+        lobbyGameOverRef.current = true;
 
         const condition1_exceededScore = finalScore >= target;
         const condition2_gameOver = true;
@@ -872,6 +1189,68 @@ export default function GamesLobby() {
       console.log('%c🎮 [GAME SCORE RETURN VALUE]', 'background: #00E676; color: #000; font-weight: bold; padding: 2px 6px;', val);
     };
 
+    // Also wire console interceptor in case GameAnalytics logs info directly to console
+    const originalLog = console.log;
+    const originalInfo = console.info;
+
+    const checkLogArgs = (...args) => {
+      try {
+        const text = args.map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
+        if (text.toLowerCase().includes('challenge')) {
+          originalLog.apply(console, ['user start challenge']);
+          originalLog.apply(console, ['%c🎯 [LOBBY CONSOLE LOG] user start challenge', 'background: #00E676; color: #000; font-weight: 900; font-size: 16px; padding: 4px 10px; border-radius: 4px;']);
+          setIsDailyChallenge(true);
+          isDailyChallengeRef.current = true;
+          handleGameMessage({ data: { eventId: 'challenge_started' }, origin: window.location.origin });
+        }
+        const chessLogMatch = text.toLowerCase().match(/(?:session:menu:click:)?mode[:_]([234])/i);
+        if (
+          chessLogMatch ||
+          text.toLowerCase().includes('session:menu:click:mode:2') ||
+          text.toLowerCase().includes('session:menu:click:mode:3') ||
+          text.toLowerCase().includes('session:menu:click:mode:4')
+        ) {
+          const modeNum = chessLogMatch ? chessLogMatch[1] : '2';
+          originalLog.apply(console, [`user start free mode: chess mode ${modeNum}`]);
+          originalLog.apply(console, [`%c♟️ [LOBBY CONSOLE LOG] Chess Mode ${modeNum} (${modeNum} Moves) - Free Play (0 USDT)`, 'background: #0284C7; color: #fff; font-weight: 900; font-size: 16px; padding: 4px 10px; border-radius: 4px;']);
+          setIsDailyChallenge(true);
+          isDailyChallengeRef.current = true;
+          isChessFreeModeRef.current = true;
+          isChessMode1SelectedRef.current = false;
+          handleGameMessage({ data: { eventKey: `session:menu:click:mode:${modeNum}:level_1` }, origin: window.location.origin });
+        }
+        if (
+          text.toLowerCase().includes('quickgame') ||
+          text.toLowerCase().includes('quick_game') ||
+          text.toLowerCase().includes('quickmatch') ||
+          text.toLowerCase().includes('session:menu:click:quickgame')
+        ) {
+          originalLog.apply(console, ['user start quickgame: paid match']);
+          originalLog.apply(console, [
+            '%c♟️ [LOBBY CONSOLE LOG] Chess Quick Match / Normal Mode - Paid Match (Entry fee deducted, rewards active)',
+            'background: #00E676; color: #000; font-weight: 900; font-size: 16px; padding: 4px 10px; border-radius: 4px;'
+          ]);
+          setIsDailyChallenge(false);
+          isDailyChallengeRef.current = false;
+          isChessFreeModeRef.current = false;
+          isChessMode1SelectedRef.current = true;
+          setIsRoundDeducted(false);
+          isRoundDeductedRef.current = false;
+          isDeductingRef.current = false;
+          handleGameMessage({ data: { eventId: 'session:menu:click:quickgame', state: 'start' }, origin: window.location.origin });
+        }
+      } catch (_) {}
+    };
+
+    console.log = (...args) => {
+      originalLog.apply(console, args);
+      checkLogArgs(...args);
+    };
+    console.info = (...args) => {
+      originalInfo.apply(console, args);
+      checkLogArgs(...args);
+    };
+
     window.addEventListener('message', handleGameMessage);
     window.addEventListener('gameresult', handleCustomEvent);
     window.addEventListener('gameover', handleCustomEvent);
@@ -882,8 +1261,33 @@ export default function GamesLobby() {
       window.removeEventListener('gameresult', handleCustomEvent);
       window.removeEventListener('gameover', handleCustomEvent);
       window.removeEventListener('gamescore', handleCustomEvent);
+      console.log = originalLog;
+      console.info = originalInfo;
     };
   }, [activeGameModal, modalTab, user?.walletAddress]);
+
+  // Native Ludo Game Event Handler
+  const handleLudoGameEvent = (event) => {
+    if (!activeGameModal) return;
+    if (event.state === 'start') {
+      if (!isRoundDeductedRef.current) {
+        handleGameStartDeduction(activeGameModal, false, false, event.entryFee);
+      }
+    } else if (event.state === 'score') {
+      lobbyCurrentScoreRef.current = event.score;
+    } else if (event.state === 'over') {
+      const finalScore = event.score ?? lobbyCurrentScoreRef.current;
+      const target = parseFloat(activeGameModal.thresholdScore || '500');
+      const prize = parseFloat(event.prizeAmount || activeGameModal.prizePool || '100.00');
+
+      if (event.won && (!target || finalScore >= target || event.firstWinner === 'red')) {
+        if (!isPrizeAwardedRef.current) {
+          isPrizeAwardedRef.current = true;
+          handlePrizeWon(activeGameModal, finalScore, target, prize);
+        }
+      }
+    }
+  };
 
   // Live Crash Mini-Game Simulation State
   const [crashState, setCrashState] = useState({
@@ -900,13 +1304,9 @@ export default function GamesLobby() {
   const [minesWonAmount, setMinesWonAmount] = useState(0);
   const [minesGameOver, setMinesGameOver] = useState(false);
 
-  // Filter and sort games
+  // Filter and sort games (pools database theke — kono localStorage noy)
   const filteredGames = useMemo(() => {
-    let rawOverrides = {};
-    try {
-      const saved = localStorage.getItem('loyalty_admin_game_overrides');
-      if (saved) rawOverrides = JSON.parse(saved);
-    } catch (_) {}
+    const rawOverrides = gameConfigs;
 
     let list = GAME_CATALOG.filter((game) => {
       // Hide games paused by admin
@@ -918,12 +1318,24 @@ export default function GamesLobby() {
         game.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         game.categoryLabel.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
-    }).map((game) => ({
-      ...game,
-      entryPool: rawOverrides[game.id]?.entryPool !== undefined ? rawOverrides[game.id].entryPool : (game.entryPool || '1.00'),
-      prizePool: rawOverrides[game.id]?.prizePool !== undefined ? rawOverrides[game.id].prizePool : (game.prizePool || '100.00'),
-      thresholdScore: rawOverrides[game.id]?.thresholdScore !== undefined ? rawOverrides[game.id].thresholdScore : (game.thresholdScore || '500'),
-    }));
+    }).map((game) => {
+      // Ludo: nijer id age, tarpor alias ids (admin jekono alias-e save korleo pabe)
+      const ludoOv = game.id?.includes('ludo')
+        ? (rawOverrides[game.id] || rawOverrides['ludo-with-friends'] || rawOverrides['ludo-dash'] || rawOverrides['ludo'] || {})
+        : {};
+      return {
+        ...game,
+        entryPool: rawOverrides[game.id]?.entryPool !== undefined ? rawOverrides[game.id].entryPool : (game.entryPool || '1.00'),
+        prizePool: rawOverrides[game.id]?.prizePool !== undefined ? rawOverrides[game.id].prizePool : (game.prizePool || '100.00'),
+        ludo2pEntryPool: ludoOv.ludo2pEntryPool !== undefined ? ludoOv.ludo2pEntryPool : (game.ludo2pEntryPool || '1.00'),
+        ludo2pPrizePool: ludoOv.ludo2pPrizePool !== undefined ? ludoOv.ludo2pPrizePool : (game.ludo2pPrizePool || '20.00'),
+        ludo4pEntryPool: ludoOv.ludo4pEntryPool !== undefined ? ludoOv.ludo4pEntryPool : (game.ludo4pEntryPool || '2.00'),
+        ludo4pPrizePool: ludoOv.ludo4pPrizePool !== undefined ? ludoOv.ludo4pPrizePool : (game.ludo4pPrizePool || '50.00'),
+        thresholdScore: (game.id === 'carrom-hero' || game.id === 'carrom' || game.id === 'chess-grandmaster' || game.id === 'chess')
+          ? '1'
+          : (rawOverrides[game.id]?.thresholdScore !== undefined ? rawOverrides[game.id].thresholdScore : (game.thresholdScore || '500')),
+      };
+    });
 
     if (sortBy === 'rtp') {
       list.sort((a, b) => parseFloat(b.rtp) - parseFloat(a.rtp));
@@ -932,7 +1344,7 @@ export default function GamesLobby() {
     }
 
     return list;
-  }, [selectedCategory, searchQuery, sortBy]);
+  }, [selectedCategory, searchQuery, sortBy, gameConfigs]);
 
   // Tic Tac Toe Mini-Game Simulation State
   const [tttBoard, setTttBoard] = useState(Array(9).fill(null));
@@ -947,6 +1359,8 @@ export default function GamesLobby() {
     isRoundDeductedRef.current = false;
     isPrizeAwardedRef.current = false;
     lobbyCurrentScoreRef.current = 0;
+    setIsDailyChallenge(false);
+    isDailyChallengeRef.current = false;
     setActiveGameModal(game);
     setModalTab(defaultTab);
     setActiveScreenshotIndex(0);
@@ -995,6 +1409,8 @@ export default function GamesLobby() {
     isRoundDeductedRef.current = false;
     isPrizeAwardedRef.current = false;
     lobbyCurrentScoreRef.current = 0;
+    setIsDailyChallenge(false);
+    isDailyChallengeRef.current = false;
     setIframeKey((prev) => prev + 1);
   };
 
@@ -1005,6 +1421,8 @@ export default function GamesLobby() {
     isRoundDeductedRef.current = false;
     isPrizeAwardedRef.current = false;
     lobbyCurrentScoreRef.current = 0;
+    setIsDailyChallenge(false);
+    isDailyChallengeRef.current = false;
     setIsIframeLoading(true);
     setIframeKey((prev) => prev + 1);
   };
@@ -1412,32 +1830,17 @@ export default function GamesLobby() {
                         <span style={{ color: '#94a3b8' }}>
                           Entry: <strong style={{ color: '#FFFFFF' }}>{game.entryPool || '1.00'} USDT</strong>
                         </span>
-                        <span style={{ color: '#38bdf8', fontWeight: 600 }}>
-                          Win: <strong style={{ color: '#FFFFFF' }}>≥{game.thresholdScore || '500'}</strong> pts
-                        </span>
+                        {/* Ludo/Carrom/Chess-e win-score nei (winner takes all) — tai Win dekhabo na */}
+                        {!(game.id?.includes('ludo') || game.playableType === 'native-ludo' || game.id === 'carrom-hero' || game.id === 'carrom' || game.id === 'chess-grandmaster' || game.id === 'chess') && (
+                          <span style={{ color: '#38bdf8', fontWeight: 600 }}>
+                            Win: <strong style={{ color: '#FFFFFF' }}>≥{game.thresholdScore || '500'}</strong> pts
+                          </span>
+                        )}
                         <span style={{ color: '#00E676', fontWeight: 700 }}>
                           Pool: {game.prizePool || '100.00'} USDT
                         </span>
                       </div>
                     )}
-
-                    {/* Spec Metrics Row (MAX WIN, RTP, ONLINE with user icon) */}
-                    <div className="game-specs-panel">
-                      <div className="spec-col">
-                        <span className="spec-label">MAX WIN</span>
-                        <span className="spec-val highlight">{game.maxWin}</span>
-                      </div>
-                      <div className="spec-col">
-                        <span className="spec-label">RTP</span>
-                        <span className="spec-val">{game.rtp}</span>
-                      </div>
-                      <div className="spec-col">
-                        <span className="spec-label">ONLINE</span>
-                        <span className="spec-val users">
-                          <Users size={12} color="#00E676" /> {game.players}
-                        </span>
-                      </div>
-                    </div>
 
                     {/* Card Actions: Green Play Now + Translucent Rules & Specs */}
                     <div className="game-card-actions">
@@ -1498,7 +1901,7 @@ export default function GamesLobby() {
           }}
         >
           <div
-            className={`game-modal-content demo-modal-dialog ${isTheaterMode ? 'theater' : ''} ${activeGameModal?.id === 'ludo-dash' ? 'ludo-compact' : ''}`}
+            className={`game-modal-content demo-modal-dialog ${isTheaterMode ? 'theater' : ''} ${isFullScreen ? 'modal-fullscreen' : ''} ${activeGameModal?.id === 'ludo-dash' ? 'ludo-compact' : ''}`}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header: Full width flex div on mobile & desktop */}
@@ -1535,32 +1938,34 @@ export default function GamesLobby() {
                 >
                   <RotateCw size={14} style={{ transform: isForceLandscape ? 'rotate(90deg)' : 'none', transition: 'transform 0.25s', color: isForceLandscape ? '#00E676' : 'inherit' }} />
                 </button>
-                <a
-                  href={getGamePlayPath(activeGameModal)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="modal-ctrl-btn popout-btn mobile-only-btn"
-                  title="Open in Dedicated Tab"
-                >
-                  <ExternalLink size={14} />
-                </a>
+
 
                 {/* Visible on both Desktop and Mobile */}
                 <button
-                  onClick={() => setIsFullScreen(true)}
+                  onClick={() => setIsFullScreen((prev) => !prev)}
                   className="modal-ctrl-btn expand-btn"
-                  title="Full Screen in Website"
+                  title={isFullScreen ? 'Exit Full Screen (ESC)' : 'Full Screen in Website'}
                 >
-                  <Maximize size={15} />
+                  {isFullScreen ? <Minimize2 size={15} /> : <Maximize size={15} />}
                 </button>
-                <div className="modal-pool-pill entry-pill" title="Required Entry Pool Fee">
-                  <span style={{ fontSize: '0.68rem', color: '#8D9993' }}>ENTRY:</span>
-                  <span className="pool-pill-val">{activeGameModal.entryPool || '1.00'} USDT</span>
-                </div>
-                <div className="modal-pool-pill" style={{ background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', color: '#38bdf8' }} title="Target Score needed to win Prize Pool">
-                  <span style={{ fontSize: '0.68rem', color: '#7dd3fc' }}>WIN SCORE:</span>
-                  <span className="pool-pill-val" style={{ color: '#ffffff', fontWeight: 700 }}>≥{activeGameModal.thresholdScore || '500'}</span>
-                </div>
+                {isDailyChallenge ? (
+                  <div className="modal-pool-pill" style={{ background: 'rgba(56, 189, 248, 0.18)', border: '1px solid #38bdf8', color: '#38bdf8' }} title="Daily Challenge Free Mode — No Entry Fee Deducted">
+                    <span style={{ fontSize: '0.68rem', fontWeight: 800 }}>🌟 MODE:</span>
+                    <span className="pool-pill-val" style={{ color: '#38bdf8', fontWeight: 800 }}>FREE (0 USDT)</span>
+                  </div>
+                ) : (
+                  <div className="modal-pool-pill entry-pill" title="Required Entry Pool Fee">
+                    <span style={{ fontSize: '0.68rem', color: '#8D9993' }}>ENTRY:</span>
+                    <span className="pool-pill-val">{activeGameModal.entryPool || '1.00'} USDT</span>
+                  </div>
+                )}
+                {/* Ludo/Carrom/Chess-e win-score nei — WIN SCORE pill dekhabo na */}
+                {!(activeGameModal.id?.includes('ludo') || activeGameModal.playableType === 'native-ludo' || activeGameModal.id === 'carrom-hero' || activeGameModal.id === 'carrom' || activeGameModal.id === 'chess-grandmaster' || activeGameModal.id === 'chess') && (
+                  <div className="modal-pool-pill" style={{ background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', color: '#38bdf8' }} title="Target Score needed to win Prize Pool">
+                    <span style={{ fontSize: '0.68rem', color: '#7dd3fc' }}>WIN SCORE:</span>
+                    <span className="pool-pill-val" style={{ color: '#ffffff', fontWeight: 700 }}>≥{activeGameModal.thresholdScore || '500'}</span>
+                  </div>
+                )}
                 <div className="modal-pool-pill prize-pill" title="Total Prize Pool">
                   <Trophy size={13} color="#FFB300" />
                   <span className="pool-pill-val">{activeGameModal.prizePool || '100.00'} USDT</span>
@@ -1573,6 +1978,11 @@ export default function GamesLobby() {
                   onClick={() => {
                     setActiveGameModal(null);
                     setIsFullScreen(false);
+                    setIsDailyChallenge(false);
+                    isDailyChallengeRef.current = false;
+                    isChessFreeModeRef.current = false;
+                    isChessMode1SelectedRef.current = false;
+                    lastDeductedAmountRef.current = 0;
                   }}
                   className="modal-close-btn"
                   title="Close & Back to Main Page"
@@ -1619,9 +2029,29 @@ export default function GamesLobby() {
                     <div className="gz-embed-title-left">
                       <span className="gz-live-dot" />
                       <span className="gz-embed-gamename">{activeGameModal.title}</span>
-                      <span className="gz-sandbox-badge">HTML5 CDN</span>
+                      {isDailyChallenge ? (
+                        <span className="gz-sandbox-badge" style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', border: '1px solid #38bdf8' }}>
+                          🌟 Daily Challenge (Free Play)
+                        </span>
+                      ) : (
+                        <span className="gz-sandbox-badge">HTML5 CDN</span>
+                      )}
                     </div>
                     <div className="gz-embed-actions">
+                      {isDailyChallenge && (
+                        <button
+                          onClick={() => {
+                            setIsDailyChallenge(false);
+                            isDailyChallengeRef.current = false;
+                            setToastMessage({ text: 'Switched to Normal Play mode. Entry fee will be deducted on round start.', type: 'info' });
+                          }}
+                          className="gz-action-btn"
+                          style={{ borderColor: '#00E676', color: '#00E676', background: 'rgba(0, 230, 118, 0.15)' }}
+                          title="Switch to Normal Paid Mode"
+                        >
+                          <span>🎮 Normal Mode</span>
+                        </button>
+                      )}
                       <button
                         onClick={handleRestartGameModal}
                         className="gz-action-btn"
@@ -1631,23 +2061,14 @@ export default function GamesLobby() {
                         <span>Restart</span>
                       </button>
                       <button
-                        onClick={() => setIsFullScreen(true)}
+                        onClick={() => setIsFullScreen((prev) => !prev)}
                         className="gz-action-btn fullscreen"
-                        title="Expand on Website"
+                        title={isFullScreen ? 'Exit Full Screen (ESC)' : 'Expand on Website'}
                       >
-                        <Maximize size={13} />
-                        <span>Expand</span>
+                        {isFullScreen ? <Minimize2 size={13} /> : <Maximize size={13} />}
+                        <span>{isFullScreen ? 'Exit' : 'Expand'}</span>
                       </button>
-                      <a
-                        href={getGamePlayPath(activeGameModal)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="gz-action-btn popout"
-                        title="Open in Dedicated Tab"
-                      >
-                        <ExternalLink size={13} />
-                        <span>Popout</span>
-                      </a>
+
                       <div className="modal-balance-pill gz-balance-mobile-inline">
                         <Wallet size={12} color="#00E676" />
                         <span>{user?.usdtBalance || '50.00'} USDT</span>
@@ -1666,27 +2087,7 @@ export default function GamesLobby() {
                     </div>
                   </div>
 
-                  {/* Game stuck notice - every game, after 3 sec */}
-                  {showGameAlert && (
-                    <div className="gz-game-alert-banner">
-                      <div className="gz-alert-left">
-                        <AlertTriangle size={16} color="#FFB300" style={{ flexShrink: 0 }} />
-                        <span>
-                          <strong>{activeGameModal.title} Notice:</strong> If the game is stuck here, click on Open in New Tab:
-                        </span>
-                      </div>
-                      <a
-                        href={getGamePlayPath(activeGameModal)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="gz-alert-launch-btn"
-                        title="Open game in new tab"
-                      >
-                        <ExternalLink size={13} />
-                        <span>Open in New Tab</span>
-                      </a>
-                    </div>
-                  )}
+
 
                   {/* Responsive Game Iframe Frame */}
                   <div className={`gz-iframe-frame ${isForceLandscape ? 'is-force-landscape' : ''}`}>
@@ -1700,28 +2101,44 @@ export default function GamesLobby() {
                         <span>Exit Rotation</span>
                       </button>
                     )}
-                    {isIframeLoading && (
-                      <div className="gz-iframe-loader">
-                        <div className="gz-spinner" />
-                        <h4>Loading {activeGameModal.title}...</h4>
-                      </div>
+                    {activeGameModal.id === 'ludo-with-friends' || activeGameModal.id === 'ludo-dash' ? (
+                      <LudoGameBoard
+                        onGameEvent={handleLudoGameEvent}
+                        entryPool={activeGameModal.entryPool || '1.00'}
+                        prizePool={activeGameModal.prizePool || '100.00'}
+                        thresholdScore={activeGameModal.thresholdScore || '500'}
+                        ludo2pEntryPool={activeGameModal.ludo2pEntryPool || '1.00'}
+                        ludo2pPrizePool={activeGameModal.ludo2pPrizePool || '20.00'}
+                        ludo4pEntryPool={activeGameModal.ludo4pEntryPool || '2.00'}
+                        ludo4pPrizePool={activeGameModal.ludo4pPrizePool || '50.00'}
+                      />
+                    ) : (
+                      <>
+                        {isIframeLoading && (
+                          <div className="gz-iframe-loader">
+                            <div className="gz-spinner" />
+                            <h4>Loading {activeGameModal.title}...</h4>
+                          </div>
+                        )}
+                        <iframe
+                          key={iframeKey}
+                          src={activeGameModal.embedUrl || `https://gamescdn.gamezop.com/_game-files/${activeGameModal.gzCode}/index.html`}
+                          title={activeGameModal.title}
+                          className="gz-game-iframe"
+                          allow="autoplay; fullscreen; screen-wake-lock; orientation-lock; accelerometer; gyroscope; magnetometer;"
+                          sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-pointer-lock allow-modals allow-orientation-lock"
+                          onLoad={() => {
+                            setIsIframeLoading(false);
+                            console.log('[GameIframe] Modal iframe loaded/reloaded (Ready to deduct on status "start"):', activeGameModal.embedUrl);
+    setIsRoundDeducted(false);
+    isRoundDeductedRef.current = false;
+    isPrizeAwardedRef.current = false;
+    lobbyGameOverRef.current = false;
+    lobbyCurrentScoreRef.current = 0;
+                          }}
+                        />
+                      </>
                     )}
-                    <iframe
-                      key={iframeKey}
-                      src={activeGameModal.embedUrl || `https://gamescdn.gamezop.com/_game-files/${activeGameModal.gzCode}/index.html`}
-                      title={activeGameModal.title}
-                      className="gz-game-iframe"
-                      allow="autoplay; fullscreen; screen-wake-lock; orientation-lock; accelerometer; gyroscope; magnetometer;"
-                      sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-pointer-lock allow-modals allow-orientation-lock"
-                      onLoad={() => {
-                        setIsIframeLoading(false);
-                        console.log('[GameIframe] Modal iframe loaded/reloaded (Ready to deduct on status "start"):', activeGameModal.embedUrl);
-                        setIsRoundDeducted(false);
-                        isRoundDeductedRef.current = false;
-                        isPrizeAwardedRef.current = false;
-                        lobbyCurrentScoreRef.current = 0;
-                      }}
-                    />
                   </div>
 
                   {/* Bottom Controls & Gameplay Hints */}
@@ -1948,132 +2365,6 @@ export default function GamesLobby() {
         </div>
       )}
 
-      {/* WEBSITE FULL SCREEN GAME OVERLAY */}
-      {activeGameModal && isFullScreen && (
-        <div className={`website-fullscreen-overlay ${showGameAlert ? 'has-alert' : ''}`}>
-          {/* Top Floating Glass HUD Bar */}
-          <div className="fullscreen-hud-bar">
-            <div className="fullscreen-hud-left">
-              <img
-                src={activeGameModal.logoUrl}
-                alt={activeGameModal.title}
-                className="fullscreen-game-icon"
-              />
-              <div>
-                <h3 className="fullscreen-game-title">{activeGameModal.title}</h3>
-                <span className="fullscreen-game-meta">
-                  <span className="gz-live-dot" /> Full Screen Mode • Gamezop HTML5 CDN
-                </span>
-              </div>
-            </div>
-
-            {/* Prize Pool, Entry Pool & Balance Badges */}
-            <div className="fullscreen-hud-pools">
-              <div className="hud-pool-badge entry-badge" title="Entry Pool Fee">
-                <span className="hud-badge-label">Entry:</span>
-                <span className="hud-badge-value">{activeGameModal.entryPool || '1.00'} USDT</span>
-              </div>
-              <div className="hud-pool-badge prize-badge" title="Total Prize Pool">
-                <Trophy size={13} color="#FFB300" />
-                <span className="hud-badge-label">Prize Pool:</span>
-                <span className="hud-badge-value">{activeGameModal.prizePool || '100.00'} USDT</span>
-              </div>
-              <div className="hud-pool-badge balance-badge" title="Your Account Balance">
-                <Wallet size={13} color="#39FF88" />
-                <span className="hud-badge-label">Balance:</span>
-                <span className="hud-badge-value">{user?.usdtBalance || '50.00'} USDT</span>
-              </div>
-            </div>
-
-            <div className="fullscreen-hud-right">
-              <button
-                onClick={handleRestartGameModal}
-                className="fullscreen-hud-btn"
-                title="Restart Game (deducts entry fee for new round)"
-              >
-                <RotateCw size={14} />
-                <span>Restart</span>
-              </button>
-
-              <a
-                href={getGamePlayPath(activeGameModal)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="fullscreen-hud-btn highlight-newtab"
-                title="Open Game Directly in Dedicated Tab"
-              >
-                <ExternalLink size={14} />
-                <span>Open in New Tab</span>
-              </a>
-
-
-              {/* Close Button in HUD */}
-              <button
-                onClick={() => setIsFullScreen(false)}
-                className="fullscreen-close-btn"
-                title="Close Full Screen (ESC)"
-              >
-                <X size={18} />
-                <span className="btn-label-desktop">Exit Full Screen</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Full Screen stuck notice - every game, after 3 sec */}
-          {showGameAlert && (
-            <div className="fullscreen-alert-bar">
-              <div className="fullscreen-alert-left">
-                <AlertTriangle size={16} color="#FFB300" style={{ flexShrink: 0 }} />
-                <span>
-                  <strong>{activeGameModal.title} Notice:</strong> If the game is stuck here, click on Open in New Tab:
-                </span>
-              </div>
-              <a
-                href={getGamePlayPath(activeGameModal)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="fullscreen-alert-redirect-btn"
-                title="Open Game in New Tab"
-              >
-                <ExternalLink size={14} />
-                <span>Open in New Tab</span>
-              </a>
-            </div>
-          )}
-
-          {/* Full Screen Iframe Wrapper */}
-          <div className="fullscreen-iframe-wrapper">
-            {isIframeLoading && (
-              <div className="gz-iframe-loader fullscreen-loader">
-                <div className="gz-spinner" />
-                <h4>Loading {activeGameModal.title} in Full Screen...</h4>
-                <p>Connecting to Gamezop CDN HTML5 engine</p>
-                <a
-                  href={getGamePlayPath(activeGameModal)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="gz-loader-newtab-btn"
-                >
-                  <ExternalLink size={13} />
-                  <span>Stuck on Gamezop? Open in New Tab</span>
-                </a>
-              </div>
-            )}
-            <iframe
-              key={`fs-${iframeKey}`}
-              src={activeGameModal.embedUrl || `https://gamescdn.gamezop.com/_game-files/${activeGameModal.gzCode}/index.html`}
-              title={`${activeGameModal.title} Full Screen`}
-              className="fullscreen-game-iframe"
-              allow="autoplay; fullscreen; screen-wake-lock; orientation-lock;"
-              sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-pointer-lock"
-              onLoad={() => {
-                setIsIframeLoading(false);
-                console.log('[GameIframe] Fullscreen iframe loaded:', activeGameModal.embedUrl);
-              }}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }

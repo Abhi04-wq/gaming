@@ -31,6 +31,22 @@ const transactionSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    grossReward: {
+      type: Number,
+      default: null,
+    },
+    deductionAmount: {
+      type: Number,
+      default: null,
+    },
+    deductionPercent: {
+      type: Number,
+      default: null,
+    },
+    netReward: {
+      type: Number,
+      default: null,
+    },
     balanceBefore: {
       type: Number,
       required: true,

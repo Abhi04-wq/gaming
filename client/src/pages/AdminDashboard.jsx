@@ -1,13 +1,15 @@
+
+
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   getAdminSession,
   logoutAdmin,
-  getAdminGamesList,
-  toggleGameStatus,
-  updateGameConfig,
+  isFixedThresholdGame,
 } from '../services/adminAuthService';
 import { api } from '../services/api';
+import { fetchGameConfigs, mergeConfigsIntoCatalog, saveGameConfig } from '../services/gameConfigService';
 import LogoWebp from '../logo.webp';
 import Toast from '../components/Toast';
 import '../styles/admin.css';
@@ -42,6 +44,11 @@ import {
   RefreshCw,
   Clock,
   Radio,
+  Percent,
+  Receipt,
+  Scissors,
+  Lock,
+  AlertCircle,
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -67,6 +74,11 @@ export default function AdminDashboard() {
   const [configEntryPool, setConfigEntryPool] = useState('');
   const [configPrizePool, setConfigPrizePool] = useState('');
   const [configThresholdScore, setConfigThresholdScore] = useState('500');
+  const [configLudo2pEntry, setConfigLudo2pEntry] = useState('1.00');
+  const [configLudo2pPrize, setConfigLudo2pPrize] = useState('20.00');
+  const [configLudo4pEntry, setConfigLudo4pEntry] = useState('2.00');
+  const [configLudo4pPrize, setConfigLudo4pPrize] = useState('50.00');
+  const [thresholdHovered, setThresholdHovered] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
   const [copiedKey, setCopiedKey] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -96,17 +108,43 @@ export default function AdminDashboard() {
     netEarnings: '0.00',
     creditCount: 0,
     debitCount: 0,
+    totalDeductions: '0.00',
+    totalGrossRewards: '0.00',
+    totalNetRewards: '0.00',
+    deductionCount: 0,
   });
   const [statsLoading, setStatsLoading] = useState(true);
+
+  // 25% Reward Deductions State (Kotai Koto Kat6e)
+  const [deductionsSummary, setDeductionsSummary] = useState({
+    totalGrossRewards: '0.00',
+    totalDeductionsCollected: '0.00',
+    totalNetRewardsCredited: '0.00',
+    totalCount: 0,
+    deductionRate: '25%',
+  });
+  const [deductionsList, setDeductionsList] = useState([]);
+  const [deductionsLoading, setDeductionsLoading] = useState(false);
+  const [deductionsSearch, setDeductionsSearch] = useState('');
+  const [deductionsGameFilter, setDeductionsGameFilter] = useState('all');
 
   // Auto-refresh interval (optional toggle)
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
-  // Load games from local storage / catalog service
-  const reloadGames = () => {
-    const list = getAdminGamesList();
-    setGames(list);
+  // Load games: database ONLY (same values on every browser/device)
+  const reloadGames = async () => {
+    try {
+      const configs = await fetchGameConfigs();
+      setGames(mergeConfigsIntoCatalog(configs));
+    } catch (err) {
+      console.error('[Admin Games Load Error]', err);
+      setGames(mergeConfigsIntoCatalog({}));
+      setToastMessage({
+        text: 'Game configs could not load from server: ' + err.message,
+        type: 'error',
+      });
+    }
   };
 
   // Fetch admin stats from server
@@ -146,12 +184,32 @@ export default function AdminDashboard() {
     }
   };
 
+  // Fetch 25% reward deductions list from database
+  const fetchRewardDeductions = async (searchOverride = null) => {
+    setDeductionsLoading(true);
+    try {
+      const search = searchOverride !== null ? searchOverride : deductionsSearch;
+      const res = await api.getRewardDeductions({
+        search: search.trim(),
+        limit: 200,
+      });
+      if (res.success) {
+        setDeductionsSummary(res.summary);
+        setDeductionsList(res.deductions || []);
+      }
+    } catch (err) {
+      console.error('[Admin Reward Deductions Error]', err);
+    } finally {
+      setDeductionsLoading(false);
+    }
+  };
+
   // Global manual refresh
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
-    await Promise.all([fetchAdminStats(), fetchAllIncome(), reloadGames()]);
+    await Promise.all([fetchAdminStats(), fetchAllIncome(), fetchRewardDeductions(), reloadGames()]);
     setLastUpdated(new Date());
-    setToastMessage({ text: 'Dashboard data synced with database!', type: 'success' });
+    setToastMessage({ text: 'Dashboard & deductions synced with database!', type: 'success' });
     setTimeout(() => setIsRefreshing(false), 600);
   };
 
@@ -160,6 +218,7 @@ export default function AdminDashboard() {
     reloadGames();
     fetchAdminStats();
     fetchAllIncome();
+    fetchRewardDeductions();
   }, []);
 
   // Auto-refresh timer
@@ -168,10 +227,11 @@ export default function AdminDashboard() {
     const interval = setInterval(() => {
       fetchAdminStats();
       fetchAllIncome();
+      fetchRewardDeductions();
       setLastUpdated(new Date());
     }, 15000);
     return () => clearInterval(interval);
-  }, [autoRefresh, incomeFilter, incomeSearch]);
+  }, [autoRefresh, incomeFilter, incomeSearch, deductionsSearch]);
 
   const handleIncomeFilterChange = (newFilter) => {
     setIncomeFilter(newFilter);
@@ -197,15 +257,31 @@ export default function AdminDashboard() {
     setTimeout(() => navigate('/admin/login'), 400);
   };
 
-  // Toggle Game Active / Paused with smooth animation
-  const handleToggleStatus = (gameId, e) => {
+  // Toggle Game Active / Paused — database ONLY
+  const handleToggleStatus = async (gameId, e) => {
     e?.stopPropagation();
-    const newStatus = toggleGameStatus(gameId);
-    reloadGames();
-    setToastMessage({
-      text: `Game ${newStatus === 'active' ? 'activated' : 'paused'} successfully!`,
-      type: newStatus === 'active' ? 'success' : 'info',
-    });
+    const game = games.find((g) => g.id === gameId);
+    const newStatus = (game?.status || 'active') === 'active' ? 'paused' : 'active';
+    try {
+      await saveGameConfig(gameId, {
+        entryPool: game?.entryPool,
+        prizePool: game?.prizePool,
+        thresholdScore: game?.thresholdScore,
+        ludo2pEntryPool: game?.ludo2pEntryPool,
+        ludo2pPrizePool: game?.ludo2pPrizePool,
+        ludo4pEntryPool: game?.ludo4pEntryPool,
+        ludo4pPrizePool: game?.ludo4pPrizePool,
+        status: newStatus,
+      });
+      await reloadGames();
+      setToastMessage({
+        text: `Game ${newStatus === 'active' ? 'activated' : 'paused'} on all devices!`,
+        type: newStatus === 'active' ? 'success' : 'info',
+      });
+    } catch (err) {
+      console.error('[GameConfig Status Save Error]', err);
+      setToastMessage({ text: 'Status save failed: ' + err.message, type: 'error' });
+    }
   };
 
   // Open Game Pool Configuration Modal
@@ -214,28 +290,45 @@ export default function AdminDashboard() {
     setConfiguringGame(game);
     setConfigEntryPool(game.entryPool || '1.00');
     setConfigPrizePool(game.prizePool || '100.00');
-    setConfigThresholdScore(game.thresholdScore || '500');
+    setConfigLudo2pEntry(game.ludo2pEntryPool || '1.00');
+    setConfigLudo2pPrize(game.ludo2pPrizePool || '20.00');
+    setConfigLudo4pEntry(game.ludo4pEntryPool || '2.00');
+    setConfigLudo4pPrize(game.ludo4pPrizePool || '50.00');
+    setConfigThresholdScore(isFixedThresholdGame(game.id) ? '1' : (game.thresholdScore || '500'));
+    setThresholdHovered(false);
   };
 
-  // Save Game Pool Configuration
-  const handleSaveConfig = (e) => {
+  // Save Game Pool Configuration — database ONLY (every browser/device sees it)
+  const handleSaveConfig = async (e) => {
     e?.preventDefault();
     if (!configuringGame) return;
 
+    const finalThresholdScore = isFixedThresholdGame(configuringGame.id) ? '1' : configThresholdScore;
+    const isLudo = configuringGame.id?.includes('ludo') || configuringGame.playableType === 'native-ludo';
+
+    const payload = {
+      entryPool: isLudo ? (configLudo2pEntry || configEntryPool || '1.00') : configEntryPool,
+      prizePool: isLudo ? (configLudo2pPrize || configPrizePool || '20.00') : configPrizePool,
+      ludo2pEntryPool: configLudo2pEntry,
+      ludo2pPrizePool: configLudo2pPrize,
+      ludo4pEntryPool: configLudo4pEntry,
+      ludo4pPrizePool: configLudo4pPrize,
+      thresholdScore: finalThresholdScore,
+      status: configuringGame.status || 'active',
+    };
+
     try {
-      updateGameConfig(configuringGame.id, {
-        entryPool: configEntryPool,
-        prizePool: configPrizePool,
-        thresholdScore: configThresholdScore,
-      });
-      reloadGames();
+      await saveGameConfig(configuringGame.id, payload);
+      await reloadGames();
       setToastMessage({
-        text: `Configuration updated for "${configuringGame.title}"! Entry: ${configEntryPool} USDT, Prize: ${configPrizePool} USDT`,
+        text: isLudo
+          ? `Saved to database — live on all devices! 2P Entry: ${configLudo2pEntry} / Win: ${configLudo2pPrize} USDT | 4P Entry: ${configLudo4pEntry} / Win: ${configLudo4pPrize} USDT`
+          : `Saved to database — live on all devices! Entry: ${configEntryPool} USDT, Prize: ${configPrizePool} USDT`,
         type: 'success',
       });
       setConfiguringGame(null);
     } catch (err) {
-      setToastMessage({ text: 'Failed to update pools: ' + err.message, type: 'error' });
+      setToastMessage({ text: 'Save failed (database): ' + err.message, type: 'error' });
     }
   };
 
@@ -267,6 +360,51 @@ export default function AdminDashboard() {
     document.body.removeChild(link);
 
     setToastMessage({ text: `Exported ${incomeTxs.length} transactions to CSV!`, type: 'success' });
+  };
+
+  // Export 25% Reward Deductions to CSV
+  const handleExportDeductionsCSV = () => {
+    if (deductionsList.length === 0) {
+      setToastMessage({ text: 'No deductions data to export.', type: 'info' });
+      return;
+    }
+
+    const headers = [
+      'Date & Time',
+      'Player Wallet Address',
+      'Game / Source',
+      'Gross Reward 100% (USDT)',
+      '25% Platform Cut (USDT)',
+      '75% Net User Credit (USDT)',
+      'Balance Before (USDT)',
+      'Balance After (USDT)',
+      'Reference ID',
+      'Status',
+    ];
+
+    const rows = filteredDeductions.map((d) => [
+      `"${new Date(d.createdAt).toLocaleString()}"`,
+      `"${d.walletAddress}"`,
+      `"${(d.gameTitle || d.gameId || 'Reward').replace(/"/g, '""')}"`,
+      d.grossReward || d.amount,
+      d.deductionAmount || '0.00',
+      d.netReward || d.amount,
+      d.balanceBefore !== undefined ? d.balanceBefore : '—',
+      d.balanceAfter !== undefined ? d.balanceAfter : '—',
+      d.referenceId,
+      d.status || 'completed',
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `reward_deductions_25pct_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    setToastMessage({ text: `Exported ${filteredDeductions.length} deduction records to CSV!`, type: 'success' });
   };
 
   // Quick simulate test transaction (Allows admin to verify DB logging in real-time)
@@ -320,6 +458,25 @@ export default function AdminDashboard() {
       return true;
     });
   }, [games, selectedCategory, statusFilter, searchQuery]);
+
+  // Filter 25% reward deductions
+  const filteredDeductions = useMemo(() => {
+    return deductionsList.filter((item) => {
+      if (deductionsGameFilter !== 'all') {
+        if (item.gameId !== deductionsGameFilter && item.gameTitle !== deductionsGameFilter) {
+          return false;
+        }
+      }
+      if (!deductionsSearch || !deductionsSearch.trim()) return true;
+      const q = deductionsSearch.toLowerCase();
+      return (
+        item.walletAddress?.toLowerCase().includes(q) ||
+        item.gameTitle?.toLowerCase().includes(q) ||
+        item.referenceId?.toLowerCase().includes(q) ||
+        item.description?.toLowerCase().includes(q)
+      );
+    });
+  }, [deductionsList, deductionsGameFilter, deductionsSearch]);
 
   // Sort income transactions
   const sortedIncomeTxs = useMemo(() => {
@@ -418,6 +575,25 @@ export default function AdminDashboard() {
             <Coins size={15} />
             <span>Ledger</span>
             <span className="badge-pill">{adminStats.totalTransactions}</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('deductions')}
+            className={`admin-tab-btn ${activeTab === 'deductions' ? 'active' : ''}`}
+            title="View all 25% reward cuts list"
+          >
+            <Percent size={15} />
+            <span>25% Reward Cuts</span>
+            <span
+              className="badge-pill"
+              style={{
+                background: '#f59e0b',
+                color: '#000000',
+                fontWeight: 800,
+              }}
+            >
+              {deductionsSummary.totalCount || adminStats.deductionCount || 0}
+            </span>
           </button>
         </div>
 
@@ -713,6 +889,62 @@ export default function AdminDashboard() {
                 </div>
                 <div style={{ marginTop: '12px', fontSize: '0.74rem', color: '#64748b' }}>
                   {adminStats.debitCount} game entry deductions
+                </div>
+              </div>
+
+              {/* Card 5: 25% Platform Reward Deductions (Platform Revenue) */}
+              <div
+                className="admin-card admin-card-interactive admin-kpi-card"
+                onClick={() => setActiveTab('deductions')}
+                title="Click to view full 25% reward deductions list"
+                style={{
+                  padding: '22px',
+                  border: '1px solid rgba(245, 158, 11, 0.35)',
+                  background: 'linear-gradient(145deg, rgba(245, 158, 11, 0.08) 0%, rgba(14, 18, 27, 0.8) 100%)',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+                  <div
+                    style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '14px',
+                      background: 'rgba(245, 158, 11, 0.15)',
+                      border: '1px solid rgba(245, 158, 11, 0.4)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#f59e0b',
+                    }}
+                  >
+                    <Percent size={24} />
+                  </div>
+                  <span
+                    style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      color: '#f59e0b',
+                      background: 'rgba(245, 158, 11, 0.15)',
+                      border: '1px solid rgba(245, 158, 11, 0.3)',
+                      padding: '3px 8px',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    25% Cut Pool
+                  </span>
+                </div>
+                <p style={{ color: '#94a3b8', fontSize: '0.84rem', margin: '0 0 4px 0', fontWeight: 600 }}>
+                  25% Reward Cuts (Revenue)
+                </p>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <h2 style={{ fontSize: '1.9rem', fontWeight: 900, color: '#f59e0b', margin: 0 }}>
+                    {statsLoading ? '…' : `+${deductionsSummary.totalDeductionsCollected || adminStats.totalDeductions || '0.00'}`}
+                  </h2>
+                  <span style={{ fontSize: '0.8rem', color: '#f59e0b', fontWeight: 700 }}>USDT</span>
+                </div>
+                <div style={{ marginTop: '12px', fontSize: '0.74rem', color: '#cbd5e1', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>{deductionsSummary.totalCount || adminStats.deductionCount || 0} prize events cut</span>
+                  <span style={{ color: '#f59e0b', fontWeight: 700 }}>View List &rarr;</span>
                 </div>
               </div>
             </div>
@@ -1362,14 +1594,36 @@ export default function AdminDashboard() {
                             </span>
                           </div>
                           <div style={{ textAlign: 'right' }}>
-                            <span style={{ fontSize: '0.64rem', color: '#FFB300', textTransform: 'uppercase', display: 'block', fontWeight: 600 }}>
-                              Win Score
+                            <span style={{ fontSize: '0.64rem', color: isFixedThresholdGame(game.id) ? '#ef4444' : '#FFB300', textTransform: 'uppercase', display: 'block', fontWeight: 600 }}>
+                              Win Score {isFixedThresholdGame(game.id) ? '(Fixed)' : ''}
                             </span>
-                            <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#FFB300' }}>
-                              {game.thresholdScore || '500'} <span style={{ fontSize: '0.68rem' }}>PTS</span>
+                            <span style={{ fontSize: '0.84rem', fontWeight: 800, color: isFixedThresholdGame(game.id) ? '#ef4444' : '#FFB300', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                              {isFixedThresholdGame(game.id) && <Lock size={11} color="#ef4444" />}
+                              {isFixedThresholdGame(game.id) ? '1' : (game.thresholdScore || '500')} <span style={{ fontSize: '0.68rem' }}>PTS</span>
                             </span>
                           </div>
                         </div>
+
+                        {/* Ludo Multi-Mode Badge if Ludo */}
+                        {(game.id?.includes('ludo') || game.playableType === 'native-ludo') && (
+                          <div
+                            style={{
+                              fontSize: '0.68rem',
+                              color: '#38bdf8',
+                              background: 'rgba(56, 189, 248, 0.08)',
+                              border: '1px solid rgba(56, 189, 248, 0.2)',
+                              borderRadius: '6px',
+                              padding: '4px 8px',
+                              marginBottom: '12px',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              fontWeight: 600,
+                            }}
+                          >
+                            <span>👥 2P: ${game.ludo2pEntryPool || '1.00'} &rarr; ${game.ludo2pPrizePool || '20.00'}</span>
+                            <span>👑 4P: ${game.ludo4pEntryPool || '2.00'} &rarr; ${game.ludo4pPrizePool || '50.00'}</span>
+                          </div>
+                        )}
 
                         {/* Action Buttons */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'auto' }}>
@@ -1551,8 +1805,17 @@ export default function AdminDashboard() {
                               {game.prizePool || '100.00'} <span style={{ fontSize: '0.7rem' }}>USDT</span>
                             </td>
 
-                            <td style={{ padding: '12px 18px', fontWeight: 800, color: '#FFB300' }}>
-                              {game.thresholdScore || '500'} <span style={{ fontSize: '0.7rem', color: '#cbd5e1' }}>pts</span>
+                            <td style={{ padding: '12px 18px', fontWeight: 800, color: isFixedThresholdGame(game.id) ? '#ef4444' : '#FFB300' }}>
+                              {isFixedThresholdGame(game.id) ? (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                                  <Lock size={12} color="#ef4444" />
+                                  1 <span style={{ fontSize: '0.7rem', color: '#f87171' }}>pts (fixed)</span>
+                                </span>
+                              ) : (
+                                <>
+                                  {game.thresholdScore || '500'} <span style={{ fontSize: '0.7rem', color: '#cbd5e1' }}>pts</span>
+                                </>
+                              )}
                             </td>
 
                             <td style={{ padding: '12px 18px' }}>
@@ -1906,6 +2169,426 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {/* ========================================================================= */}
+        {/* VIEW 4: 25% PLATFORM REWARD DEDUCTIONS LEDGER (KOTAI KOTO KAT6E) */}
+        {/* ========================================================================= */}
+        {activeTab === 'deductions' && (
+          <div style={{ animation: 'modalFadeIn 0.3s ease-out' }}>
+            {/* Header & Filter Controls Card */}
+            <div className="admin-card" style={{ padding: '24px', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div
+                      style={{
+                        width: '38px',
+                        height: '38px',
+                        borderRadius: '10px',
+                        background: 'rgba(245, 158, 11, 0.15)',
+                        border: '1px solid rgba(245, 158, 11, 0.35)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#f59e0b',
+                      }}
+                    >
+                      <Percent size={20} />
+                    </div>
+                    <div>
+                      <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
+                        25% Platform Reward Deductions
+                      </h2>
+                      <p style={{ color: '#94a3b8', fontSize: '0.84rem', margin: '3px 0 0 0' }}>
+                        Live tracking of every 25% platform cut deducted from game rewards before updating 75% to user accounts (Kotai Koto Kat6e)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <button
+                    onClick={() => fetchRewardDeductions()}
+                    disabled={deductionsLoading}
+                    title="Refresh deductions list from MongoDB"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: 'rgba(255, 255, 255, 0.06)',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      color: '#e2e8f0',
+                      padding: '8px 14px',
+                      borderRadius: '10px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <RefreshCw size={13} className={deductionsLoading ? 'spin-anim' : ''} />
+                    <span>Sync</span>
+                  </button>
+
+                  <button
+                    onClick={handleExportDeductionsCSV}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: 'rgba(245, 158, 11, 0.15)',
+                      border: '1px solid rgba(245, 158, 11, 0.4)',
+                      color: '#f59e0b',
+                      padding: '8px 14px',
+                      borderRadius: '10px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Download size={14} />
+                    <span>Export CSV</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Metric KPI Banner for Deductions */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: '16px',
+                  marginTop: '16px',
+                  padding: '18px',
+                  background: 'rgba(10, 14, 23, 0.7)',
+                  borderRadius: '14px',
+                  border: '1px solid rgba(255, 255, 255, 0.06)',
+                }}
+              >
+                <div>
+                  <span style={{ fontSize: '0.74rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>
+                    Total 25% Cuts (Platform Revenue)
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '4px' }}>
+                    <h3 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#f59e0b', margin: 0 }}>
+                      +{deductionsSummary.totalDeductionsCollected}
+                    </h3>
+                    <span style={{ fontSize: '0.8rem', color: '#f59e0b', fontWeight: 700 }}>USDT</span>
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: '#f59e0b', opacity: 0.85 }}>Fixed 25% Platform Share</span>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '0.74rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>
+                    Total Gross Rewards Won
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '4px' }}>
+                    <h3 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#38bdf8', margin: 0 }}>
+                      {deductionsSummary.totalGrossRewards}
+                    </h3>
+                    <span style={{ fontSize: '0.8rem', color: '#38bdf8', fontWeight: 700 }}>USDT</span>
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: '#7dd3fc' }}>100% Prize Pool Value</span>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '0.74rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>
+                    Total Net Paid to Users (75%)
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '4px' }}>
+                    <h3 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#00E676', margin: 0 }}>
+                      +{deductionsSummary.totalNetRewardsCredited}
+                    </h3>
+                    <span style={{ fontSize: '0.8rem', color: '#00E676', fontWeight: 700 }}>USDT</span>
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: '#00E676' }}>Credited to Player Balances</span>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '0.74rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>
+                    Deduction Events Logged
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '4px' }}>
+                    <h3 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#FFFFFF', margin: 0 }}>
+                      {deductionsSummary.totalCount}
+                    </h3>
+                    <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>records</span>
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Verified MongoDB Records</span>
+                </div>
+              </div>
+
+              {/* Search and Game Filter Bar */}
+              <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', alignItems: 'center', marginTop: '20px' }}>
+                <div style={{ position: 'relative', flex: '1 1 280px' }}>
+                  <Search size={15} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+                  <input
+                    type="text"
+                    value={deductionsSearch}
+                    onChange={(e) => {
+                      setDeductionsSearch(e.target.value);
+                    }}
+                    placeholder="Search by wallet address, game name, reference ID..."
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px 10px 38px',
+                      borderRadius: '10px',
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      color: '#FFFFFF',
+                      fontSize: '0.82rem',
+                    }}
+                  />
+                  {deductionsSearch && (
+                    <button
+                      onClick={() => setDeductionsSearch('')}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#94a3b8',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+
+                <select
+                  value={deductionsGameFilter}
+                  onChange={(e) => setDeductionsGameFilter(e.target.value)}
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    background: '#0e121b',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    color: '#e2e8f0',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="all">All Games</option>
+                  {games.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.title}
+                    </option>
+                  ))}
+                </select>
+
+                <div style={{ marginLeft: 'auto', fontSize: '0.8rem', color: '#94a3b8' }}>
+                  Showing <strong style={{ color: '#FFFFFF' }}>{filteredDeductions.length}</strong> of{' '}
+                  <strong style={{ color: '#FFFFFF' }}>{deductionsList.length}</strong> deduction records
+                </div>
+              </div>
+            </div>
+
+            {/* Deductions Table Card */}
+            <div className="admin-card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem' }}>
+                  <thead>
+                    <tr
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.03)',
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                        color: '#94a3b8',
+                        fontSize: '0.72rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                      }}
+                    >
+                      <th style={{ padding: '14px 16px' }}>Date &amp; Time</th>
+                      <th style={{ padding: '14px 16px' }}>Player Wallet</th>
+                      <th style={{ padding: '14px 16px' }}>Game / Source</th>
+                      <th style={{ padding: '14px 16px' }}>Gross Prize (100%)</th>
+                      <th style={{ padding: '14px 16px' }}>25% Cut Deducted (Platform)</th>
+                      <th style={{ padding: '14px 16px' }}>75% Net User Credit</th>
+                      <th style={{ padding: '14px 16px' }}>User Balance (Before &rarr; After)</th>
+                      <th style={{ padding: '14px 16px' }}>Reference ID</th>
+                      <th style={{ padding: '14px 16px' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {deductionsLoading ? (
+                      <tr>
+                        <td colSpan={9} style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
+                          <RotateCw size={24} className="spin-anim" style={{ margin: '0 auto 8px auto', display: 'block', color: '#f59e0b' }} />
+                          Loading 25% reward deductions from database...
+                        </td>
+                      </tr>
+                    ) : filteredDeductions.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} style={{ padding: '50px 20px', textAlign: 'center', color: '#94a3b8' }}>
+                          <Percent size={36} style={{ color: '#f59e0b', opacity: 0.5, margin: '0 auto 12px auto', display: 'block' }} />
+                          <h4 style={{ color: '#FFFFFF', margin: '0 0 6px 0', fontSize: '1rem' }}>
+                            No Reward Deductions Logged Yet
+                          </h4>
+                          <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b', maxWidth: '420px', marginLeft: 'auto', marginRight: 'auto' }}>
+                            Whenever a player scores &ge; the target score in any game, 25% is automatically deducted and logged in this list, while 75% is updated to the player's account.
+                          </p>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredDeductions.map((d) => {
+                        const isCopied = copiedKey === `deduct-${d.referenceId}`;
+                        return (
+                          <tr
+                            key={d._id || d.referenceId}
+                            style={{ borderTop: '1px solid rgba(255,255,255,0.06)', transition: 'background 0.15s' }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                          >
+                            <td style={{ padding: '14px 16px', color: '#94a3b8', whiteSpace: 'nowrap', fontSize: '0.78rem' }}>
+                              {formatDateTime(d.createdAt)}
+                            </td>
+
+                            <td style={{ padding: '14px 16px', fontFamily: 'monospace', color: '#e2e8f0', fontSize: '0.8rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span title={d.walletAddress}>
+                                  {d.walletAddress ? `${d.walletAddress.slice(0, 6)}...${d.walletAddress.slice(-4)}` : '—'}
+                                </span>
+                                {d.walletAddress && (
+                                  <button
+                                    onClick={() => copyToClipboard(d.walletAddress, `addr-${d.referenceId}`, 'Copied address')}
+                                    style={{
+                                      background: 'transparent',
+                                      border: 'none',
+                                      color: copiedKey === `addr-${d.referenceId}` ? '#00E676' : '#64748b',
+                                      cursor: 'pointer',
+                                      padding: '2px',
+                                    }}
+                                    title="Copy full wallet address"
+                                  >
+                                    {copiedKey === `addr-${d.referenceId}` ? <Check size={12} /> : <Copy size={12} />}
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+
+                            <td style={{ padding: '14px 16px', color: '#FFFFFF', fontWeight: 700 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span>{d.gameTitle || d.gameId || 'Arcade Game'}</span>
+                              </div>
+                            </td>
+
+                            <td style={{ padding: '14px 16px', fontWeight: 800, color: '#38bdf8', fontSize: '0.86rem' }}>
+                              {d.grossReward || d.amount} USDT
+                            </td>
+
+                            <td style={{ padding: '14px 16px' }}>
+                              <span
+                                style={{
+                                  background: 'rgba(245, 158, 11, 0.15)',
+                                  border: '1px solid rgba(245, 158, 11, 0.35)',
+                                  color: '#f59e0b',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 800,
+                                  padding: '4px 10px',
+                                  borderRadius: '8px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                }}
+                              >
+                                -{d.deductionAmount || '0.00'} USDT (25%)
+                              </span>
+                            </td>
+
+                            <td style={{ padding: '14px 16px' }}>
+                              <span
+                                style={{
+                                  background: 'rgba(0, 230, 118, 0.15)',
+                                  border: '1px solid rgba(0, 230, 118, 0.35)',
+                                  color: '#00E676',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 800,
+                                  padding: '4px 10px',
+                                  borderRadius: '8px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                }}
+                              >
+                                +{d.netReward || d.amount} USDT (75%)
+                              </span>
+                            </td>
+
+                            <td style={{ padding: '14px 16px', color: '#cbd5e1', fontSize: '0.78rem' }}>
+                              {d.balanceBefore !== undefined && d.balanceAfter !== undefined ? (
+                                <span>
+                                  <span style={{ color: '#94a3b8' }}>{Number(d.balanceBefore).toFixed(2)}</span>
+                                  <span style={{ color: '#64748b', margin: '0 6px' }}>&rarr;</span>
+                                  <span style={{ color: '#00E676', fontWeight: 700 }}>{Number(d.balanceAfter).toFixed(2)} USDT</span>
+                                </span>
+                              ) : (
+                                '—'
+                              )}
+                            </td>
+
+                            <td style={{ padding: '14px 16px', fontFamily: 'monospace', color: '#64748b', fontSize: '0.74rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span>{d.referenceId}</span>
+                                <button
+                                  onClick={() => copyToClipboard(d.referenceId, `deduct-${d.referenceId}`, 'Copied reference ID')}
+                                  style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: isCopied ? '#00E676' : '#64748b',
+                                    cursor: 'pointer',
+                                    padding: '2px',
+                                  }}
+                                >
+                                  {isCopied ? <Check size={12} /> : <Copy size={12} />}
+                                </button>
+                              </div>
+                            </td>
+
+                            <td style={{ padding: '14px 16px' }}>
+                              <span
+                                style={{
+                                  background: 'rgba(0, 230, 118, 0.12)',
+                                  color: '#00E676',
+                                  fontSize: '0.7rem',
+                                  fontWeight: 800,
+                                  padding: '3px 8px',
+                                  borderRadius: '6px',
+                                  textTransform: 'uppercase',
+                                }}
+                              >
+                                Deducted &amp; Credited
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Table Footer */}
+              <div className="admin-ledger-table-footer">
+                <div className="admin-ledger-footer-info">
+                  Showing <span className="highlight">{filteredDeductions.length}</span> of{' '}
+                  <span className="highlight">{deductionsList.length}</span> reward cuts (25% Platform Share)
+                </div>
+
+                <button
+                  onClick={handleExportDeductionsCSV}
+                  className="admin-ledger-csv-btn"
+                  title="Export deductions report to CSV"
+                >
+                  <Download size={15} />
+                  <span>Export Deductions CSV</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </main>
 
       {/* ========================================================================= */}
@@ -1978,11 +2661,9 @@ export default function AdminDashboard() {
                   <span>Reload</span>
                 </button>
 
-                {/* Popout fullscreen */}
+                {/* Open game without new tab */}
                 <Link
                   to={`/play/${previewGame.id}`}
-                  target="_blank"
-                  rel="noreferrer"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -1997,8 +2678,8 @@ export default function AdminDashboard() {
                     fontWeight: 700,
                   }}
                 >
-                  <ExternalLink size={13} />
-                  <span>Open Full Game</span>
+                  <Play size={13} />
+                  <span>Play Full Game</span>
                 </Link>
 
                 <button
@@ -2102,204 +2783,474 @@ export default function AdminDashboard() {
             </div>
 
             <form onSubmit={handleSaveConfig} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {/* Entry Pool Input */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <label style={{ fontSize: '0.84rem', fontWeight: 700, color: '#FFFFFF' }}>
-                    Entry Pool (USDT)
-                  </label>
-                  <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Player match stake fee</span>
-                </div>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="number"
-                    step="any"
-                    min="0.01"
-                    required
-                    placeholder="e.g. 1.00"
-                    value={configEntryPool}
-                    onChange={(e) => setConfigEntryPool(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 14px',
-                      paddingRight: '64px',
-                      background: 'rgba(0, 0, 0, 0.45)',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
-                      borderRadius: '12px',
-                      color: '#FFFFFF',
-                      fontSize: '1rem',
-                      fontWeight: 700,
-                      outline: 'none',
-                    }}
-                  />
-                  <span
-                    style={{
-                      position: 'absolute',
-                      right: '14px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      color: '#00E676',
-                      fontWeight: 800,
-                      fontSize: '0.82rem',
-                    }}
-                  >
-                    USDT
-                  </span>
-                </div>
-
-                {/* Quick Presets */}
-                <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
-                  {['0.50', '1.00', '2.00', '5.00', '10.00', '25.00', '50.00'].map((preset) => (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => setConfigEntryPool(preset)}
-                      className={`preset-pill-btn ${configEntryPool === preset ? 'active' : ''}`}
-                    >
-                      ${preset}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Prize Pool Input */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <label style={{ fontSize: '0.84rem', fontWeight: 700, color: '#FFFFFF' }}>
-                    Prize Pool (USDT)
-                  </label>
-                  <span style={{ fontSize: '0.72rem', color: '#00E676' }}>Jackpot reward pool</span>
-                </div>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="number"
-                    step="any"
-                    min="0.1"
-                    required
-                    placeholder="e.g. 100.00"
-                    value={configPrizePool}
-                    onChange={(e) => setConfigPrizePool(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 14px',
-                      paddingRight: '64px',
-                      background: 'rgba(0, 0, 0, 0.45)',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
-                      borderRadius: '12px',
-                      color: '#00E676',
-                      fontSize: '1rem',
-                      fontWeight: 800,
-                      outline: 'none',
-                    }}
-                  />
-                  <span
-                    style={{
-                      position: 'absolute',
-                      right: '14px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      color: '#00E676',
-                      fontWeight: 800,
-                      fontSize: '0.82rem',
-                    }}
-                  >
-                    USDT
-                  </span>
-                </div>
-
-                {/* Quick Presets */}
-                <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
-                  {['50.00', '100.00', '250.00', '500.00', '1000.00', '2500.00', '5000.00'].map((preset) => (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => setConfigPrizePool(preset)}
-                      className={`preset-pill-btn ${configPrizePool === preset ? 'active' : ''}`}
-                    >
-                      ${preset}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Threshold Win Score Input */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <label style={{ fontSize: '0.84rem', fontWeight: 700, color: '#FFFFFF' }}>
-                    Threshold Win Score (Points)
-                  </label>
-                  <span style={{ fontSize: '0.72rem', color: '#FFB300' }}>Score required to claim prize</span>
-                </div>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="number"
-                    step="1"
-                    min="1"
-                    required
-                    placeholder="e.g. 500"
-                    value={configThresholdScore}
-                    onChange={(e) => setConfigThresholdScore(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 14px',
-                      paddingRight: '64px',
-                      background: 'rgba(0, 0, 0, 0.45)',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
-                      borderRadius: '12px',
-                      color: '#FFB300',
-                      fontSize: '1rem',
-                      fontWeight: 800,
-                      outline: 'none',
-                    }}
-                  />
-                  <span
-                    style={{
-                      position: 'absolute',
-                      right: '14px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      color: '#FFB300',
-                      fontWeight: 800,
-                      fontSize: '0.82rem',
-                    }}
-                  >
-                    PTS
-                  </span>
-                </div>
-
-                {/* Quick Presets */}
-                <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
-                  {['100', '250', '500', '1000', '2500', '5000'].map((preset) => (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => setConfigThresholdScore(preset)}
-                      className={`preset-pill-btn ${configThresholdScore === preset ? 'active' : ''}`}
-                    >
-                      {preset} pts
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Calculated Multiplier Ratio */}
-              {parseFloat(configEntryPool) > 0 && parseFloat(configPrizePool) > 0 && (
+              {/* Ludo Dedicated 2-Player & 4-Player Configuration */}
+              {(configuringGame?.id?.includes('ludo') || configuringGame?.playableType === 'native-ludo') && (
                 <div
                   style={{
-                    background: 'rgba(0, 230, 118, 0.08)',
-                    border: '1px solid rgba(0, 230, 118, 0.25)',
-                    borderRadius: '12px',
-                    padding: '12px 16px',
+                    background: 'rgba(0, 230, 118, 0.06)',
+                    border: '1px solid rgba(0, 230, 118, 0.28)',
+                    borderRadius: '14px',
+                    padding: '16px',
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
+                    flexDirection: 'column',
+                    gap: '14px',
                   }}
                 >
-                  <span style={{ fontSize: '0.82rem', color: '#94a3b8' }}>Calculated Jackpot Multiplier:</span>
-                  <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#00E676' }}>
-                    {(parseFloat(configPrizePool) / parseFloat(configEntryPool)).toFixed(1)}x Multiplier
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#00E676', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      🎲 Ludo Multi-Mode Pool Configuration
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                      1st place winner claims prize
+                    </span>
+                  </div>
+
+                  {/* 2-Player Mode Pool */}
+                  <div
+                    style={{
+                      background: 'rgba(0, 0, 0, 0.38)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      borderRadius: '12px',
+                      padding: '12px 14px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#FFFFFF' }}>
+                        👥 2-Player (1v1 Duel)
+                      </span>
+                      <span style={{ fontSize: '0.74rem', color: '#FFB300', fontWeight: 700 }}>
+                        {parseFloat(configLudo2pEntry) > 0 && parseFloat(configLudo2pPrize) > 0
+                          ? `${(parseFloat(configLudo2pPrize) / parseFloat(configLudo2pEntry)).toFixed(1)}x Winner Multiplier`
+                          : ''}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      <div>
+                        <label style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>
+                          2P Entry Pool (USDT)
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          min="0.01"
+                          required
+                          value={configLudo2pEntry}
+                          onChange={(e) => setConfigLudo2pEntry(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            background: 'rgba(0, 0, 0, 0.45)',
+                            border: '1px solid rgba(255, 255, 255, 0.12)',
+                            borderRadius: '8px',
+                            color: '#FFFFFF',
+                            fontSize: '0.88rem',
+                            fontWeight: 700,
+                            outline: 'none',
+                          }}
+                        />
+                        <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap' }}>
+                          {['0.50', '1.00', '2.00', '5.00', '10.00'].map((p) => (
+                            <button
+                              key={p}
+                              type="button"
+                              onClick={() => setConfigLudo2pEntry(p)}
+                              className={`preset-pill-btn ${configLudo2pEntry === p ? 'active' : ''}`}
+                              style={{ padding: '2px 6px', fontSize: '0.68rem' }}
+                            >
+                              ${p}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '0.72rem', color: '#00E676', display: 'block', marginBottom: '4px' }}>
+                          2P Prize Pool (USDT)
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          min="0.1"
+                          required
+                          value={configLudo2pPrize}
+                          onChange={(e) => setConfigLudo2pPrize(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            background: 'rgba(0, 0, 0, 0.45)',
+                            border: '1px solid rgba(255, 255, 255, 0.12)',
+                            borderRadius: '8px',
+                            color: '#00E676',
+                            fontSize: '0.88rem',
+                            fontWeight: 800,
+                            outline: 'none',
+                          }}
+                        />
+                        <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap' }}>
+                          {['10.00', '20.00', '50.00', '100.00'].map((p) => (
+                            <button
+                              key={p}
+                              type="button"
+                              onClick={() => setConfigLudo2pPrize(p)}
+                              className={`preset-pill-btn ${configLudo2pPrize === p ? 'active' : ''}`}
+                              style={{ padding: '2px 6px', fontSize: '0.68rem' }}
+                            >
+                              ${p}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 4-Player Mode Pool */}
+                  <div
+                    style={{
+                      background: 'rgba(0, 0, 0, 0.38)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      borderRadius: '12px',
+                      padding: '12px 14px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#FFFFFF' }}>
+                        👑 4-Player (Classic Tournament)
+                      </span>
+                      <span style={{ fontSize: '0.74rem', color: '#00E676', fontWeight: 700 }}>
+                        {parseFloat(configLudo4pEntry) > 0 && parseFloat(configLudo4pPrize) > 0
+                          ? `${(parseFloat(configLudo4pPrize) / parseFloat(configLudo4pEntry)).toFixed(1)}x Winner Multiplier`
+                          : ''}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      <div>
+                        <label style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>
+                          4P Entry Pool (USDT)
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          min="0.01"
+                          required
+                          value={configLudo4pEntry}
+                          onChange={(e) => setConfigLudo4pEntry(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            background: 'rgba(0, 0, 0, 0.45)',
+                            border: '1px solid rgba(255, 255, 255, 0.12)',
+                            borderRadius: '8px',
+                            color: '#FFFFFF',
+                            fontSize: '0.88rem',
+                            fontWeight: 700,
+                            outline: 'none',
+                          }}
+                        />
+                        <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap' }}>
+                          {['1.00', '2.00', '5.00', '10.00', '20.00'].map((p) => (
+                            <button
+                              key={p}
+                              type="button"
+                              onClick={() => setConfigLudo4pEntry(p)}
+                              className={`preset-pill-btn ${configLudo4pEntry === p ? 'active' : ''}`}
+                              style={{ padding: '2px 6px', fontSize: '0.68rem' }}
+                            >
+                              ${p}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '0.72rem', color: '#00E676', display: 'block', marginBottom: '4px' }}>
+                          4P 1st Prize (USDT)
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          min="0.1"
+                          required
+                          value={configLudo4pPrize}
+                          onChange={(e) => setConfigLudo4pPrize(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            background: 'rgba(0, 0, 0, 0.45)',
+                            border: '1px solid rgba(255, 255, 255, 0.12)',
+                            borderRadius: '8px',
+                            color: '#00E676',
+                            fontSize: '0.88rem',
+                            fontWeight: 800,
+                            outline: 'none',
+                          }}
+                        />
+                        <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap' }}>
+                          {['25.00', '50.00', '100.00', '250.00'].map((p) => (
+                            <button
+                              key={p}
+                              type="button"
+                              onClick={() => setConfigLudo4pPrize(p)}
+                              className={`preset-pill-btn ${configLudo4pPrize === p ? 'active' : ''}`}
+                              style={{ padding: '2px 6px', fontSize: '0.68rem' }}
+                            >
+                              ${p}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+              )}
+
+              {/* Standard Game Pool Inputs (Hidden for Ludo since Ludo has dedicated 2P/4P multi-mode configuration) */}
+              {!(configuringGame?.id?.includes('ludo') || configuringGame?.playableType === 'native-ludo') && (
+                <>
+                  {/* Default / Fallback Entry Pool Input */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label style={{ fontSize: '0.84rem', fontWeight: 700, color: '#FFFFFF' }}>
+                        Entry Pool (USDT)
+                      </label>
+                      <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Player match stake fee</span>
+                    </div>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="number"
+                        step="any"
+                        min="0.01"
+                        required
+                        placeholder="e.g. 1.00"
+                        value={configEntryPool}
+                        onChange={(e) => setConfigEntryPool(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 14px',
+                          paddingRight: '64px',
+                          background: 'rgba(0, 0, 0, 0.45)',
+                          border: '1px solid rgba(255, 255, 255, 0.12)',
+                          borderRadius: '12px',
+                          color: '#FFFFFF',
+                          fontSize: '1rem',
+                          fontWeight: 700,
+                          outline: 'none',
+                        }}
+                      />
+                      <span
+                        style={{
+                          position: 'absolute',
+                          right: '14px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          color: '#00E676',
+                          fontWeight: 800,
+                          fontSize: '0.82rem',
+                        }}
+                      >
+                        USDT
+                      </span>
+                    </div>
+
+                    {/* Quick Presets */}
+                    <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
+                      {['0.50', '1.00', '2.00', '5.00', '10.00', '25.00', '50.00'].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setConfigEntryPool(preset)}
+                          className={`preset-pill-btn ${configEntryPool === preset ? 'active' : ''}`}
+                        >
+                          ${preset}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Prize Pool Input */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label style={{ fontSize: '0.84rem', fontWeight: 700, color: '#FFFFFF' }}>
+                        Prize Pool (USDT)
+                      </label>
+                      <span style={{ fontSize: '0.72rem', color: '#00E676' }}>Jackpot reward pool</span>
+                    </div>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="number"
+                        step="any"
+                        min="0.1"
+                        required
+                        placeholder="e.g. 100.00"
+                        value={configPrizePool}
+                        onChange={(e) => setConfigPrizePool(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 14px',
+                          paddingRight: '64px',
+                          background: 'rgba(0, 0, 0, 0.45)',
+                          border: '1px solid rgba(255, 255, 255, 0.12)',
+                          borderRadius: '12px',
+                          color: '#00E676',
+                          fontSize: '1rem',
+                          fontWeight: 800,
+                          outline: 'none',
+                        }}
+                      />
+                      <span
+                        style={{
+                          position: 'absolute',
+                          right: '14px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          color: '#00E676',
+                          fontWeight: 800,
+                          fontSize: '0.82rem',
+                        }}
+                      >
+                        USDT
+                      </span>
+                    </div>
+
+                    {/* Quick Presets */}
+                    <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
+                      {['50.00', '100.00', '250.00', '500.00', '1000.00', '2500.00', '5000.00'].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setConfigPrizePool(preset)}
+                          className={`preset-pill-btn ${configPrizePool === preset ? 'active' : ''}`}
+                        >
+                          ${preset}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Threshold Win Score Input */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label style={{ fontSize: '0.84rem', fontWeight: 700, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        Threshold Win Score (Points)
+                        {isFixedThresholdGame(configuringGame?.id) && (
+                          <span className="locked-threshold-badge">
+                            <Lock size={11} /> FIXED (1 PTS)
+                          </span>
+                        )}
+                      </label>
+                      <span style={{ fontSize: '0.72rem', color: isFixedThresholdGame(configuringGame?.id) ? '#ef4444' : '#FFB300' }}>
+                        {isFixedThresholdGame(configuringGame?.id) ? 'Locked permanently to 1' : 'Score required to claim prize'}
+                      </span>
+                    </div>
+                    <div
+                      style={{ position: 'relative' }}
+                      onMouseEnter={() => {
+                        if (isFixedThresholdGame(configuringGame?.id)) setThresholdHovered(true);
+                      }}
+                      onMouseLeave={() => setThresholdHovered(false)}
+                    >
+                      <input
+                        type="number"
+                        step="1"
+                        min="1"
+                        required
+                        readOnly={isFixedThresholdGame(configuringGame?.id)}
+                        placeholder="e.g. 500"
+                        value={isFixedThresholdGame(configuringGame?.id) ? '1' : configThresholdScore}
+                        onChange={(e) => {
+                          if (!isFixedThresholdGame(configuringGame?.id)) {
+                            setConfigThresholdScore(e.target.value);
+                          }
+                        }}
+                        className={isFixedThresholdGame(configuringGame?.id) ? 'fixed-threshold-locked' : ''}
+                        style={{
+                          width: '100%',
+                          padding: '12px 14px',
+                          paddingRight: '64px',
+                          background: isFixedThresholdGame(configuringGame?.id) ? 'rgba(239, 68, 68, 0.08)' : 'rgba(0, 0, 0, 0.45)',
+                          border: isFixedThresholdGame(configuringGame?.id)
+                            ? (thresholdHovered ? '2px solid #ef4444' : '1.5px solid rgba(239, 68, 68, 0.55)')
+                            : '1px solid rgba(255, 255, 255, 0.12)',
+                          borderRadius: '12px',
+                          color: isFixedThresholdGame(configuringGame?.id) ? '#ef4444' : '#FFB300',
+                          fontSize: '1rem',
+                          fontWeight: 800,
+                          outline: 'none',
+                          cursor: isFixedThresholdGame(configuringGame?.id) ? 'not-allowed' : 'text',
+                          boxShadow: isFixedThresholdGame(configuringGame?.id) && thresholdHovered
+                            ? '0 0 0 3px rgba(239, 68, 68, 0.25), 0 0 20px rgba(239, 68, 68, 0.45)'
+                            : 'none',
+                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        }}
+                      />
+                      <span
+                        style={{
+                          position: 'absolute',
+                          right: '14px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          color: isFixedThresholdGame(configuringGame?.id) ? '#ef4444' : '#FFB300',
+                          fontWeight: 800,
+                          fontSize: '0.82rem',
+                        }}
+                      >
+                        PTS
+                      </span>
+                    </div>
+
+                    {/* Red Mark & Warning Banner when hovered on Carrom & Chess */}
+                    {isFixedThresholdGame(configuringGame?.id) && thresholdHovered && (
+                      <div className="locked-hover-warning">
+                        <AlertCircle size={15} color="#ef4444" style={{ flexShrink: 0 }} />
+                        <span>
+                          <strong>Fixed at 1:</strong> Threshold for {configuringGame.title} is strictly locked to 1 PTS. Admin cannot change this setting.
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Quick Presets or Locked Notice */}
+                    {isFixedThresholdGame(configuringGame?.id) ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', color: '#ef4444', fontSize: '0.78rem', fontWeight: 600 }}>
+                        <Lock size={13} color="#ef4444" />
+                        <span>Fixed Threshold: 1 PTS required to claim prize (Modifications disabled)</span>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
+                        {['100', '250', '500', '1000', '2500', '5000'].map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => setConfigThresholdScore(preset)}
+                            className={`preset-pill-btn ${configThresholdScore === preset ? 'active' : ''}`}
+                          >
+                            {preset} pts
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Calculated Multiplier Ratio */}
+                  {parseFloat(configEntryPool) > 0 && parseFloat(configPrizePool) > 0 && (
+                    <div
+                      style={{
+                        background: 'rgba(0, 230, 118, 0.08)',
+                        border: '1px solid rgba(0, 230, 118, 0.25)',
+                        borderRadius: '12px',
+                        padding: '12px 16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <span style={{ fontSize: '0.82rem', color: '#94a3b8' }}>Calculated Jackpot Multiplier:</span>
+                      <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#00E676' }}>
+                        {(parseFloat(configPrizePool) / parseFloat(configEntryPool)).toFixed(1)}x Multiplier
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Modal Buttons */}

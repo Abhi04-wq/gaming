@@ -40,7 +40,7 @@ export default function IncomeDetails() {
     transactions: [],
   });
 
-  const [filterType, setFilterType] = useState('all'); // 'all' | 'credit' | 'debit'
+  const [filterType, setFilterType] = useState('all'); // 'all' | 'credit' | 'debit' | 'cut'
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedId, setCopiedId] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
@@ -84,11 +84,35 @@ export default function IncomeDetails() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  // 25% platform-cut ledger: prize rewards where a cut was taken
+  const cutTransactions = useMemo(() => {
+    return (data.transactions || []).filter((t) => Number(t.deductionAmount || 0) > 0);
+  }, [data.transactions]);
+
+  const cutTotals = useMemo(() => {
+    let gross = 0;
+    let cut = 0;
+    let net = 0;
+    cutTransactions.forEach((t) => {
+      gross += Number(t.grossReward || t.amount || 0);
+      cut += Number(t.deductionAmount || 0);
+      net += Number(t.amount || 0);
+    });
+    return {
+      count: cutTransactions.length,
+      gross: gross.toFixed(2),
+      cut: cut.toFixed(2),
+      net: net.toFixed(2),
+    };
+  }, [cutTransactions]);
+
   // Filtered transactions
   const filteredTransactions = useMemo(() => {
     let list = data.transactions || [];
 
-    if (filterType !== 'all') {
+    if (filterType === 'cut') {
+      list = cutTransactions;
+    } else if (filterType !== 'all') {
       list = list.filter((t) => t.type === filterType);
     }
 
@@ -104,7 +128,7 @@ export default function IncomeDetails() {
     }
 
     return list;
-  }, [data.transactions, filterType, searchQuery]);
+  }, [data.transactions, cutTransactions, filterType, searchQuery]);
 
   // Format date helper
   const formatTxTime = (dateStr) => {
@@ -166,6 +190,9 @@ export default function IncomeDetails() {
       badgeText: badgeText.toUpperCase(),
       scoreText,
       amount: Number(tx.amount || 0).toFixed(2),
+      grossReward: tx.grossReward ? Number(tx.grossReward).toFixed(2) : null,
+      deductionAmount: tx.deductionAmount ? Number(tx.deductionAmount).toFixed(2) : null,
+      netReward: tx.netReward ? Number(tx.netReward).toFixed(2) : null,
       balanceAfter: Number(tx.balanceAfter || 0).toFixed(2),
       referenceId: tx.referenceId || '',
       createdAt: tx.createdAt,
@@ -488,6 +515,24 @@ export default function IncomeDetails() {
                 >
                   🔴 Debits ({data.summary.debitCount})
                 </button>
+                <button
+                  onClick={() => setFilterType('cut')}
+                  title="Prize rewards with 25% platform cut"
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    border: filterType === 'cut' ? 'none' : '1px solid rgba(255, 179, 0, 0.4)',
+                    background: filterType === 'cut' ? '#FFB300' : 'rgba(255, 179, 0, 0.08)',
+                    color: filterType === 'cut' ? '#000' : '#FFB300',
+                    fontWeight: 700,
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  ✂️ 25% Cut ({cutTotals.count})
+                </button>
               </div>
 
               {/* Search Box */}
@@ -512,6 +557,32 @@ export default function IncomeDetails() {
               </div>
             </div>
 
+            {/* 25% Cut summary strip (visible on 25% Cut tab) */}
+            {filterType === 'cut' && (
+              <div
+                className="income-cut-strip"
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '8px 20px',
+                  alignItems: 'center',
+                  background: 'rgba(255, 179, 0, 0.07)',
+                  border: '1px solid rgba(255, 179, 0, 0.35)',
+                  borderRadius: '10px',
+                  padding: '10px 14px',
+                  marginBottom: '16px',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  color: '#FFE082',
+                }}
+              >
+                <span>✂️ {cutTotals.count} prize{cutTotals.count !== 1 ? 's' : ''} with 25% cut</span>
+                <span>Gross: <strong style={{ color: '#FFFFFF' }}>{cutTotals.gross} USDT</strong></span>
+                <span>Platform cut: <strong style={{ color: '#FFB300' }}>-{cutTotals.cut} USDT</strong></span>
+                <span>You received: <strong style={{ color: '#00E676' }}>+{cutTotals.net} USDT</strong></span>
+              </div>
+            )}
+
             {/* Transactions List */}
             {loading ? (
               <div style={{ textAlign: 'center', padding: '60px 20px', color: '#A3A3A3' }}>
@@ -533,6 +604,8 @@ export default function IncomeDetails() {
                 <p style={{ color: '#737373', fontSize: '0.88rem', maxWidth: '380px', margin: '0 auto 16px auto' }}>
                   {searchQuery
                     ? 'No transactions matching your search query.'
+                    : filterType === 'cut'
+                    ? 'No 25% platform cuts yet — win a prize pool and the cut will appear here!'
                     : 'Start playing games or enter prize pools to generate credits and debits!'}
                 </p>
                 <Link
@@ -596,6 +669,11 @@ export default function IncomeDetails() {
                             {isCredit ? `+${card.amount}` : `-${card.amount}`}
                             <span className="income-currency">USDT</span>
                           </div>
+                          {card.deductionAmount && (
+                            <div className="income-platform-cut" style={{ fontSize: '0.72rem', color: '#f59e0b', fontWeight: 700, margin: '2px 0' }}>
+                              -25% Platform Cut: -{card.deductionAmount} USDT (Gross: {card.grossReward} USDT)
+                            </div>
+                          )}
                           <div className="income-balance-after">
                             <span className="bal-lbl">Bal after:</span>
                             <span className="bal-val">{card.balanceAfter} USDT</span>

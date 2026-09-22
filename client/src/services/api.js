@@ -105,6 +105,16 @@ export const api = {
   // Admin: platform-wide stats live from database (users + transactions)
   getAdminStats: () => request('/wallet/admin-stats'),
 
+  // Admin: fetch all 25% reward deduction records
+  getRewardDeductions: ({ search = '', page = 1, limit = 200 } = {}) => {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (page) params.set('page', String(page));
+    if (limit) params.set('limit', String(limit));
+    const qs = params.toString();
+    return request(`/wallet/reward-deductions${qs ? `?${qs}` : ''}`);
+  },
+
   // Logout
   logout: () =>
     request('/auth/logout', {

@@ -1,7 +1,10 @@
 const express = require('express');
+const http = require('http');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const { Server } = require('socket.io');
 const connectDB = require('./config/db');
+const initLudoSocket = require('./socket/ludoSocket');
 
 // Load environment variables
 dotenv.config();
@@ -34,6 +37,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/wallet', require('./routes/wallet'));
 app.use('/api/games', require('./routes/games'));
+app.use('/api/game-config', require('./routes/gameConfig'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -46,7 +50,14 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+const httpServer = http.createServer(app);
+const io = new Server(httpServer, {
+  cors: { origin: '*', methods: ['GET', 'POST'] },
+});
+initLudoSocket(io);
+app.set('io', io);
+
+httpServer.listen(PORT, () => {
   console.log(`===============================================`);
   console.log(` Web3 Auth Server Running on port ${PORT}`);
   console.log(` Environment: ${process.env.NODE_ENV || 'development'}`);

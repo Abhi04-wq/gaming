@@ -16,35 +16,44 @@ import {
 import { GAME_CATALOG, getGameRedirectUrl } from './GamesLobby';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
+import { fetchGameConfigs } from '../services/gameConfigService';
+import LudoGameBoard from '../components/games/ludo/LudoGameBoard';
 
 // Dedicated in-app play page (/play/:gameId)
 // Displays Entry Pool, Threshold Score, Prize Pool, and Live Balance
 // Strictly checks return JSON: state=start -> deducts entry fee; state=over -> calculates if score >= threshold to win prize pool
 export default function GamePlay() {
   const { gameId } = useParams();
-  const game = GAME_CATALOG.find((g) => g.id === gameId);
+  const game = GAME_CATALOG.find((g) => g.id === gameId) ||
+    (gameId === 'carrom' ? GAME_CATALOG.find((g) => g.id === 'carrom-hero') : null);
   const { user, updateBalance } = useAuth();
 
-  // Load configured entry pool, prize pool & threshold score from admin overrides (or fallback)
-  let initialEntryPool = game?.entryPool || '1.00';
-  let initialPrizePool = game?.prizePool || '100.00';
-  let initialThresholdScore = game?.thresholdScore || '500';
+  // Admin pools database theke (kono localStorage noy) — sob browser-e same value
+  const [gameConfigs, setGameConfigs] = useState({});
+  useEffect(() => {
+    let cancelled = false;
+    fetchGameConfigs()
+      .then((cfg) => { if (!cancelled) setGameConfigs(cfg); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
-  try {
-    const saved = localStorage.getItem('loyalty_admin_game_overrides');
-    if (saved) {
-      const overrides = JSON.parse(saved);
-      if (overrides[gameId]) {
-        if (overrides[gameId].entryPool !== undefined) initialEntryPool = overrides[gameId].entryPool;
-        if (overrides[gameId].prizePool !== undefined) initialPrizePool = overrides[gameId].prizePool;
-        if (overrides[gameId].thresholdScore !== undefined) initialThresholdScore = overrides[gameId].thresholdScore;
-      }
-    }
-  } catch (_) {}
+  // Load configured entry pool, prize pool & threshold score from database (or fallback)
+  const gameOv = gameConfigs[gameId] ||
+    (gameId?.includes('ludo') ? (gameConfigs['ludo-with-friends'] || gameConfigs['ludo-dash'] || gameConfigs['ludo']) : null);
+  let initialEntryPool = gameOv?.entryPool !== undefined ? gameOv.entryPool : (game?.entryPool || '1.00');
+  let initialPrizePool = gameOv?.prizePool !== undefined ? gameOv.prizePool : (game?.prizePool || '100.00');
+  let initialThresholdScore = gameOv?.thresholdScore !== undefined ? gameOv.thresholdScore : (game?.thresholdScore || '500');
+  let initialLudo2pEntry = gameOv?.ludo2pEntryPool !== undefined ? gameOv.ludo2pEntryPool : (game?.ludo2pEntryPool || '1.00');
+  let initialLudo2pPrize = gameOv?.ludo2pPrizePool !== undefined ? gameOv.ludo2pPrizePool : (game?.ludo2pPrizePool || '20.00');
+  let initialLudo4pEntry = gameOv?.ludo4pEntryPool !== undefined ? gameOv.ludo4pEntryPool : (game?.ludo4pEntryPool || '2.00');
+  let initialLudo4pPrize = gameOv?.ludo4pPrizePool !== undefined ? gameOv.ludo4pPrizePool : (game?.ludo4pPrizePool || '50.00');
 
+  const isFixedThresholdGame =
+    gameId === 'carrom-hero' || gameId === 'carrom' || gameId === 'chess-grandmaster' || gameId === 'chess';
   const entryPool = initialEntryPool;
   const prizePool = initialPrizePool;
-  const thresholdScore = initialThresholdScore;
+  const thresholdScore = isFixedThresholdGame ? '1' : initialThresholdScore;
 
   const [iframeKey, setIframeKey] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
@@ -65,6 +74,18 @@ export default function GamePlay() {
   const isRoundDeductedRef = useRef(false);
   const currentScoreRef = useRef(0);
   const isPrizeAwardedRef = useRef(false);
+  // Listener closure stale state dhore rakhe, tai round-end track ref-e (win OR lose)
+  const gameOverRef = useRef(false);
+  const gameResultRef = useRef(null);
+  const [isDailyChallenge, setIsDailyChallenge] = useState(false);
+  const isDailyChallengeRef = useRef(false);
+  const isChessMode1SelectedRef = useRef(false);
+  const isChessFreeModeRef = useRef(false);
+  const lastDeductedAmountRef = useRef(0);
+
+  useEffect(() => {
+    isDailyChallengeRef.current = isDailyChallenge;
+  }, [isDailyChallenge]);
 
   useEffect(() => {
     isRoundDeductedRef.current = isRoundDeducted;
@@ -74,28 +95,59 @@ export default function GamePlay() {
     currentScoreRef.current = currentScore;
   }, [currentScore]);
 
+  useEffect(() => {
+    gameOverRef.current = isGameOver;
+  }, [isGameOver]);
+
+  useEffect(() => {
+    gameResultRef.current = gameResult;
+  }, [gameResult]);
+
+  const isNativeLudo = game?.playableType === 'native-ludo' || gameId === 'ludo-with-friends' || gameId === 'ludo-dash' || gameId === 'ludo';
+
   // Show stuck notice 3 seconds after (re)load
   useEffect(() => {
+    if (isNativeLudo) {
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     setShowStuck(false);
     const timer = setTimeout(() => setShowStuck(true), 3000);
     return () => clearTimeout(timer);
-  }, [gameId, iframeKey]);
+  }, [gameId, iframeKey, isNativeLudo]);
 
-  // Core Deduction Function: Triggered ONLY when return status is 'start'
-  const handleGameStartDeduction = async (isRestart = false) => {
+  // Core Deduction Function: Triggered ONLY when return status is 'start' and NOT in daily challenge
+  const handleGameStartDeduction = async (isRestart = false, force = false, feeOverride = null) => {
     if (!game) return;
 
-    if (!user?.walletAddress) {
+    // Strict Daily Challenge Guard: NEVER deduct money for challenge or chess free moves
+    if ((isDailyChallengeRef.current || isChessFreeModeRef.current) && !force) {
+      console.log('user start challenge / chess free moves');
+      console.log('%c🌟 [DEDUCTION ABORTED] Free Play Mode is active (0 USDT deducted)', 'background: #38BDF8; color: #000; font-weight: bold;');
       return;
     }
 
-    if (isRoundDeductedRef.current || isDeductingRef.current) {
+    // In Chess: If free moves mode is active, do not deduct unless force=true
+    const isChessGame = Boolean(gameId?.includes('chess') || game?.id?.includes('chess'));
+    if (isChessGame && (isChessFreeModeRef.current || isDailyChallengeRef.current) && !force) {
+      console.log('%c♟️ [CHESS DEDUCTION HELD] Free practice mode active.', 'background: #FFB300; color: #000; font-weight: bold;');
+      return;
+    }
+
+    if (!user?.walletAddress) {
+      console.warn('[GamePlay: Start] User wallet address not found.');
+      return;
+    }
+
+    if (!force && (isRoundDeductedRef.current || isDeductingRef.current)) {
       console.log('[GamePlay: Start] Round entry already deducted or in progress.');
       return;
     }
 
-    const fee = parseFloat(entryPool);
+    const fee = feeOverride !== null && feeOverride !== undefined && !isNaN(parseFloat(feeOverride))
+      ? parseFloat(feeOverride)
+      : parseFloat(entryPool);
     const balance = parseFloat(user.usdtBalance || '0');
 
     if (balance < fee) {
@@ -111,6 +163,7 @@ export default function GamePlay() {
       const res = await api.deductGameEntry(user.walletAddress, gameId, fee, game?.title || null);
 
       if (res.success) {
+        lastDeductedAmountRef.current = fee;
         updateBalance(res.newBalance);
         setIsRoundDeducted(true);
         isRoundDeductedRef.current = true;
@@ -170,11 +223,18 @@ export default function GamePlay() {
 
       if (res.success) {
         updateBalance(res.newBalance);
+        const gross = res.grossReward || prize;
+        const cut = res.deductionAmount || (parseFloat(gross) * 0.25).toFixed(2);
+        const net = res.netReward || res.prizeCredited || (parseFloat(gross) * 0.75).toFixed(2);
+
         setGameResult({
           won: true,
           score,
           threshold: target,
-          prize,
+          prize: net,
+          grossPrize: gross,
+          deductionAmount: cut,
+          netReward: net,
           condition1Passed: true,
           condition2Passed: true,
           newBalance: res.newBalance,
@@ -182,7 +242,7 @@ export default function GamePlay() {
         });
 
         setToastAlert({
-          text: `🎉 REWARD CLAIMED! Condition 1 (Score: ${score} >= ${target}) & Condition 2 (Game Over) PASSED! +${prize} USDT credited!`,
+          text: `🎉 REWARD CLAIMED! Gross: ${gross} USDT | -25% Cut: -${cut} USDT | +${net} USDT (75%) credited to balance!`,
           type: 'success',
         });
       }
@@ -193,8 +253,27 @@ export default function GamePlay() {
   };
 
   // Central Game Event Processor: Evaluates Return Status 'start' and the Two Reward Conditions
-  const processGameEvent = (parsed) => {
+  // Central Game Event Processor: Evaluates Return Status 'start', Daily Challenge, and Two Reward Conditions
+  const processGameEvent = (parsed, rawData) => {
     if (!parsed) return;
+
+    // Detect Sudoku / Gamezop Daily Challenge events:
+    // Handles object format: { eventId: 'challenge_started', value: 0 }, { eventKey: 'challenge_started' }, etc.
+    // Handles string format: "info/GameAnalytics: Add DESIGN event: {eventId:challenge_started, value:0}"
+    const rawDataStr = typeof rawData === 'string' ? rawData.toLowerCase() : '';
+    const parsedStr = typeof parsed === 'string' ? parsed.toLowerCase() : '';
+
+    const rawEventId = String(
+      parsed?.eventId ??
+      parsed?.event_id ??
+      parsed?.eventID ??
+      parsed?.eventKey ??
+      parsed?.event_key ??
+      parsed?.data?.eventId ??
+      parsed?.data?.eventKey ??
+      parsed?.payload?.eventId ??
+      ''
+    ).toLowerCase().trim();
 
     // Extract state/status/name/event/action from the return JSON
     const rawState =
@@ -206,6 +285,148 @@ export default function GamePlay() {
       parsed?.type ??
       (typeof parsed === 'string' ? parsed : '');
     const stateStr = String(rawState).toLowerCase().trim();
+    let jsonStr = '';
+    try {
+      jsonStr = typeof parsed === 'object' && parsed !== null ? JSON.stringify(parsed).toLowerCase() : '';
+    } catch (_) {}
+
+    const isChallengeEvent =
+      rawDataStr.includes('challenge') ||
+      parsedStr.includes('challenge') ||
+      jsonStr.includes('challenge') ||
+      rawEventId.includes('challenge') ||
+      stateStr.includes('challenge');
+
+    // Detect Chess 2-moves, 3-moves, and 4-moves events (Free Play Mode — No entry deduction from wallet)
+    // Game returns: 'session:menu:click:mode:2:level_1' (2 moves), 'session:menu:click:mode:3:level_1' (3 moves), 'session:menu:click:mode:4:level_1' (4 moves)
+    const chessModeMatch =
+      (rawDataStr + ' ' + parsedStr + ' ' + jsonStr + ' ' + rawEventId).match(/(?:session:menu:click:)?mode[:_]([234])/i);
+
+    const isChessFreeMovesEvent =
+      Boolean(chessModeMatch) ||
+      rawDataStr.includes('session:menu:click:mode:2') ||
+      jsonStr.includes('session:menu:click:mode:2') ||
+      rawDataStr.includes('session:menu:click:mode:3') ||
+      jsonStr.includes('session:menu:click:mode:3') ||
+      rawDataStr.includes('session:menu:click:mode:4') ||
+      jsonStr.includes('session:menu:click:mode:4') ||
+      rawEventId.includes('mode:2') || rawEventId.includes('mode_2') ||
+      rawEventId.includes('mode:3') || rawEventId.includes('mode_3') ||
+      rawEventId.includes('mode:4') || rawEventId.includes('mode_4');
+
+    if (isChallengeEvent) {
+      console.log('user start challenge');
+      console.log(
+        '%c🎯 [SUDOKU DAILY CHALLENGE DETECTED] user start challenge',
+        'background: #00E676; color: #000; font-weight: 900; font-size: 16px; padding: 4px 10px; border-radius: 4px;'
+      );
+      setIsDailyChallenge(true);
+      isDailyChallengeRef.current = true;
+      setRoundStatus('started');
+      setToastAlert({
+        text: '🌟 Sudoku Daily Challenge Activated! Free Play Mode: No entry fee deducted from your wallet.',
+        type: 'info',
+      });
+      return;
+    }
+
+    if (isChessFreeMovesEvent) {
+      const combined = `${rawDataStr} ${parsedStr} ${jsonStr} ${rawEventId}`;
+      const modeNum = chessModeMatch ? chessModeMatch[1] : (
+        combined.includes('mode:3') || combined.includes('mode_3') ? '3' :
+        combined.includes('mode:4') || combined.includes('mode_4') ? '4' : '2'
+      );
+      console.log(`user start free mode: chess mode ${modeNum}`);
+      console.log(
+        `%c♟️ [CHESS MODE ${modeNum} DETECTED] {eventKey: session:menu:click:mode:${modeNum}:level_1} Free Play Mode — No entry fee will be deducted.`,
+        'background: #0284C7; color: #FFFFFF; font-weight: 800; padding: 4px 8px; border-radius: 4px;'
+      );
+      setIsDailyChallenge(true);
+      isDailyChallengeRef.current = true;
+      isChessFreeModeRef.current = true;
+      isChessMode1SelectedRef.current = false;
+      setIsRoundDeducted(false);
+      isRoundDeductedRef.current = false;
+      setRoundStatus('started');
+
+      // Auto-Refund Guard: If money was previously deducted on initial menu load before mode selection, refund it now!
+      if (lastDeductedAmountRef.current > 0 && user?.walletAddress) {
+        const refundAmt = lastDeductedAmountRef.current;
+        lastDeductedAmountRef.current = 0;
+        console.log(`%c💸 [CHESS AUTO-REFUND] Refunding ${refundAmt} USDT because player selected free chess mode ${modeNum}.`, 'background: #00E676; color: #000; font-weight: bold;');
+        api.depositFunds(user.walletAddress, refundAmt, `Refund: Chess Free Moves Mode (Mode ${modeNum}) Activated`)
+          .then((res) => {
+            if (res.success) {
+              updateBalance(res.newBalance);
+              setToastAlert({
+                text: `♟️ Chess ${modeNum} Moves (Free Play): ${refundAmt} USDT refunded to your wallet!`,
+                type: 'success',
+              });
+            }
+          })
+          .catch((err) => console.error('[Chess Refund Error]', err));
+      } else {
+        setToastAlert({
+          text: `♟️ Chess ${modeNum} Moves Practice Mode (Mode ${modeNum}): Free Play! No entry fee deducted from your wallet.`,
+          type: 'info',
+        });
+      }
+      return;
+    }
+
+    // Detect Chess Quick Match / Paid Game:
+    // Event: 'session:menu:click:quickgame' or { eventId: 'session:menu:click:quickgame', value: 0 }
+    const isQuickGameEvent =
+      rawEventId.includes('quickgame') ||
+      rawEventId.includes('quickmatch') ||
+      rawDataStr.includes('quickgame') ||
+      rawDataStr.includes('quickmatch') ||
+      jsonStr.includes('quickgame') ||
+      jsonStr.includes('quickmatch') ||
+      rawDataStr.includes('session:menu:click:quickgame') ||
+      jsonStr.includes('session:menu:click:quickgame');
+
+    if (isQuickGameEvent) {
+      console.log('user start quickgame: paid match');
+      console.log(
+        '%c♟️ [CHESS QUICK MATCH DETECTED] {eventId: session:menu:click:quickgame} Paid Match — Deducting entry fee, prize pool rewards enabled.',
+        'background: #00E676; color: #000; font-weight: 900; font-size: 14px; padding: 4px 8px; border-radius: 4px;'
+      );
+      setIsDailyChallenge(false);
+      isDailyChallengeRef.current = false;
+      isChessFreeModeRef.current = false;
+      isChessMode1SelectedRef.current = true;
+      setIsRoundDeducted(false);
+      isRoundDeductedRef.current = false;
+      isDeductingRef.current = false;
+      setRoundStatus('started');
+
+      handleGameStartDeduction(false, true);
+      return;
+    }
+
+    // Helper to detect Normal Play: In Chess, Mode 1 or Quick Game resets to normal paid play!
+    const isChessGame = Boolean(gameId?.includes('chess') || game?.id?.includes('chess'));
+    const isNormalPlayEvent = isChessGame
+      ? (/(?:session:menu:click:)?mode[:_]1(?::|$)/i.test(rawDataStr + ' ' + jsonStr + ' ' + rawEventId) ||
+         isQuickGameEvent)
+      : (
+          rawEventId === 'normal_started' ||
+          rawEventId === 'classic_started' ||
+          rawEventId === 'difficulty_selected' ||
+          rawEventId.includes('normal') ||
+          rawEventId.includes('classic')
+        );
+
+    if (isNormalPlayEvent) {
+      console.log('%c🎮 [NORMAL PLAY DETECTED] Setting to Normal Play Mode (Entry fee will be deducted on start).', 'background: #00E676; color: #000; font-weight: bold;');
+      setIsDailyChallenge(false);
+      isDailyChallengeRef.current = false;
+      if (isChessGame) {
+        isChessMode1SelectedRef.current = true;
+        isChessFreeModeRef.current = false;
+      }
+    }
 
     // Extract numerical score if present
     const incomingScore =
@@ -250,6 +471,7 @@ export default function GamePlay() {
         condition1_exceededScore,
         condition2_isGameOver,
         isRoundDeducted: isRoundDeductedRef.current,
+        isDailyChallenge: isDailyChallengeRef.current,
       }
     );
 
@@ -281,26 +503,48 @@ export default function GamePlay() {
       stateStr === 'play' ||
       stateStr === 'roundstart';
 
-    // If reload/restart occurs OR if previous round was over and a new start arrives:
-    if (isReloadOrRestart || ((isGameOver || isPrizeAwardedRef.current || gameResult) && isStart)) {
-      console.log('%c🔄 [RELOAD / NEW ROUND DETECTED] Resetting round state to enable entry deduction...', 'background: #FFB300; color: #000; font-weight: bold;');
+    // If reload/restart occurs OR if previous round was over (win OR lose) and a new start arrives:
+    // Age stale state-er karone harle reset hoto na — restart-e taka katto na (bug fix)
+    if (isReloadOrRestart || ((gameOverRef.current || isPrizeAwardedRef.current || gameResultRef.current) && isStart)) {
+      console.log('%c🔄 [RELOAD / NEW ROUND DETECTED] Resetting round state...', 'background: #FFB300; color: #000; font-weight: bold;');
       setIsRoundDeducted(false);
       isRoundDeductedRef.current = false;
       isPrizeAwardedRef.current = false;
+      gameOverRef.current = false;
+      gameResultRef.current = null;
       setCurrentScore(0);
       currentScoreRef.current = 0;
       setIsGameOver(false);
       setRoundStatus('idle');
       setGameResult(null);
+      // isDailyChallenge is preserved during reload/restart of challenge mode
     }
 
     // =========================================================================
-    // 1. DEDUCTION RULE: Deduct money ONLY when return status is 'start'
+    // 1. DEDUCTION RULE:
+    // When Daily Challenge is active: DO NOT DEDUCT (Free Play Mode).
+    // When Normal Play is active: Deduct entry pool fee strictly on status 'start'.
     // =========================================================================
     if (isStart) {
-      console.log('%c🚀 [RETURN STATUS: START DETECTED] Deducting money from account for round...', 'background: #39FF88; color: #000; font-weight: bold;');
-      if (!isRoundDeductedRef.current) {
-        handleGameStartDeduction(isReloadOrRestart);
+      if (isDailyChallengeRef.current) {
+        console.log(
+          '%c🌟 [DAILY CHALLENGE ACTIVE - FREE PLAY] Skipping wallet entry pool deduction for daily challenge round.',
+          'background: #38BDF8; color: #000; font-weight: bold;'
+        );
+        setRoundStatus('started');
+        setToastAlert({
+          text: '🌟 Daily Challenge Mode Active: Free Play round! No entry fee deducted from your wallet.',
+          type: 'info',
+        });
+      } else {
+        console.log(
+          '%c🚀 [NORMAL PLAY: RETURN STATUS START DETECTED] Deducting money from account for round...',
+          'background: #39FF88; color: #000; font-weight: bold;'
+        );
+        if (!isRoundDeductedRef.current) {
+          const customEntryFee = parsed?.entryFee !== undefined ? parsed.entryFee : (parsed?.data?.entryFee || null);
+          handleGameStartDeduction(isReloadOrRestart, false, customEntryFee);
+        }
       }
     }
 
@@ -311,37 +555,49 @@ export default function GamePlay() {
     // =========================================================================
     if (condition2_isGameOver) {
       setIsGameOver(true);
+      gameOverRef.current = true; // win hok ba lose — porer 'start'-e notun round deduct hobe
       setRoundStatus('over');
 
+      // Check if event explicitly passed won flag (e.g. from Ludo where winner is red or bot)
+      const explicitWon = parsed?.won !== undefined ? Boolean(parsed.won) : (parsed?.data?.won !== undefined ? Boolean(parsed.data.won) : null);
+      const isWinner = explicitWon !== null ? explicitWon : condition1_exceededScore;
+      const actualPrize = parsed?.prizeAmount !== undefined && !isNaN(parseFloat(parsed.prizeAmount))
+        ? parseFloat(parsed.prizeAmount)
+        : (parsed?.prize !== undefined && !isNaN(parseFloat(parsed.prize))
+          ? parseFloat(parsed.prize)
+          : (parsed?.data?.prize !== undefined && !isNaN(parseFloat(parsed.data.prize)) ? parseFloat(parsed.data.prize) : prize));
+
       console.log(
-        '%c🏁 [GAME OVER DETECTED - EVALUATING TWO CONDITIONS]',
+        '%c🏁 [GAME OVER DETECTED - EVALUATING CONDITIONS]',
         'background: #FFD700; color: #000; font-weight: bold; font-size: 13px;',
         {
-          'Condition 1 (Score Exceeded?)': condition1_exceededScore ? 'PASSED ✅' : 'FAILED ❌',
-          'Condition 2 (Game Over?)': 'PASSED ✅',
+          'Winner Status': isWinner ? 'WINNER ✅' : 'RUNNER UP / FAILED ❌',
+          'Condition 2 (Game Over)': 'PASSED ✅',
           finalScore: updatedScore,
           targetThreshold: target,
-          prizeReward: prize,
+          prizeReward: actualPrize,
         }
       );
 
-      // BOTH CONDITIONS MET: Condition 1 (Score Exceeded) AND Condition 2 (Game Over)
-      if (condition1_exceededScore) {
-        handlePrizeWon(updatedScore, target, prize);
+      // Condition 1 (Winner / Score Exceeded) AND Condition 2 (Game Over)
+      if (isWinner) {
+        handlePrizeWon(updatedScore, target, actualPrize);
       } else {
-        // Condition 1 FAILED: Score did not reach threshold
+        // Did not win 1st place -> No prize awarded!
         setGameResult({
           won: false,
           score: updatedScore,
           threshold: target,
-          prize,
+          prize: actualPrize,
           condition1Passed: false,
           condition2Passed: true,
           time: new Date().toLocaleTimeString(),
         });
 
         setToastAlert({
-          text: `🏁 Game Over! Condition 1 Failed: Score ${updatedScore} did not exceed target ${target} PTS. No prize reward.`,
+          text: explicitWon === false
+            ? `🏁 Match Over! An opponent finished first. Prize given to 1st place only.`
+            : `🏁 Game Over! Condition 1 Failed: Score ${updatedScore} did not exceed target ${target} PTS. No prize reward.`,
           type: 'info',
         });
       }
@@ -357,6 +613,8 @@ export default function GamePlay() {
       if (!event.data) return;
       if (typeof event.data === 'string' && event.data.startsWith('webpack')) return;
 
+      console.log('%c📨 [GAME MESSAGE EVENT]', 'background: #2563EB; color: #fff; font-weight: bold;', event.data);
+
       let parsed = event.data;
       if (typeof event.data === 'string') {
         try {
@@ -366,10 +624,124 @@ export default function GamePlay() {
         }
       }
 
-      processGameEvent(parsed);
+      // Immediate check for challenge event at listener entry
+      const msgStr = typeof event.data === 'string' ? event.data.toLowerCase() : '';
+      let msgJson = '';
+      try {
+        msgJson = typeof event.data === 'object' && event.data !== null ? JSON.stringify(event.data).toLowerCase() : '';
+      } catch (_) {}
+
+      if (msgStr.includes('challenge') || msgJson.includes('challenge')) {
+        console.log('user start challenge');
+        console.log('%c🎯 [ENTRY DETECTED] user start challenge', 'background: #00E676; color: #000; font-weight: 900; font-size: 16px; padding: 4px 10px; border-radius: 4px;');
+        setIsDailyChallenge(true);
+        isDailyChallengeRef.current = true;
+      }
+
+      // Immediate check for chess moves mode (2 moves, 3 moves, 4 moves) at listener entry
+      const chessEntryMatch = (msgStr + ' ' + msgJson).match(/(?:session:menu:click:)?mode[:_]([234])/i);
+      if (
+        chessEntryMatch ||
+        msgStr.includes('session:menu:click:mode:2') || msgJson.includes('session:menu:click:mode:2') ||
+        msgStr.includes('session:menu:click:mode:3') || msgJson.includes('session:menu:click:mode:3') ||
+        msgStr.includes('session:menu:click:mode:4') || msgJson.includes('session:menu:click:mode:4')
+      ) {
+        const modeNum = chessEntryMatch ? chessEntryMatch[1] : '2/3/4';
+        console.log(`user start free mode: chess mode ${modeNum}`);
+        console.log(`%c♟️ [ENTRY DETECTED] user start free mode: chess mode ${modeNum} (${modeNum} Moves - No money deducted)`, 'background: #0284C7; color: #fff; font-weight: 900; font-size: 16px; padding: 4px 10px; border-radius: 4px;');
+        setIsDailyChallenge(true);
+        isDailyChallengeRef.current = true;
+        isChessFreeModeRef.current = true;
+        isChessMode1SelectedRef.current = false;
+      }
+
+      // Immediate check for quick match / quickgame
+      const isQuickGame =
+        msgStr.includes('quickgame') ||
+        msgJson.includes('quickgame') ||
+        msgStr.includes('quickmatch') ||
+        msgJson.includes('quickmatch') ||
+        msgStr.includes('session:menu:click:quickgame') ||
+        msgJson.includes('session:menu:click:quickgame');
+
+      if (isQuickGame) {
+        console.log('user start quickgame: paid match');
+        console.log(
+          '%c♟️ [ENTRY DETECTED] Chess Quick Match - Paid Match (Entry fee will be deducted, rewards active)',
+          'background: #00E676; color: #000; font-weight: 900; font-size: 16px; padding: 4px 10px; border-radius: 4px;'
+        );
+        setIsDailyChallenge(false);
+        isDailyChallengeRef.current = false;
+        isChessFreeModeRef.current = false;
+        isChessMode1SelectedRef.current = true;
+      }
+
+      processGameEvent(parsed, event.data);
     };
 
     window.addEventListener('message', handleGameMessage);
+
+    // Also wire console interceptor in case GameAnalytics logs info directly to console
+    const originalLog = console.log;
+    const originalInfo = console.info;
+
+    const checkLogArgs = (...args) => {
+      try {
+        const text = args.map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
+        if (text.toLowerCase().includes('challenge')) {
+          originalLog.apply(console, ['user start challenge']);
+          originalLog.apply(console, ['%c🎯 [CONSOLE LOG DETECTED] user start challenge', 'background: #00E676; color: #000; font-weight: 900; font-size: 16px; padding: 4px 10px; border-radius: 4px;']);
+          setIsDailyChallenge(true);
+          isDailyChallengeRef.current = true;
+          processGameEvent({ eventId: 'challenge_started' }, text);
+        }
+        const chessLogMatch = text.toLowerCase().match(/(?:session:menu:click:)?mode[:_]([234])/i);
+        if (
+          chessLogMatch ||
+          text.toLowerCase().includes('session:menu:click:mode:2') ||
+          text.toLowerCase().includes('session:menu:click:mode:3') ||
+          text.toLowerCase().includes('session:menu:click:mode:4')
+        ) {
+          const modeNum = chessLogMatch ? chessLogMatch[1] : '2';
+          originalLog.apply(console, [`user start free mode: chess mode ${modeNum}`]);
+          originalLog.apply(console, [`%c♟️ [CONSOLE LOG DETECTED] Chess Mode ${modeNum} (${modeNum} Moves) - Free Play (0 USDT)`, 'background: #0284C7; color: #fff; font-weight: 900; font-size: 16px; padding: 4px 10px; border-radius: 4px;']);
+          setIsDailyChallenge(true);
+          isDailyChallengeRef.current = true;
+          isChessFreeModeRef.current = true;
+          isChessMode1SelectedRef.current = false;
+          processGameEvent({ eventKey: `session:menu:click:mode:${modeNum}:level_1` }, text);
+        }
+        if (
+          text.toLowerCase().includes('quickgame') ||
+          text.toLowerCase().includes('quick_game') ||
+          text.toLowerCase().includes('quickmatch') ||
+          text.toLowerCase().includes('session:menu:click:quickgame')
+        ) {
+          originalLog.apply(console, ['user start quickgame: paid match']);
+          originalLog.apply(console, [
+            '%c♟️ [CONSOLE LOG DETECTED] Chess Quick Match / Normal Mode - Paid Match (Entry fee deducted, rewards active)',
+            'background: #00E676; color: #000; font-weight: 900; font-size: 16px; padding: 4px 10px; border-radius: 4px;'
+          ]);
+          setIsDailyChallenge(false);
+          isDailyChallengeRef.current = false;
+          isChessFreeModeRef.current = false;
+          isChessMode1SelectedRef.current = true;
+          setIsRoundDeducted(false);
+          isRoundDeductedRef.current = false;
+          isDeductingRef.current = false;
+          processGameEvent({ eventId: 'session:menu:click:quickgame', state: 'start' }, text);
+        }
+      } catch (_) {}
+    };
+
+    console.log = (...args) => {
+      originalLog.apply(console, args);
+      checkLogArgs(...args);
+    };
+    console.info = (...args) => {
+      originalInfo.apply(console, args);
+      checkLogArgs(...args);
+    };
 
     // Also wire global callback handlers for games
     window.onGameOver = (score) => {
@@ -390,6 +762,8 @@ export default function GamePlay() {
 
     return () => {
       window.removeEventListener('message', handleGameMessage);
+      console.log = originalLog;
+      console.info = originalInfo;
       delete window.onGameOver;
       delete window.onGameScore;
       delete window.onGameStart;
@@ -423,9 +797,13 @@ export default function GamePlay() {
   // Manual Restart Action: Resets round deduction flag and reloads game; deduction will trigger on status 'start'
   const handleRestartNewRound = () => {
     console.log('[GamePlay] User clicked Restart: Resetting round and waiting for status start');
+    setIsDailyChallenge(false);
+    isDailyChallengeRef.current = false;
     setIsRoundDeducted(false);
     isRoundDeductedRef.current = false;
     isPrizeAwardedRef.current = false;
+    gameOverRef.current = false;
+    gameResultRef.current = null;
     setCurrentScore(0);
     currentScoreRef.current = 0;
     setIsGameOver(false);
@@ -454,19 +832,38 @@ export default function GamePlay() {
 
         {/* Prize Pool, Threshold Score, Entry Pool, Balance & Condition Badges */}
         <div className="fullscreen-hud-pools">
-          {/* Entry Status: Deducts ONLY when state is 'start' */}
+          {/* Mode & Entry Status: Free for Daily Challenge, Deducts on start for Normal Play */}
           <div
             className="hud-pool-badge entry-badge"
-            title="Entry pool fee is deducted from account only when game returns status 'start'"
+            title={isDailyChallenge ? 'Daily Challenge: Free Play Mode — No Entry Fee Deducted' : "Normal Play: Entry fee deducted only when game returns status 'start'"}
             style={{
-              borderColor: isRoundDeducted ? '#00E676' : 'rgba(255,255,255,0.2)',
+              borderColor: isDailyChallenge ? '#38BDF8' : isRoundDeducted ? '#00E676' : 'rgba(255,255,255,0.2)',
+              background: isDailyChallenge ? 'rgba(56, 189, 248, 0.15)' : undefined,
             }}
           >
-            <span className="hud-badge-label">Entry ({entryPool} USDT):</span>
-            <span className="hud-badge-value" style={{ color: isRoundDeducted ? '#39FF88' : '#cbd5e1' }}>
-              {isRoundDeducted ? '✅ Deducted' : '⏳ Awaiting Start'}
+            <span className="hud-badge-label">{isDailyChallenge ? (gameId?.includes('chess') ? '♟️ Chess:' : '🌟 Mode:') : `Entry (${entryPool} USDT):`}</span>
+            <span
+              className="hud-badge-value"
+              style={{ color: isDailyChallenge ? '#38BDF8' : isRoundDeducted ? '#39FF88' : '#cbd5e1', fontWeight: 700 }}
+            >
+              {isDailyChallenge ? (gameId?.includes('chess') ? 'Free Moves Mode (0 USDT)' : 'Free Challenge (0 USDT)') : isRoundDeducted ? '✅ Deducted' : '⏳ Awaiting Start'}
             </span>
           </div>
+
+          {isDailyChallenge && (
+            <button
+              onClick={() => {
+                setIsDailyChallenge(false);
+                isDailyChallengeRef.current = false;
+                setToastAlert({ text: 'Switched to Normal Play mode. Entry fee will be deducted on round start.', type: 'info' });
+              }}
+              className="fullscreen-hud-btn"
+              style={{ background: 'rgba(0, 230, 118, 0.15)', borderColor: '#00E676', color: '#00E676', fontSize: '0.72rem', padding: '3px 8px', fontWeight: 700 }}
+              title="Switch back to Normal Paid Mode"
+            >
+              🎮 Play Normal Mode
+            </button>
+          )}
 
           {/* Condition 1: Exceed Score or not */}
           <div
@@ -568,12 +965,89 @@ export default function GamePlay() {
             🧪 Condition Test Controls:
           </span>
           <button
+            onClick={() => {
+              processGameEvent(
+                { eventId: 'challenge_started', value: 0 },
+                'info/GameAnalytics: Add DESIGN event: {eventId:challenge_started, value:0}'
+              );
+            }}
+            className="fullscreen-hud-btn"
+            style={{ padding: '4px 10px', fontSize: '0.75rem', background: 'rgba(56, 189, 248, 0.25)', borderColor: '#38BDF8', color: '#38BDF8', fontWeight: 800 }}
+            title="Simulate Sudoku Daily Challenge Selection ({eventId:challenge_started}) -> Free Play (No Entry Deduction)"
+          >
+            🌟 Daily Challenge ({'{eventId:challenge_started}'})
+          </button>
+          <button
+            onClick={() => {
+              processGameEvent(
+                { eventType: 'design_event', eventKey: 'session:menu:click:mode:2:level_1', value: 0 },
+                "Sending design event {eventType: 'design_event', eventKey: 'session:menu:click:mode:2:level_1', value: 0}"
+              );
+            }}
+            className="fullscreen-hud-btn"
+            style={{ padding: '4px 10px', fontSize: '0.75rem', background: 'rgba(56, 189, 248, 0.25)', borderColor: '#38BDF8', color: '#38BDF8', fontWeight: 800 }}
+            title="Simulate Chess 2-Moves Selection ({eventKey: 'session:menu:click:mode:2:level_1'}) -> Free Play (No Entry Deduction)"
+          >
+            ♟️ 2-Moves (Mode 2)
+          </button>
+          <button
+            onClick={() => {
+              processGameEvent(
+                { eventType: 'design_event', eventKey: 'session:menu:click:mode:3:level_1', value: 0 },
+                "Sending design event {eventType: 'design_event', eventKey: 'session:menu:click:mode:3:level_1', value: 0}"
+              );
+            }}
+            className="fullscreen-hud-btn"
+            style={{ padding: '4px 10px', fontSize: '0.75rem', background: 'rgba(56, 189, 248, 0.25)', borderColor: '#38BDF8', color: '#38BDF8', fontWeight: 800 }}
+            title="Simulate Chess 3-Moves Selection ({eventKey: 'session:menu:click:mode:3:level_1'}) -> Free Play (No Entry Deduction)"
+          >
+            ♟️ 3-Moves (Mode 3)
+          </button>
+          <button
+            onClick={() => {
+              processGameEvent(
+                { eventType: 'design_event', eventKey: 'session:menu:click:mode:4:level_1', value: 0 },
+                "Sending design event {eventType: 'design_event', eventKey: 'session:menu:click:mode:4:level_1', value: 0}"
+              );
+            }}
+            className="fullscreen-hud-btn"
+            style={{ padding: '4px 10px', fontSize: '0.75rem', background: 'rgba(56, 189, 248, 0.25)', borderColor: '#38BDF8', color: '#38BDF8', fontWeight: 800 }}
+            title="Simulate Chess 4-Moves Selection ({eventKey: 'session:menu:click:mode:4:level_1'}) -> Free Play (No Entry Deduction)"
+          >
+            ♟️ 4-Moves (Mode 4)
+          </button>
+          <button
+            onClick={() => {
+              processGameEvent(
+                { eventType: 'design_event', eventId: 'session:menu:click:quickgame', value: 0 },
+                'Info/GameAnalytics: Add DESIGN event: {eventId:session:menu:click:quickgame, value:0}'
+              );
+            }}
+            className="fullscreen-hud-btn"
+            style={{ padding: '4px 10px', fontSize: '0.75rem', background: 'rgba(0, 230, 118, 0.25)', borderColor: '#00E676', color: '#00E676', fontWeight: 800 }}
+            title="Simulate Chess Quick Game Selection ({eventId: 'session:menu:click:quickgame'}) -> Paid Match (Deducts Entry Fee & Rewards Active)"
+          >
+            ♟️ Quick Game (Paid Match)
+          </button>
+          <button
             onClick={() => processGameEvent({ state: 'start' })}
             className="fullscreen-hud-btn"
             style={{ padding: '4px 10px', fontSize: '0.75rem', background: '#00E676', color: '#000', borderColor: '#00E676', fontWeight: 800 }}
-            title="Simulate game returning status 'start' -> Deducts entry fee"
+            title="Simulate game returning status 'start' (Deducts in Normal Mode, Skips in Daily Challenge)"
           >
-            1. Trigger Status 'start' (-{entryPool} USDT)
+            1. Trigger Status 'start' {isDailyChallenge ? '(Free Play: 0 USDT)' : `(-${entryPool} USDT)`}
+          </button>
+          <button
+            onClick={() => {
+              setIsDailyChallenge(false);
+              isDailyChallengeRef.current = false;
+              setToastAlert({ text: 'Mode set to Normal Play. Entry fee will be deducted on round start.', type: 'info' });
+            }}
+            className="fullscreen-hud-btn"
+            style={{ padding: '4px 10px', fontSize: '0.75rem', background: 'rgba(255,255,255,0.08)', color: '#fff', borderColor: 'rgba(255,255,255,0.3)', fontWeight: 700 }}
+            title="Reset to Normal Play Mode"
+          >
+            🎮 Set Normal Mode
           </button>
           <button
             onClick={() => processGameEvent({ state: 'score', score: targetNum + 50 })}
@@ -696,7 +1170,7 @@ export default function GamePlay() {
             <div style={{ fontSize: '0.82rem', marginTop: '4px' }}>
               {gameResult.won ? (
                 <span style={{ color: '#00E676', fontWeight: 800 }}>
-                  Both conditions satisfied! +{gameResult.prize} USDT credited to your wallet account!
+                  Both conditions satisfied! Gross: {gameResult.grossPrize || gameResult.prize} USDT | -25% Platform Cut: -{gameResult.deductionAmount || '0.00'} USDT | +{gameResult.netReward || gameResult.prize} USDT (75%) credited to your account!
                 </span>
               ) : (
                 <span style={{ color: '#94a3b8' }}>
@@ -781,58 +1255,55 @@ export default function GamePlay() {
         </div>
       )}
 
-      {/* Stuck notice - after 3 sec, with direct-version fallback */}
-      {showStuck && !insufficientFunds && (
-        <div className="fullscreen-alert-bar">
-          <div className="fullscreen-alert-left">
-            <AlertTriangle size={16} color="#FFB300" style={{ flexShrink: 0 }} />
-            <span>
-              <strong>{game.title} Notice:</strong> If the game is stuck here, open the direct version:
-            </span>
-          </div>
-          <a
-            href={directUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="fullscreen-alert-redirect-btn"
-            title="Open direct game version"
-          >
-            <ExternalLink size={14} />
-            <span>Direct Version</span>
-          </a>
-        </div>
-      )}
 
-      {/* Game Iframe: Loads the game without deducting money. Deduction occurs when return status is 'start'. */}
+
+      {/* Game Iframe or Native Game Board */}
       {user?.walletAddress && !insufficientFunds && (
         <div className="fullscreen-iframe-wrapper">
-          {isLoading && (
-            <div className="gz-iframe-loader fullscreen-loader">
-              <div className="gz-spinner" />
-              <h4>Loading {game.title}...</h4>
-              <p>Connecting to Gamezop CDN HTML5 engine</p>
+          {game?.playableType === 'native-ludo' || gameId === 'ludo-with-friends' || gameId === 'ludo-dash' || gameId === 'ludo' ? (
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', overflowY: 'auto' }}>
+              <LudoGameBoard
+                onGameEvent={processGameEvent}
+                entryPool={entryPool}
+                prizePool={prizePool}
+                thresholdScore={thresholdScore}
+                ludo2pEntryPool={initialLudo2pEntry}
+                ludo2pPrizePool={initialLudo2pPrize}
+                ludo4pEntryPool={initialLudo4pEntry}
+                ludo4pPrizePool={initialLudo4pPrize}
+              />
             </div>
+          ) : (
+            <>
+              {isLoading && (
+                <div className="gz-iframe-loader fullscreen-loader">
+                  <div className="gz-spinner" />
+                  <h4>Loading {game?.title || 'Game'}...</h4>
+                  <p>Connecting to Gamezop CDN HTML5 engine</p>
+                </div>
+              )}
+              <iframe
+                key={iframeKey}
+                src={iframeSrc}
+                title={game?.title || 'Game'}
+                className="fullscreen-game-iframe"
+                allow="autoplay; fullscreen; screen-wake-lock; orientation-lock;"
+                sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-pointer-lock"
+                onLoad={() => {
+                  setIsLoading(false);
+                  console.log('[GameIframe] Play page iframe loaded/reloaded (Ready to deduct on return status "start"):', iframeSrc);
+                  setIsRoundDeducted(false);
+                  isRoundDeductedRef.current = false;
+                  isPrizeAwardedRef.current = false;
+                  setCurrentScore(0);
+                  currentScoreRef.current = 0;
+                  setIsGameOver(false);
+                  setRoundStatus('idle');
+                  setGameResult(null);
+                }}
+              />
+            </>
           )}
-          <iframe
-            key={iframeKey}
-            src={iframeSrc}
-            title={game.title}
-            className="fullscreen-game-iframe"
-            allow="autoplay; fullscreen; screen-wake-lock; orientation-lock;"
-            sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-pointer-lock"
-            onLoad={() => {
-              setIsLoading(false);
-              console.log('[GameIframe] Play page iframe loaded/reloaded (Ready to deduct on return status "start"):', iframeSrc);
-              setIsRoundDeducted(false);
-              isRoundDeductedRef.current = false;
-              isPrizeAwardedRef.current = false;
-              setCurrentScore(0);
-              currentScoreRef.current = 0;
-              setIsGameOver(false);
-              setRoundStatus('idle');
-              setGameResult(null);
-            }}
-          />
         </div>
       )}
     </div>

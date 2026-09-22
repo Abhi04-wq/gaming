@@ -1,0 +1,1996 @@
+/* =========================================================
+   LUDO GAME - PREMIUM ARCADE & ROYAL BOARD
+   Rich aesthetics, 3D Tumbling Dice, Pawn Hopping,
+   Knockout Capture Animations & 2-Player Mode
+   ========================================================= */
+
+.ludoArenaContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  height: 100%;
+  min-height: auto;
+  max-height: 100%;
+  background:
+    radial-gradient(circle at 15% 15%, rgba(59, 130, 246, 0.15) 0%, transparent 45%),
+    radial-gradient(circle at 85% 85%, rgba(239, 68, 68, 0.12) 0%, transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(245, 158, 11, 0.08) 0%, transparent 60%),
+    linear-gradient(145deg, #090e1a 0%, #0d1527 50%, #080c16 100%);
+  color: #ffffff;
+  padding: 12px;
+  box-sizing: border-box;
+  position: relative;
+  overflow-y: auto;
+  user-select: none;
+}
+
+/* Header bar with turn, stats and 2-Player mode switcher */
+.ludoHeaderBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 900px;
+  margin-bottom: 10px;
+  padding: 10px 16px;
+  background: rgba(13, 21, 39, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  backdrop-filter: blur(14px);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.turnBadge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.turnIndicatorDot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  box-shadow: 0 0 12px currentColor;
+  animation: pulseDot 1.4s ease-in-out infinite;
+}
+
+@keyframes pulseDot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: 0.75; }
+}
+
+/* Mode Switcher Pill (2 Players vs 4 Players) */
+.modeSwitcher {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 3px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  gap: 3px;
+}
+
+.modeBtn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.modeBtn:hover:not(.modeBtnActive) {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.modeBtnActive {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #0b0f19;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+}
+
+.scorePill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  padding: 6px 12px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.15);
+}
+
+/* ---------- Classic layout with side rails ---------- */
+.classicLayout {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 900px;
+  position: relative;
+}
+
+.sideRail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  justify-content: space-between;
+  width: 115px;
+  flex-shrink: 0;
+}
+
+/* Upgraded Sleek Gamer Card Side Panels */
+.sidePanel {
+  --panel-color: #3b82f6;
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.95), rgba(11, 16, 27, 0.9));
+  border: 2px solid var(--panel-color);
+  border-radius: 14px;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  position: relative;
+  flex: 1;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidePanelActive {
+  box-shadow: 0 0 0 2px #fff inset, 0 0 25px var(--panel-color), 0 8px 30px rgba(0, 0, 0, 0.6);
+  border-color: #ffffff;
+  transform: translateY(-2px);
+}
+
+/* Inactive Player Panel in 2-Player mode */
+.sidePanelDimmed {
+  opacity: 0.35;
+  filter: grayscale(0.85);
+  pointer-events: none;
+}
+
+.sideAvatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 2.5px solid var(--panel-color);
+  background: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(0, 0, 0, 0.5);
+  position: relative;
+  overflow: hidden;
+}
+
+.sideAvatarIcon {
+  font-size: 1.4rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+}
+
+.sideActiveCrown {
+  position: absolute;
+  top: -9px;
+  font-size: 0.82rem;
+  filter: drop-shadow(0 0 6px #fbbf24);
+  animation: crownBounce 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes crownBounce {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-3px); }
+}
+
+.sideName {
+  width: 100%;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #f1f5f9;
+  border-radius: 6px;
+  padding: 3px 4px;
+  background: rgba(255, 255, 255, 0.06);
+  letter-spacing: 0.3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 3D Dice Box & Interactive Tumbling */
+.sideDiceBox {
+  width: 100%;
+  min-height: 68px;
+  background: radial-gradient(circle at 50% 30%, #fef3c7 0%, #fed7aa 60%, #fdba74 100%);
+  border: 2px solid rgba(245, 158, 11, 0.4);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  box-shadow: inset 0 2px 5px rgba(255, 255, 255, 0.6), inset 0 -3px 6px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.3);
+  position: relative;
+  perspective: 400px;
+}
+
+.sideDiceBtn {
+  font-family: inherit;
+  cursor: default;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  border: 2px solid transparent;
+}
+
+.sideDiceBtn:disabled {
+  cursor: not-allowed;
+}
+
+.sideDiceClickable {
+  cursor: pointer;
+  background: radial-gradient(circle at 50% 30%, #dcfce7 0%, #bbf7d0 60%, #86efac 100%);
+  border-color: #22c55e;
+  animation: diceBtnPromptGlow 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes diceBtnPromptGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0), inset 0 2px 5px rgba(255, 255, 255, 0.7);
+    transform: scale(1);
+  }
+  100% {
+    box-shadow: 0 0 18px 4px rgba(34, 197, 94, 0.7), inset 0 2px 5px rgba(255, 255, 255, 0.9);
+    transform: scale(1.05);
+  }
+}
+
+.sideDiceClickable:hover {
+  transform: scale(1.08) translateY(-2px);
+}
+
+/* 3D Tumbling Dice Animation */
+.sideDiceImg {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.45));
+  transition: transform 0.2s;
+}
+
+.dice3DTumble {
+  animation: dice3DTumbleAnim 0.42s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes dice3DTumbleAnim {
+  0% {
+    transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(1) translateY(0);
+    filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.5));
+  }
+  25% {
+    transform: rotateX(120deg) rotateY(90deg) rotateZ(45deg) scale(1.22) translateY(-10px);
+    filter: drop-shadow(0 14px 8px rgba(0, 0, 0, 0.3));
+  }
+  50% {
+    transform: rotateX(240deg) rotateY(180deg) rotateZ(135deg) scale(0.9) translateY(4px);
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.6));
+  }
+  75% {
+    transform: rotateX(360deg) rotateY(270deg) rotateZ(225deg) scale(1.18) translateY(-6px);
+    filter: drop-shadow(0 12px 6px rgba(0, 0, 0, 0.35));
+  }
+  100% {
+    transform: rotateX(480deg) rotateY(360deg) rotateZ(360deg) scale(1) translateY(0);
+    filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.5));
+  }
+}
+
+/* Dice Landing Slam & Shockwave */
+.diceLand {
+  animation: diceSlamBounce 0.38s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes diceSlamBounce {
+  0% {
+    transform: scale(1.6) translateY(-14px) rotate(-18deg);
+    opacity: 0.6;
+    filter: brightness(1.5) drop-shadow(0 18px 10px rgba(0, 0, 0, 0.2));
+  }
+  50% {
+    transform: scale(0.88) translateY(2px) rotate(4deg);
+    opacity: 1;
+    filter: brightness(1.1) drop-shadow(0 2px 2px rgba(0, 0, 0, 0.6));
+  }
+  75% {
+    transform: scale(1.1) translateY(-2px) rotate(-2deg);
+  }
+  100% {
+    transform: scale(1) translateY(0) rotate(0deg);
+    filter: brightness(1) drop-shadow(0 4px 6px rgba(0, 0, 0, 0.45));
+  }
+}
+
+.tapDiceHint {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #15803d;
+  text-align: center;
+  animation: timerPulse 0.8s infinite alternate;
+  letter-spacing: 0.2px;
+}
+
+.sideTimer {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sideTimerUrgent {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.4);
+  animation: timerPulse 0.5s infinite alternate;
+}
+
+.sideTimerBar {
+  width: 100%;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.sideTimerBar span {
+  display: block;
+  height: 100%;
+  transition: width 0.12s linear;
+  border-radius: 4px;
+}
+
+.sideHomeCount {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #e2e8f0;
+}
+
+/* =========================================================
+   CLASSIC 15x15 LUDO BOARD - LUXURY ARCADE FRAME
+   ========================================================= */
+
+.classicBoardFrame {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 4px solid #b45309;
+  outline: 4px solid #f59e0b;
+  border-radius: 16px;
+  padding: 8px;
+  box-shadow:
+    0 25px 60px rgba(0, 0, 0, 0.8),
+    0 0 35px rgba(245, 158, 11, 0.25),
+    inset 0 2px 8px rgba(255, 255, 255, 0.25),
+    inset 0 -4px 10px rgba(0, 0, 0, 0.6);
+  position: relative;
+  transition: transform 0.3s;
+}
+
+/* Board Shake on Knockout */
+.boardShake {
+  animation: boardRumble 0.4s ease-in-out;
+}
+
+@keyframes boardRumble {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  15% { transform: translate(-5px, 3px) rotate(-0.5deg); }
+  30% { transform: translate(5px, -3px) rotate(0.5deg); }
+  50% { transform: translate(-4px, -2px) rotate(-0.3deg); }
+  70% { transform: translate(3px, 3px) rotate(0.3deg); }
+  85% { transform: translate(-2px, 1px) rotate(-0.1deg); }
+}
+
+.classicBoard {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(15, 1fr);
+  grid-template-rows: repeat(15, 1fr);
+  gap: 1px;
+  width: min(70vh, 580px, 100%);
+  aspect-ratio: 1 / 1;
+  background: #475569;
+  border: 2px solid #334155;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+/* =========================================================
+   FOUR PLAYER BASES (YARDS) - GLOSSY ROYAL DESIGN
+   ========================================================= */
+
+.baseSolid {
+  min-width: 0;
+  min-height: 0;
+  z-index: 0;
+  position: relative;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.25);
+  transition: filter 0.3s, opacity 0.3s;
+}
+
+/* Glossy Base Colors */
+.baseSolidYellow {
+  background: radial-gradient(circle at 35% 35%, #fef08a 0%, #eab308 55%, #ca8a04 100%) !important;
+}
+
+.baseSolidBlue {
+  background: radial-gradient(circle at 35% 35%, #60a5fa 0%, #2563eb 55%, #1d4ed8 100%) !important;
+}
+
+.baseSolidGreen {
+  background: radial-gradient(circle at 35% 35%, #86efac 0%, #16a34a 55%, #15803d 100%) !important;
+}
+
+.baseSolidRed {
+  background: radial-gradient(circle at 35% 35%, #fca5a5 0%, #dc2626 55%, #991b1b 100%) !important;
+}
+
+/* Dimmed Inactive Bases in 2-Player Mode */
+.baseInactive {
+  opacity: 0.38 !important;
+  filter: grayscale(0.8) contrast(0.85);
+}
+
+.baseInactiveBadge {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
+  pointer-events: none;
+}
+
+.baseInactiveBadge span {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #cbd5e1;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  letter-spacing: 0.5px;
+}
+
+/* High-End White Home Box with 3D Recessed Pedestals */
+.baseWhiteBox {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  padding: 8%;
+  gap: 6%;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 12px;
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.25),
+    0 4px 12px rgba(0, 0, 0, 0.35);
+  border: 2px solid rgba(255, 255, 255, 0.9);
+}
+
+.baseCircleSlot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  background: radial-gradient(circle at 40% 40%, #f1f5f9 0%, #cbd5e1 75%, #94a3b8 100%);
+  border-radius: 50%;
+  box-shadow:
+    inset 0 3px 5px rgba(0, 0, 0, 0.4),
+    0 2px 4px rgba(255, 255, 255, 0.8),
+    0 0 0 1.5px #cbd5e1;
+  position: relative;
+  cursor: pointer;
+}
+
+.baseCircleSlot .classicPawn {
+  width: 100%;
+  height: 100%;
+}
+
+.baseSlotMovable {
+  cursor: pointer !important;
+  box-shadow:
+    inset 0 3px 5px rgba(0, 0, 0, 0.4),
+    0 0 0 2.5px #22c55e,
+    0 0 12px rgba(34, 197, 94, 0.7);
+  animation: slotPulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes slotPulse {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.08); }
+}
+
+.baseCircleColor {
+  width: 68%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255, 255, 255, 0.95);
+  box-shadow:
+    inset 0 -3px 6px rgba(0, 0, 0, 0.45),
+    inset 0 2px 4px rgba(255, 255, 255, 0.6),
+    0 2px 5px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
+/* Track Cells */
+.classicCell {
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 0.5px rgba(15, 23, 42, 0.1);
+  touch-action: manipulation;
+  transition: background-color 0.2s;
+}
+
+/* Landing Ripple on cell when coin hops onto it */
+.cellRipple {
+  animation: cellHopRipple 0.35s ease-out;
+}
+
+@keyframes cellHopRipple {
+  0% { box-shadow: inset 0 0 0 0 rgba(255, 215, 0, 0.9), 0 0 0 0 rgba(255, 215, 0, 0.6); }
+  50% { box-shadow: inset 0 0 10px 2px rgba(255, 215, 0, 0.8), 0 0 16px 4px rgba(255, 215, 0, 0.7); }
+  100% { box-shadow: inset 0 0 0 0 transparent, 0 0 0 0 transparent; }
+}
+
+.classicVoid {
+  background: #ffffff;
+}
+
+/* Embossed 3D Golden Star for Safe Squares */
+.classicStar {
+  font-size: clamp(13px, 2.4vw, 22px);
+  font-weight: 900;
+  color: #fbbf24;
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 4px rgba(245, 158, 11, 0.6));
+  z-index: 0;
+  transform: translateY(-0.5px);
+}
+
+/* Direction Arrows */
+.classicArrow {
+  font-size: clamp(12px, 2.5vw, 24px);
+  font-weight: 900;
+  color: #0f172a;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.85;
+}
+
+/* =========================================================
+   PAWN TOKENS & COIN GO HOPPING ANIMATION
+   ========================================================= */
+
+.classicPawnStack {
+  position: absolute;
+  inset: 2%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  z-index: 2;
+  cursor: pointer;
+}
+
+.classicPawn {
+  width: 96%;
+  height: 96%;
+  aspect-ratio: 1 / 1;
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  cursor: pointer;
+  line-height: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.classicPawnStacked {
+  width: 48%;
+  height: 48%;
+  margin: 0;
+}
+
+.pawnIconSvg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.6));
+  pointer-events: none;
+}
+
+button.classicPawn:not(:disabled) {
+  cursor: pointer;
+}
+
+/* Coin Go: Parabolic Hopping Animation */
+.pawnHopping {
+  animation: pawnHopPhysics 0.26s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  z-index: 10 !important;
+}
+
+@keyframes pawnHopPhysics {
+  0% {
+    transform: translateY(0) scale(1);
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
+  }
+  45% {
+    transform: translateY(-18px) scale(1.24);
+    filter: drop-shadow(0 18px 10px rgba(0, 0, 0, 0.35));
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
+  }
+}
+
+/* Pawn Exit-Base Leap Burst */
+.pawnExitBase {
+  animation: pawnExitLeap 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes pawnExitLeap {
+  0% { transform: scale(0.4) translateY(15px); opacity: 0; }
+  60% { transform: scale(1.3) translateY(-16px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* Movable Pawn Glow & Pulse */
+.classicPawnMovable {
+  animation: pawnBouncePrompt 0.75s ease-in-out infinite alternate;
+  outline: 2.5px solid #22c55e;
+  outline-offset: 1px;
+  border-radius: 50%;
+  z-index: 3;
+}
+
+.classicPawnMovable .pawnIconSvg {
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 8px #22c55e);
+}
+
+button.classicPawnMovable:not(:disabled):hover {
+  transform: scale(1.18) translateY(-2px);
+}
+
+@keyframes pawnBouncePrompt {
+  from { transform: translateY(0) scale(1); }
+  to { transform: translateY(-4px) scale(1.1); }
+}
+
+/* =========================================================
+   COIN CUT (KNOCKOUT COLLISION) ANIMATION
+   ========================================================= */
+
+/* Knockout Collision Blast on Board */
+.knockoutBlastOverlay {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 30;
+  width: 100%;
+  height: 100%;
+}
+
+.knockoutBlastRing {
+  position: absolute;
+  width: 220%;
+  height: 220%;
+  border-radius: 50%;
+  border: 3px solid #ef4444;
+  box-shadow: 0 0 20px #ef4444, inset 0 0 15px #f59e0b;
+  animation: shockwaveExpand 0.5s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+}
+
+@keyframes shockwaveExpand {
+  0% { transform: scale(0.2); opacity: 1; border-width: 5px; }
+  100% { transform: scale(3); opacity: 0; border-width: 1px; }
+}
+
+.knockoutFlash {
+  font-size: clamp(22px, 5vw, 36px);
+  line-height: 1;
+  filter: drop-shadow(0 0 12px #f59e0b) drop-shadow(0 0 24px #ef4444);
+  animation: knockoutIconPop 0.5s ease-out forwards;
+}
+
+@keyframes knockoutIconPop {
+  0% { transform: scale(0.3) rotate(-20deg); opacity: 0; }
+  40% { transform: scale(1.5) rotate(15deg); opacity: 1; }
+  75% { transform: scale(1.2) rotate(-5deg); opacity: 1; }
+  100% { transform: scale(0.8) rotate(10deg); opacity: 0; }
+}
+
+/* Victim Coin Flying Back to Base */
+.pawnFlyingBack {
+  animation: victimFlyToYard 0.52s cubic-bezier(0.55, 0.055, 0.675, 0.19) forwards !important;
+  z-index: 25 !important;
+}
+
+@keyframes victimFlyToYard {
+  0% {
+    transform: scale(1.1) rotate(0deg) translateY(0);
+    opacity: 1;
+    filter: drop-shadow(0 0 10px #ef4444);
+  }
+  40% {
+    transform: scale(1.4) rotate(270deg) translateY(-28px);
+    opacity: 0.9;
+    filter: drop-shadow(0 20px 14px rgba(239, 68, 68, 0.7));
+  }
+  100% {
+    transform: scale(0.3) rotate(720deg) translateY(0);
+    opacity: 0;
+  }
+}
+
+/* Floating Knockout Toast Banner */
+.knockoutToast {
+  position: absolute;
+  top: 14%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  color: #ffffff;
+  font-size: clamp(0.85rem, 2vw, 1.1rem);
+  font-weight: 900;
+  padding: 8px 20px;
+  border-radius: 30px;
+  box-shadow: 0 8px 30px rgba(239, 68, 68, 0.7), 0 0 0 2px #fca5a5;
+  z-index: 45;
+  pointer-events: none;
+  animation: knockoutToastFloat 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+@keyframes knockoutToastFloat {
+  0% { transform: translate(-50%, 25px) scale(0.6); opacity: 0; }
+  18% { transform: translate(-50%, 0) scale(1.15); opacity: 1; }
+  35% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+  80% { transform: translate(-50%, -4px) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -20px) scale(0.8); opacity: 0; }
+}
+
+/* =========================================================
+   CENTER VICTORY AREA & MEDALLION
+   ========================================================= */
+
+.classicCenter {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  background: #ffffff;
+  border: 1px solid #475569;
+  box-shadow: inset 0 0 0 1px #ffffff, 0 0 15px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  z-index: 2;
+}
+
+.classicTri {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.triTop {
+  background: radial-gradient(circle at 50% 25%, #60a5fa 0%, #2563eb 60%, #1d4ed8 100%);
+  clip-path: polygon(0 0, 100% 0, 50% 50%);
+}
+
+.triRight {
+  background: radial-gradient(circle at 75% 50%, #fca5a5 0%, #dc2626 60%, #991b1b 100%);
+  clip-path: polygon(100% 0, 100% 100%, 50% 50%);
+}
+
+.triBottom {
+  background: radial-gradient(circle at 50% 75%, #86efac 0%, #16a34a 60%, #15803d 100%);
+  clip-path: polygon(0 100%, 100% 100%, 50% 50%);
+}
+
+.triLeft {
+  background: radial-gradient(circle at 25% 50%, #fef08a 0%, #eab308 60%, #ca8a04 100%);
+  clip-path: polygon(0 0, 0 100%, 50% 50%);
+}
+
+/* Golden Victory Medallion in Center */
+.centerMedallion {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 32%;
+  height: 32%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fef08a 0%, #f59e0b 60%, #b45309 100%);
+  border: 2px solid #fff;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.8), inset 0 2px 4px rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+  font-size: clamp(10px, 2vw, 16px);
+  pointer-events: none;
+}
+
+/* Finished Pawns inside Triangles */
+.centerPawns {
+  position: absolute;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  width: 30%;
+  height: 30%;
+  z-index: 5;
+}
+
+.centerPawnsBlue { left: 35%; top: 4%; }
+.centerPawnsRed { right: 4%; top: 35%; }
+.centerPawnsGreen { left: 35%; bottom: 4%; }
+.centerPawnsYellow { left: 4%; top: 35%; }
+
+.centerPawns button {
+  width: 44% !important;
+  height: auto !important;
+  aspect-ratio: 1 / 1;
+}
+
+/* Hint Banner */
+.hintBanner {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  text-align: center;
+  margin-top: 10px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 8px 16px;
+  border-radius: 10px;
+  max-width: 900px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.2px;
+}
+
+/* Winner Overlay */
+.winnerOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(7, 10, 19, 0.94);
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  padding: 24px;
+  text-align: center;
+  animation: fadeInModal 0.3s ease;
+}
+
+@keyframes fadeInModal {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.winnerCard {
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
+  border: 2px solid #22c55e;
+  box-shadow: 0 0 60px rgba(34, 197, 94, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border-radius: 24px;
+  padding: 34px 44px;
+  max-width: 440px;
+  width: 90%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.winnerTrophy {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 25px rgba(251, 191, 36, 0.7));
+  animation: trophyFloat 2s ease-in-out infinite alternate;
+}
+
+@keyframes trophyFloat {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-8px); }
+}
+
+.restartBtn {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #07090e;
+  border: none;
+  font-size: 0.92rem;
+  font-weight: 800;
+  padding: 12px 28px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 18px rgba(34, 197, 94, 0.45);
+}
+
+.restartBtn:hover {
+  background: linear-gradient(135deg, #4ade80, #22c55e);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(34, 197, 94, 0.6);
+}
+
+@keyframes timerPulse {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.12); }
+}
+
+/* =========================================================
+   ONLINE MATCHMAKING RADAR OVERLAY (PvP & Bot Fallback)
+   ========================================================= */
+
+.matchmakingOverlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 40%, rgba(15, 23, 42, 0.94) 0%, rgba(7, 10, 19, 0.98) 100%);
+  backdrop-filter: blur(14px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  padding: 20px;
+  animation: fadeInModal 0.25s ease;
+}
+
+.matchmakingCard {
+  background: linear-gradient(145deg, rgba(26, 36, 56, 0.96) 0%, rgba(13, 20, 36, 0.98) 100%);
+  border: 2px solid #3b82f6;
+  box-shadow:
+    0 0 50px rgba(59, 130, 246, 0.35),
+    0 25px 60px rgba(0, 0, 0, 0.8),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  border-radius: 24px;
+  padding: 30px 36px;
+  max-width: 500px;
+  width: 92%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Radar Animation Container */
+.radarContainer {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 2px solid rgba(59, 130, 246, 0.4);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3), inset 0 0 20px rgba(59, 130, 246, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.radarRingInner {
+  position: absolute;
+  width: 60%;
+  height: 60%;
+  border-radius: 50%;
+  border: 1px dashed rgba(59, 130, 246, 0.5);
+}
+
+.radarSweep {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0deg, rgba(59, 130, 246, 0.5) 60deg, transparent 65deg);
+  animation: radarRotate 1.8s linear infinite;
+}
+
+@keyframes radarRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.radarCenterIcon {
+  font-size: 2rem;
+  z-index: 2;
+  filter: drop-shadow(0 0 8px #60a5fa);
+  animation: radarPulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes radarPulse {
+  0% { transform: scale(0.92); opacity: 0.8; }
+  100% { transform: scale(1.1); opacity: 1; }
+}
+
+.matchmakingTitle {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.matchmakingSubtitle {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.matchmakingCountdown {
+  color: #fbbf24;
+  font-weight: 800;
+}
+
+/* Slots Grid for 2 or 4 players */
+.matchmakingSlotsGrid {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  justify-content: center;
+}
+
+.matchSlot {
+  flex: 1;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.matchSlotReady {
+  border-color: #22c55e;
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
+}
+
+.matchSlotFound {
+  border-color: #3b82f6;
+  box-shadow: 0 0 18px rgba(59, 130, 246, 0.4);
+  animation: slotFoundBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes slotFoundBounce {
+  0% { transform: scale(0.85); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.matchSlotSearching {
+  border-color: rgba(245, 158, 11, 0.4);
+  animation: slotPulseBorder 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes slotPulseBorder {
+  0% { border-color: rgba(245, 158, 11, 0.2); }
+  100% { border-color: rgba(245, 158, 11, 0.8); }
+}
+
+.matchSlotAvatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #0f172a;
+  border: 2px solid #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+}
+
+.matchSlotName {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #f1f5f9;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.matchSlotTag {
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.tagLive {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.tagBot {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.tagSearching {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+}
+
+/* Quick Play / Skip Wait Button */
+.matchSkipBtn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #e2e8f0;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 8px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.matchSkipBtn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: translateY(-1px);
+}
+
+.matchCancelBtn {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #f87171;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.matchCancelBtn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #ffffff;
+  border-color: #ef4444;
+  transform: translateY(-1px);
+}
+
+/* Status Badge on Side Panels */
+.playerTypeBadge {
+  font-size: 0.58rem;
+  font-weight: 900;
+  padding: 2px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.playerTypeLive {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.playerTypeBot {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+@media (max-width: 768px) {
+  .classicLayout {
+    flex-direction: column;
+    align-items: center;
+  }
+  .sideRail {
+    flex-direction: row;
+    width: 100%;
+    max-width: 580px;
+  }
+  .sidePanel {
+    flex: 1;
+  }
+  .classicBoard {
+    width: min(92vw, 480px);
+  }
+}
+
+/* =========================================================
+   Player Mode Selection Screen (2 vs 4 Players)
+   ========================================================= */
+.modeSelectOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 7, 14, 0.94);
+  backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 70;
+  padding: 20px;
+  animation: fadeInModal 0.3s ease;
+}
+
+.modeSelectCard {
+  background: linear-gradient(145deg, rgba(17, 24, 39, 0.98) 0%, rgba(10, 15, 26, 0.98) 100%);
+  border: 1.5px solid rgba(245, 158, 11, 0.4);
+  box-shadow:
+    0 0 40px rgba(245, 158, 11, 0.2),
+    0 25px 60px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+  padding: 32px 28px;
+  max-width: 620px;
+  width: 95%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.modeSelectHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.modeSelectTitle {
+  font-size: 1.45rem;
+  font-weight: 900;
+  color: #ffffff;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  letter-spacing: 0.5px;
+}
+
+.modeSelectSubtitle {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin: 0;
+  max-width: 460px;
+}
+
+.modeSelectGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  width: 100%;
+}
+
+@media (max-width: 580px) {
+  .modeSelectGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.modeCardOption {
+  background: rgba(15, 23, 42, 0.75);
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  padding: 20px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.modeCardOption:hover {
+  border-color: #f59e0b;
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(245, 158, 11, 0.25);
+  background: rgba(20, 30, 52, 0.85);
+}
+
+.modeCardOptionActive {
+  border-color: #00E676;
+  box-shadow: 0 0 30px rgba(0, 230, 118, 0.35);
+  background: rgba(10, 30, 20, 0.85);
+}
+
+.modeBadgePill {
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.badge2P {
+  background: rgba(56, 189, 248, 0.18);
+  border: 1px solid #38bdf8;
+  color: #38bdf8;
+}
+
+.badge4P {
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid #f59e0b;
+  color: #f59e0b;
+}
+
+.modeIconDisplay {
+  font-size: 2.4rem;
+  margin: 2px 0;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+}
+
+.modeOptionName {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+}
+
+.modePoolsRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.modePoolItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+}
+
+.modePoolLabel {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.modePoolValue {
+  font-weight: 800;
+}
+
+.modeSelectActionBtn {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn2P {
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
+}
+
+.btn2P:hover {
+  background: linear-gradient(135deg, #0369a1, #075985);
+  transform: translateY(-1px);
+}
+
+.btn4P {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #000000;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);
+}
+
+.btn4P:hover {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  transform: translateY(-1px);
+}
+
+/* 30-Second Progress Bar */
+.matchProgressBarContainer {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+  margin: 4px 0 8px 0;
+}
+
+.matchProgressBarFill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #00E676);
+  border-radius: 999px;
+  transition: width 1s linear;
+  box-shadow: 0 0 10px rgba(0, 230, 118, 0.6);
+}
+
+/* Deduction Notice Card */
+.deductionNoticeCard {
+  width: 100%;
+  background: rgba(0, 230, 118, 0.12);
+  border: 1.5px solid #00E676;
+  box-shadow: 0 0 20px rgba(0, 230, 118, 0.35);
+  border-radius: 12px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #39FF88;
+  animation: deductionPulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes deductionPulse {
+  0% { transform: scale(0.99); opacity: 0.9; }
+  100% { transform: scale(1.02); opacity: 1; }
+}
+
+/* Player Name Pill in Mode Selection Card */
+.playerNamePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 6px 14px;
+  border-radius: 999px;
+  margin-top: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+.playerNamePillLabel {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.playerNamePillVal {
+  font-size: 0.88rem;
+  color: #f8fafc;
+  font-weight: 800;
+}
+
+.changeNameBtn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #38bdf8;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.changeNameBtn:hover {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38bdf8;
+  color: #ffffff;
+}
+
+/* First-Time Player Name Modal */
+.nameModalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: modalFadeIn 0.25s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.nameModalCard {
+  width: 100%;
+  max-width: 440px;
+  background: linear-gradient(145deg, #1e293b, #0f172a);
+  border: 2px solid rgba(239, 68, 68, 0.5);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(239, 68, 68, 0.25);
+  border-radius: 20px;
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.nameModalBadge {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  display: inline-block;
+  margin-bottom: 10px;
+}
+
+.nameModalTitle {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 6px 0;
+}
+
+.nameModalSubtitle {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin: 0 0 20px 0;
+  line-height: 1.4;
+}
+
+.nameModalForm {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.nameModalInput {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  font-size: 1.05rem;
+  font-weight: 700;
+  border-radius: 12px;
+  padding: 12px 16px;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.nameModalInput:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.4);
+}
+
+.nameModalError {
+  font-size: 0.78rem;
+  color: #f87171;
+  font-weight: 600;
+}
+
+.nameModalActions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.nameModalCancelBtn {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #cbd5e1;
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nameModalCancelBtn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.nameModalSubmitBtn {
+  flex: 2;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  border: none;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.95rem;
+  padding: 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+  transition: all 0.2s ease;
+}
+
+.nameModalSubmitBtn:hover {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.6);
+}
+
+/* =========================================================
+   MOBILE RESPONSIVE — LUDO (tablets & phones)
+   Layout rails stack top/bottom, board fits viewport width,
+   header/panels/cards compact so nothing overflows 360px.
+   ========================================================= */
+@media (max-width: 768px) {
+  .ludoArenaContainer {
+    padding: 8px;
+  }
+
+  .ludoHeaderBar {
+    padding: 8px 10px;
+    gap: 8px;
+    border-radius: 12px;
+  }
+
+  .turnBadge {
+    font-size: 0.74rem;
+    padding: 5px 10px;
+    flex-wrap: wrap;
+    row-gap: 4px;
+    max-width: 100%;
+  }
+
+  .modeBtn {
+    font-size: 0.66rem;
+    padding: 5px 8px;
+  }
+
+  .scorePill {
+    font-size: 0.74rem;
+    padding: 5px 10px;
+  }
+
+  .sideRail {
+    gap: 8px;
+  }
+
+  .sidePanel {
+    padding: 8px 6px;
+    gap: 6px;
+    border-radius: 12px;
+    min-width: 0;
+  }
+
+  .sideAvatar {
+    width: 38px;
+    height: 38px;
+  }
+
+  .sideAvatarIcon {
+    font-size: 1.15rem;
+  }
+
+  .sideName {
+    font-size: 0.64rem;
+  }
+
+  .sideDiceBox {
+    min-height: 56px;
+  }
+
+  .sideDiceImg {
+    width: 38px;
+    height: 38px;
+  }
+
+  .tapDiceHint {
+    font-size: 0.56rem;
+  }
+
+  .sideTimer {
+    font-size: 0.66rem;
+  }
+
+  .sideHomeCount {
+    font-size: 0.64rem;
+  }
+
+  .classicBoardFrame {
+    padding: 5px;
+    border-width: 2px;
+    outline-width: 2px;
+    border-radius: 12px;
+    max-width: 100%;
+  }
+
+  .hintBanner {
+    font-size: 0.72rem;
+    padding: 7px 10px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .knockoutToast {
+    white-space: normal;
+    text-align: center;
+    max-width: 92vw;
+    font-size: 0.8rem;
+    box-sizing: border-box;
+  }
+
+  .matchmakingCard {
+    padding: 22px 16px;
+    gap: 14px;
+  }
+
+  .matchmakingTitle {
+    font-size: 1.02rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .modeSelectCard {
+    padding: 22px 16px;
+    gap: 14px;
+  }
+
+  .modeSelectTitle {
+    font-size: 1.12rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .modeSelectSubtitle {
+    font-size: 0.78rem;
+  }
+
+  .playerNamePill {
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 6px;
+    max-width: 100%;
+  }
+
+  .winnerCard {
+    padding: 24px 18px;
+  }
+
+  .winnerTrophy {
+    width: 72px;
+    height: 72px;
+  }
+
+  .restartBtn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ---------- Small phones (≤480px) ---------- */
+@media (max-width: 480px) {
+  .ludoArenaContainer {
+    padding: 6px;
+  }
+
+  .classicBoard {
+    width: min(94vw, 400px);
+  }
+
+  .sideRail {
+    gap: 6px;
+  }
+
+  .sidePanel {
+    padding: 6px 4px;
+    gap: 5px;
+    border-radius: 10px;
+  }
+
+  .sideAvatar {
+    width: 32px;
+    height: 32px;
+    border-width: 2px;
+  }
+
+  .sideAvatarIcon {
+    font-size: 1rem;
+  }
+
+  .sideDiceBox {
+    min-height: 50px;
+    padding: 4px;
+  }
+
+  .sideDiceImg {
+    width: 32px;
+    height: 32px;
+  }
+
+  .sideName {
+    font-size: 0.58rem;
+  }
+
+  .playerTypeBadge {
+    font-size: 0.5rem;
+  }
+
+  .sideTimer {
+    font-size: 0.6rem;
+  }
+
+  .sideTimerBar {
+    height: 4px;
+  }
+
+  /* Dice-only player panels on phones: avatar/name/badge/timer hidden */
+  .sideAvatar,
+  .sideName,
+  .playerTypeBadge,
+  .sideActiveCrown,
+  .sideTimer,
+  .sideTimerBar,
+  .sideHomeCount,
+  .tapDiceHint {
+    display: none !important;
+  }
+
+  .sidePanel {
+    padding: 4px !important;
+    gap: 0 !important;
+    border-width: 1.5px !important;
+    border-radius: 10px !important;
+  }
+
+  .sideDiceBox {
+    min-height: 0 !important;
+    padding: 3px !important;
+    border-width: 1.5px !important;
+    border-radius: 8px !important;
+  }
+
+  .sideDiceImg {
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  /* 4-player slots become 2x2 grid instead of a squeezed row */
+  .matchmakingSlotsGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .matchSlotName {
+    max-width: 100%;
+  }
+
+  .modeBtn {
+    font-size: 0.6rem;
+    padding: 5px 6px;
+  }
+
+  .turnBadge {
+    font-size: 0.68rem;
+  }
+
+  .scorePill {
+    font-size: 0.68rem;
+  }
+
+  .matchmakingCard {
+    width: 96%;
+  }
+
+  .modeSelectCard {
+    width: 96%;
+    padding: 18px 12px;
+  }
+
+  .modeSelectGrid {
+    gap: 12px;
+  }
+
+  .nameModalCard {
+    padding: 22px 16px;
+  }
+
+  .nameModalTitle {
+    font-size: 1.15rem;
+  }
+
+  .knockoutToast {
+    font-size: 0.72rem;
+    padding: 7px 14px;
+  }
+
+  .hintBanner {
+    font-size: 0.66rem;
+  }
+}
+

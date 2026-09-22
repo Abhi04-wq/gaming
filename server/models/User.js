@@ -46,6 +46,11 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    ludoPlayerName: {
+      type: String,
+      default: null,
+      trim: true,
+    },
   },
   {
     timestamps: true,

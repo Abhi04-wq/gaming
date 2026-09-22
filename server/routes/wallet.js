@@ -11,13 +11,18 @@ const formatGameTitle = (gameId, fallbackTitle) => {
   if (!gameId) return 'Arcade Game';
   const nameMap = {
     'valley-of-terror': 'Valley of Terror',
+    'bottle-shoot': 'Bottle Shoot',
     'fruit-chop': 'Fruit Chop',
     'chess-grandmaster': 'Chess Grandmaster',
     'ludo-with-friends': 'Play With Friends Ludo',
     'ludo-dash': 'Ludo Dash Live',
     'sudoku-classic': 'Sudoku Classic',
+    'shade-shuffle': 'Shade Shuffle',
     'bubble-shooter-classic': 'Bubble Shooter Classic',
+    'word-finder': 'Word Finder',
     'spell-wizard': 'Spell Wizard',
+    'carrom-hero': 'Carrom Hero',
+    'carrom': 'Carrom Hero',
     'tic-tac-toe': 'Tic Tac Toe Master',
   };
   return nameMap[gameId] || gameId.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -163,7 +168,7 @@ router.post('/deduct-entry', async (req, res) => {
 });
 
 // @route   POST /api/wallet/credit-prize
-// @desc    Credit prize pool reward when player score reaches/exceeds threshold and save CREDIT transaction in DB
+// @desc    Credit prize pool reward when player score reaches/exceeds threshold (deducts 25% platform cut, updates 75% to user account)
 router.post('/credit-prize', async (req, res) => {
   try {
     const { address, gameId, gameTitle, score, threshold, prizeAmount } = req.body;
@@ -175,13 +180,18 @@ router.post('/credit-prize', async (req, res) => {
       });
     }
 
-    const prize = parseFloat(prizeAmount || '0');
-    if (isNaN(prize) || prize <= 0) {
+    const gross = parseFloat(prizeAmount || '0');
+    if (isNaN(gross) || gross <= 0) {
       return res.status(400).json({
         success: false,
         message: 'Invalid prize pool reward amount.',
       });
     }
+
+    // 25% deduction rule: Cut 25% from reward, credit 75% to user account
+    const deductionPercent = 25;
+    const deductionAmount = Number(((gross * deductionPercent) / 100).toFixed(2));
+    const netReward = Number((gross - deductionAmount).toFixed(2));
 
     const normalizedAddress = address.toLowerCase();
     const user = await User.findOne({ walletAddress: normalizedAddress });
@@ -194,14 +204,15 @@ router.post('/credit-prize', async (req, res) => {
     }
 
     const currentBalance = parseFloat(user.usdtBalance || '50.00');
-    const newBalance = (currentBalance + prize).toFixed(2);
+    // Update user's account with 75% of the reward
+    const newBalance = (currentBalance + netReward).toFixed(2);
     user.usdtBalance = newBalance;
     await user.save();
 
     const title = formatGameTitle(gameId, gameTitle);
     const referenceId = `TX-CRE-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
-    // Record CREDIT transaction in MongoDB database
+    // Record CREDIT transaction in MongoDB database with 25% cut metadata
     let savedTransaction = null;
     try {
       savedTransaction = await Transaction.create({
@@ -209,23 +220,29 @@ router.post('/credit-prize', async (req, res) => {
         userId: user._id,
         type: 'credit',
         category: 'prize_reward',
-        amount: prize,
+        amount: netReward, // 75% added to account
+        grossReward: gross, // 100% full prize
+        deductionAmount, // 25% platform cut
+        deductionPercent,
+        netReward, // 75% net reward
         balanceBefore: currentBalance,
         balanceAfter: parseFloat(newBalance),
         currency: 'USDT',
         gameId: gameId || null,
         gameTitle: title,
-        description: `Prize Pool Reward - ${title} (Score: ${score} >= ${threshold} PTS)`,
+        description: `Prize Pool Reward - ${title} (Gross: ${gross.toFixed(2)} USDT, 25% Platform Cut: -${deductionAmount.toFixed(2)} USDT, 75% Credited: +${netReward.toFixed(2)} USDT | Score: ${score} >= ${threshold} PTS)`,
         referenceId,
         status: 'completed',
       });
-      console.log(`[Transaction Saved: CREDIT] ${referenceId} | +${prize.toFixed(2)} USDT | New Bal: ${newBalance} USDT`);
+      console.log(
+        `[Transaction Saved: CREDIT (75%)] ${referenceId} | Gross: ${gross.toFixed(2)} USDT | 25% Cut: -${deductionAmount.toFixed(2)} USDT | Net: +${netReward.toFixed(2)} USDT | New Bal: ${newBalance} USDT`
+      );
     } catch (txErr) {
       console.error('[Transaction Save Error (Credit)]', txErr);
     }
 
     console.log(
-      `[Prize Pool Won & Credited] User: ${normalizedAddress} | Game: ${gameId} | Score: ${score} >= ${threshold} | Prize: +${prize.toFixed(2)} USDT | New Balance: ${newBalance} USDT`
+      `[Prize Pool Won & 75% Credited] User: ${normalizedAddress} | Game: ${gameId} | Gross: ${gross.toFixed(2)} USDT | 25% Cut: -${deductionAmount.toFixed(2)} USDT | Net: +${netReward.toFixed(2)} USDT | New Balance: ${newBalance} USDT`
     );
 
     return res.json({
@@ -233,12 +250,16 @@ router.post('/credit-prize', async (req, res) => {
       won: true,
       score,
       threshold,
-      prizeCredited: prize.toFixed(2),
+      grossReward: gross.toFixed(2),
+      deductionAmount: deductionAmount.toFixed(2),
+      deductionPercent,
+      netReward: netReward.toFixed(2),
+      prizeCredited: netReward.toFixed(2),
       newBalance: user.usdtBalance,
       gameId,
       referenceId,
       transaction: savedTransaction,
-      message: `🏆 Congratulations! Score ${score} reached threshold ${threshold}. Prize pool reward of +${prize.toFixed(2)} USDT credited!`,
+      message: `🏆 Congratulations! Score ${score} reached target ${threshold}. Gross Reward: ${gross.toFixed(2)} USDT (-25% platform cut: ${deductionAmount.toFixed(2)} USDT) -> +${netReward.toFixed(2)} USDT (75%) credited to your balance!`,
     });
   } catch (error) {
     console.error('[Credit Prize Error]', error);
@@ -495,8 +516,128 @@ router.get('/all-transactions', async (req, res) => {
   }
 });
 
+// @route   GET /api/wallet/reward-deductions
+// @desc    Admin: List all 25% reward deductions with player address, game, gross prize, 25% cut, net credit, and timestamps
+// @access  Public (Admin Console)
+router.get('/reward-deductions', async (req, res) => {
+  try {
+    const { search = '', page = 1, limit = 200 } = req.query;
+
+    const query = {
+      $or: [
+        { category: 'prize_reward' },
+        { deductionAmount: { $gt: 0 } },
+      ],
+      status: 'completed',
+    };
+
+    if (search && search.trim()) {
+      const q = search.trim();
+      query.$and = [
+        {
+          $or: [
+            { walletAddress: { $regex: q, $options: 'i' } },
+            { gameTitle: { $regex: q, $options: 'i' } },
+            { referenceId: { $regex: q, $options: 'i' } },
+            { description: { $regex: q, $options: 'i' } },
+          ],
+        },
+      ];
+    }
+
+    const perPage = Math.min(parseInt(limit, 10) || 200, 500);
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+
+    const deductions = await Transaction.find(query)
+      .sort({ createdAt: -1 })
+      .skip((pageNum - 1) * perPage)
+      .limit(perPage)
+      .lean();
+
+    const totalDeductionsCount = await Transaction.countDocuments(query);
+
+    // Compute aggregate metrics for all reward deductions
+    const allDeductionTxs = await Transaction.find({
+      $or: [
+        { category: 'prize_reward' },
+        { deductionAmount: { $gt: 0 } },
+      ],
+      status: 'completed',
+    }).lean();
+
+    let totalDeductionsCollected = 0;
+    let totalGrossRewards = 0;
+    let totalNetRewardsCredited = 0;
+
+    const formattedList = deductions.map((tx) => {
+      const gross = tx.grossReward !== null && tx.grossReward !== undefined
+        ? tx.grossReward
+        : (tx.deductionAmount ? tx.amount + tx.deductionAmount : tx.amount);
+      const cut = tx.deductionAmount !== null && tx.deductionAmount !== undefined
+        ? tx.deductionAmount
+        : 0;
+      const net = tx.netReward !== null && tx.netReward !== undefined
+        ? tx.netReward
+        : tx.amount;
+
+      return {
+        ...tx,
+        grossReward: Number(gross).toFixed(2),
+        deductionAmount: Number(cut).toFixed(2),
+        deductionPercent: tx.deductionPercent || 25,
+        netReward: Number(net).toFixed(2),
+      };
+    });
+
+    for (const tx of allDeductionTxs) {
+      const gross = tx.grossReward !== null && tx.grossReward !== undefined
+        ? tx.grossReward
+        : (tx.deductionAmount ? tx.amount + tx.deductionAmount : tx.amount);
+      const cut = tx.deductionAmount !== null && tx.deductionAmount !== undefined
+        ? tx.deductionAmount
+        : 0;
+      const net = tx.netReward !== null && tx.netReward !== undefined
+        ? tx.netReward
+        : tx.amount;
+
+      totalGrossRewards += gross;
+      totalDeductionsCollected += cut;
+      totalNetRewardsCredited += net;
+    }
+
+    return res.json({
+      success: true,
+      summary: {
+        totalGrossRewards: Number(totalGrossRewards).toFixed(2),
+        totalDeductionsCollected: Number(totalDeductionsCollected).toFixed(2),
+        totalNetRewardsCredited: Number(totalNetRewardsCredited).toFixed(2),
+        totalCount: totalDeductionsCount,
+        deductionRate: '25%',
+      },
+      deductions: formattedList,
+      page: pageNum,
+      perPage,
+      totalCount: totalDeductionsCount,
+    });
+  } catch (error) {
+    console.error('[Admin Reward Deductions Error]', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch reward deductions history.',
+      summary: {
+        totalGrossRewards: '0.00',
+        totalDeductionsCollected: '0.00',
+        totalNetRewardsCredited: '0.00',
+        totalCount: 0,
+        deductionRate: '25%',
+      },
+      deductions: [],
+    });
+  }
+});
+
 // @route   GET /api/wallet/admin-stats
-// @desc    Admin: platform-wide stats computed live from database (users + transactions)
+// @desc    Admin: platform-wide stats computed live from database (users + transactions + deductions)
 // @access  Public (admin console uses static session, not JWT)
 router.get('/admin-stats', async (req, res) => {
   try {
@@ -528,6 +669,35 @@ router.get('/admin-stats', async (req, res) => {
       }
     }
 
+    // Aggregate 25% reward deductions
+    const deductionTotals = await Transaction.aggregate([
+      {
+        $match: {
+          status: 'completed',
+          $or: [
+            { category: 'prize_reward' },
+            { deductionAmount: { $gt: 0 } },
+          ],
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalCut: { $sum: '$deductionAmount' },
+          totalGross: { $sum: '$grossReward' },
+          totalNet: { $sum: '$netReward' },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const deductionsSummary = deductionTotals[0] || {
+      totalCut: 0,
+      totalGross: 0,
+      totalNet: 0,
+      count: 0,
+    };
+
     return res.json({
       success: true,
       stats: {
@@ -538,6 +708,10 @@ router.get('/admin-stats', async (req, res) => {
         netEarnings: Number(totalCredit - totalDebit).toFixed(2),
         creditCount,
         debitCount,
+        totalDeductions: Number(deductionsSummary.totalCut || 0).toFixed(2),
+        totalGrossRewards: Number(deductionsSummary.totalGross || 0).toFixed(2),
+        totalNetRewards: Number(deductionsSummary.totalNet || 0).toFixed(2),
+        deductionCount: deductionsSummary.count || 0,
       },
     });
   } catch (error) {
