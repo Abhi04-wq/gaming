@@ -1574,7 +1574,7 @@ export default function AdminDashboard() {
                             border: '1px solid rgba(0, 230, 118, 0.2)',
                             padding: '10px',
                             borderRadius: '12px',
-                            marginBottom: '16px',
+                            marginBottom: '8px',
                           }}
                         >
                           <div>
@@ -1602,6 +1602,26 @@ export default function AdminDashboard() {
                               {isFixedThresholdGame(game.id) ? '1' : (game.thresholdScore || '500')} <span style={{ fontSize: '0.68rem' }}>PTS</span>
                             </span>
                           </div>
+                        </div>
+
+                        {/* Database proof: MongoDB last-synced time (same on every browser) */}
+                        <div
+                          title="Values loaded from MongoDB — identical on every browser/device"
+                          style={{
+                            fontSize: '0.66rem',
+                            color: game.dbUpdatedAt ? '#00E676' : '#64748b',
+                            background: game.dbUpdatedAt ? 'rgba(0, 230, 118, 0.07)' : 'rgba(255, 255, 255, 0.03)',
+                            border: game.dbUpdatedAt ? '1px solid rgba(0, 230, 118, 0.25)' : '1px solid rgba(255, 255, 255, 0.08)',
+                            borderRadius: '8px',
+                            padding: '4px 8px',
+                            marginBottom: '16px',
+                            textAlign: 'center',
+                            fontWeight: 700,
+                          }}
+                        >
+                          {game.dbUpdatedAt
+                            ? `🗄️ DB synced • ${new Date(game.dbUpdatedAt).toLocaleString()}`
+                            : '🗄️ DB: not saved yet (defaults shown)'}
                         </div>
 
                         {/* Ludo Multi-Mode Badge if Ludo */}

@@ -133,13 +133,13 @@ export const GAME_CATALOG = [
     rtp: '99.5%',
     players: '5,120',
     description: 'Classic 4-player board game. Roll the dice, deploy pawns on 6, capture enemy pawns, and race home to claim the pool jackpot.',
-    coverUrl: 'https://static.gamezop.com/SkhljT2fdgb/wall.png',
-    logoUrl: 'https://static.gamezop.com/SkhljT2fdgb/square.png',
+    coverUrl: '/games/ludo/gameplay.png',
+    logoUrl: '/games/ludo/logo.png',
     screenshots: [
-      { title: '4-Player Board Layout', url: 'https://static.gamezop.com/SkhljT2fdgb/game-1.png' },
-      { title: 'Dice Roll & Token Sprint', url: 'https://static.gamezop.com/SkhljT2fdgb/game-2.png' },
-      { title: 'Safe Square Haven Arena', url: 'https://static.gamezop.com/SkhljT2fdgb/game-3.png' },
-      { title: 'Victory Podium Win', url: 'https://static.gamezop.com/SkhljT2fdgb/wall.png' },
+      { title: '4-Player Live Match Arena', url: '/games/ludo/gameplay.png' },
+      { title: 'Tournament Mode Selection (2P & 4P)', url: '/games/ludo/mode-select.png' },
+      { title: '30s Online Matchmaking Radar', url: '/games/ludo/radar.png' },
+      { title: 'Board & Token Action', url: '/games/ludo/cover.png' },
     ],
     videoDuration: '1:10',
     videoTeaser: 'Live 4-Player Ludo Tournament & Pawn Knockout',
@@ -269,12 +269,15 @@ export const GAME_CATALOG = [
     directUrl,
     youtubeId: yId,
     trailerEmbedUrl: `https://www.youtube.com/embed/${yId}?autoplay=1&mute=0&rel=0`,
-    screenshots: [
-      { title: `${game.title} - Official In-Game Gameplay Screen 1`, url: `https://static.gamezop.com/${game.gzCode}/game-1.png` },
-      { title: `${game.title} - Official In-Game Gameplay Screen 2`, url: `https://static.gamezop.com/${game.gzCode}/game-2.png` },
-      { title: `${game.title} - Official In-Game Gameplay Screen 3`, url: `https://static.gamezop.com/${game.gzCode}/game-3.png` },
-      { title: `${game.title} - Official HD Wallpaper Artwork`, url: `https://static.gamezop.com/${game.gzCode}/wall.png` },
-    ],
+    screenshots:
+      game.screenshots && game.screenshots.length > 0
+        ? game.screenshots
+        : [
+            { title: `${game.title} - Official In-Game Gameplay Screen 1`, url: `https://static.gamezop.com/${game.gzCode}/game-1.png` },
+            { title: `${game.title} - Official In-Game Gameplay Screen 2`, url: `https://static.gamezop.com/${game.gzCode}/game-2.png` },
+            { title: `${game.title} - Official In-Game Gameplay Screen 3`, url: `https://static.gamezop.com/${game.gzCode}/game-3.png` },
+            { title: `${game.title} - Official HD Wallpaper Artwork`, url: `https://static.gamezop.com/${game.gzCode}/wall.png` },
+          ],
   };
 });
 
@@ -2024,71 +2027,6 @@ export default function GamesLobby() {
               {/* TAB 1: EMBEDDED GAMEZOP HTML5 GAME */}
               {modalTab === 'play' && (
                 <div className="gz-embed-arena">
-                  {/* Top Game Action Bar */}
-                  <div className="gz-embed-topbar">
-                    <div className="gz-embed-title-left">
-                      <span className="gz-live-dot" />
-                      <span className="gz-embed-gamename">{activeGameModal.title}</span>
-                      {isDailyChallenge ? (
-                        <span className="gz-sandbox-badge" style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', border: '1px solid #38bdf8' }}>
-                          🌟 Daily Challenge (Free Play)
-                        </span>
-                      ) : (
-                        <span className="gz-sandbox-badge">HTML5 CDN</span>
-                      )}
-                    </div>
-                    <div className="gz-embed-actions">
-                      {isDailyChallenge && (
-                        <button
-                          onClick={() => {
-                            setIsDailyChallenge(false);
-                            isDailyChallengeRef.current = false;
-                            setToastMessage({ text: 'Switched to Normal Play mode. Entry fee will be deducted on round start.', type: 'info' });
-                          }}
-                          className="gz-action-btn"
-                          style={{ borderColor: '#00E676', color: '#00E676', background: 'rgba(0, 230, 118, 0.15)' }}
-                          title="Switch to Normal Paid Mode"
-                        >
-                          <span>🎮 Normal Mode</span>
-                        </button>
-                      )}
-                      <button
-                        onClick={handleRestartGameModal}
-                        className="gz-action-btn"
-                        title="Restart Game (deducts entry fee for new round)"
-                      >
-                        <RotateCw size={13} />
-                        <span>Restart</span>
-                      </button>
-                      <button
-                        onClick={() => setIsFullScreen((prev) => !prev)}
-                        className="gz-action-btn fullscreen"
-                        title={isFullScreen ? 'Exit Full Screen (ESC)' : 'Expand on Website'}
-                      >
-                        {isFullScreen ? <Minimize2 size={13} /> : <Maximize size={13} />}
-                        <span>{isFullScreen ? 'Exit' : 'Expand'}</span>
-                      </button>
-
-                      <div className="modal-balance-pill gz-balance-mobile-inline">
-                        <Wallet size={12} color="#00E676" />
-                        <span>{user?.usdtBalance || '50.00'} USDT</span>
-                      </div>
-                      <button
-                        onClick={() => {
-                          setActiveGameModal(null);
-                          setIsFullScreen(false);
-                        }}
-                        className="gz-action-btn close-btn"
-                        title="Close Game & Back to Main Page"
-                        aria-label="Back to Main Page"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  </div>
-
-
-
                   {/* Responsive Game Iframe Frame */}
                   <div className={`gz-iframe-frame ${isForceLandscape ? 'is-force-landscape' : ''}`}>
                     {isForceLandscape && (

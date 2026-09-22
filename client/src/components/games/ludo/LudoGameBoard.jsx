@@ -2052,17 +2052,17 @@ export default function LudoGameBoard({
             type="button"
             className={`${styles.modeBtn} ${playerMode === 2 ? styles.modeBtnActive : ''}`}
             onClick={() => handleModeChange(2)}
-            title="Switch to 2 Players (1v1)"
+            title={`Switch to 2 Players (1v1) — Entry ${adminPools.p2Entry} USDT, Prize ${adminPools.p2Prize} USDT`}
           >
-            👥 2P ({ludo2pEntryPool} USDT)
+            👥 2P ({adminPools.p2Entry} USDT)
           </button>
           <button
             type="button"
             className={`${styles.modeBtn} ${playerMode === 4 ? styles.modeBtnActive : ''}`}
             onClick={() => handleModeChange(4)}
-            title="Switch to 4 Players Classic Tournament"
+            title={`Switch to 4 Players Classic Tournament — Entry ${adminPools.p4Entry} USDT, Prize ${adminPools.p4Prize} USDT`}
           >
-            👑 4P ({ludo4pEntryPool} USDT)
+            👑 4P ({adminPools.p4Entry} USDT)
           </button>
         </div>
 
@@ -2071,9 +2071,17 @@ export default function LudoGameBoard({
           <span>{score} PTS</span>
         </div>
 
+        {/* Both modes' pools visible (admin values) */}
         <div style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 600 }}>
-          Entry: <strong style={{ color: '#39FF88' }}>{activeEntryPool} USDT</strong> | Prize:{' '}
-          <strong style={{ color: '#00E676' }}>{activePrizePool} USDT</strong>{' '}
+          <span title="2-Player entry fee & prize pool">
+            👥 2P Entry: <strong style={{ color: '#39FF88' }}>{adminPools.p2Entry} USDT</strong>
+            {' '}| Prize: <strong style={{ color: '#00E676' }}>{adminPools.p2Prize} USDT</strong>
+          </span>
+          <span style={{ margin: '0 6px', color: '#475569' }}>•</span>
+          <span title="4-Player entry fee & prize pool">
+            👑 4P Entry: <strong style={{ color: '#39FF88' }}>{adminPools.p4Entry} USDT</strong>
+            {' '}| Prize: <strong style={{ color: '#00E676' }}>{adminPools.p4Prize} USDT</strong>
+          </span>{' '}
           <span style={{ color: '#FFB300', fontSize: '0.72rem' }}>(1st Winner)</span>
         </div>
       </div>

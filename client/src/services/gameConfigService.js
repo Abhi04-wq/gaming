@@ -41,6 +41,8 @@ export function mergeConfigsIntoCatalog(configs = {}) {
     return {
       ...g,
       status: ov.status || 'active',
+      // updatedAt from MongoDB — proves the values came from database
+      dbUpdatedAt: ov.updatedAt || null,
       entryPool: ov.entryPool !== undefined ? String(ov.entryPool) : g.entryPool || '1.00',
       prizePool: ov.prizePool !== undefined ? String(ov.prizePool) : g.prizePool || '100.00',
       ludo2pEntryPool: ov.ludo2pEntryPool !== undefined ? String(ov.ludo2pEntryPool) : g.ludo2pEntryPool || '1.00',
