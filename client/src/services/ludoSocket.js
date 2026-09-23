@@ -21,8 +21,11 @@ export function getStablePlayerId(walletAddress) {
 export function getLudoSocket() {
   if (socketInstance?.connected) return socketInstance;
   if (socketInstance) return socketInstance;
-  // Vite proxy diye /socket.io same-origin-e jabe; production-e same host
-  socketInstance = io({ path: '/socket.io', transports: ['websocket', 'polling'] });
+  const backendUrl = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/+$/, '');
+  socketInstance = io(backendUrl || undefined, {
+    path: '/socket.io',
+    transports: ['websocket', 'polling'],
+  });
   return socketInstance;
 }
 

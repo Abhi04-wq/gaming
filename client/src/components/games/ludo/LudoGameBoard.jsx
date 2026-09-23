@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { getLudoSocket, getStablePlayerId } from '../../../services/ludoSocket';
+import { BACKEND_URL } from '../../../services/api';
 import styles from './LudoGameBoard.module.css';
 import {
   PLAYER_COLORS,
@@ -121,7 +122,7 @@ export default function LudoGameBoard({
       setPlayerName(user.ludoPlayerName);
       localStorage.setItem('ludo_player_name', user.ludoPlayerName);
     } else if (user?.walletAddress && !playerName) {
-      fetch(`/api/games/ludo/player-name/${user.walletAddress}`)
+      fetch(`${BACKEND_URL}/api/games/ludo/player-name/${user.walletAddress}`)
         .then((r) => r.json())
         .then((data) => {
           if (data?.success && data?.name) {
@@ -150,7 +151,7 @@ export default function LudoGameBoard({
     setNameError('');
 
     try {
-      await fetch('/api/games/ludo/player-name', {
+      await fetch(`${BACKEND_URL}/api/games/ludo/player-name`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -333,7 +334,7 @@ export default function LudoGameBoard({
     }
     if (qid) {
       try {
-        fetch('/api/games/ludo/matchmake/cancel', {
+        fetch(`${BACKEND_URL}/api/games/ludo/matchmake/cancel`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ queueId: qid }),
@@ -440,7 +441,7 @@ export default function LudoGameBoard({
       let serverPrize;
       const currentName = playerName || 'You';
       try {
-        const res = await fetch('/api/games/ludo/matchmake/fallback-bot', {
+        const res = await fetch(`${BACKEND_URL}/api/games/ludo/matchmake/fallback-bot`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -485,7 +486,7 @@ export default function LudoGameBoard({
     async (modeVal, currentName) => {
       try {
         const stableId = getStablePlayerId(user?.walletAddress);
-        const res = await fetch('/api/games/ludo/matchmake', {
+        const res = await fetch(`${BACKEND_URL}/api/games/ludo/matchmake`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -572,7 +573,7 @@ export default function LudoGameBoard({
       pollTimerRef.current = setInterval(async () => {
         if (!queueIdRef.current || socketMatchedRef.current || matchedDoneRef.current) return;
         try {
-          const pollRes = await fetch(`/api/games/ludo/matchmake/status/${queueIdRef.current}`);
+          const pollRes = await fetch(`${BACKEND_URL}/api/games/ludo/matchmake/status/${queueIdRef.current}`);
           const pollData = await pollRes.json();
           if (pollData && pollData.status === 'matched' && Array.isArray(pollData.players)) {
             try { getLudoSocket()?.emit('ludo:cancel'); } catch (_) {}
@@ -776,7 +777,7 @@ export default function LudoGameBoard({
     matchedDoneRef.current = false;
     if (queueIdRef.current) {
       try {
-        fetch('/api/games/ludo/matchmake/cancel', {
+        fetch(`${BACKEND_URL}/api/games/ludo/matchmake/cancel`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ queueId: queueIdRef.current }),

@@ -1,6 +1,7 @@
 import { getAdminConfigCredentials } from './adminAuthService';
 import { GAME_CATALOG } from '../pages/GamesLobby';
 import { isFixedThresholdGame } from './adminAuthService';
+import { BACKEND_URL } from './api';
 
 // Single source of truth: MongoDB via /api/game-config.
 // No localStorage — every browser/device sees the same admin values.
@@ -23,7 +24,7 @@ const POOL_KEYS = [
  * Throws on network/server error so callers can show proper state.
  */
 export async function fetchGameConfigs() {
-  const res = await fetch('/api/game-config');
+  const res = await fetch(`${BACKEND_URL}/api/game-config`);
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data?.success) {
     throw new Error(data?.message || `Game config fetch failed (status ${res.status})`);
@@ -85,7 +86,7 @@ export async function saveGameConfig(gameId, config) {
 
   const results = [];
   for (const id of ids) {
-    const res = await fetch(`/api/game-config/${encodeURIComponent(id)}`, {
+    const res = await fetch(`${BACKEND_URL}/api/game-config/${encodeURIComponent(id)}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

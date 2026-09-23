@@ -1,5 +1,6 @@
 
 import { ethers } from 'ethers';
+import { BACKEND_URL } from './api';
 
 // Minimal ERC-20 ABI for USDT
 export const USDT_ABI = [
@@ -251,7 +252,7 @@ export async function fetchLiveUsdtBalance(address, chainId = 1, browserProvider
     console.warn('[Client USDT Fetch Warning]', error.message);
     // If client query is blocked by CORS, query backend proxy
     try {
-      const res = await fetch(`/api/wallet/balance?address=${address}&chainId=${chainId}`);
+      const res = await fetch(`${BACKEND_URL}/api/wallet/balance?address=${address}&chainId=${chainId}`);
       const data = await res.json();
       if (data.success) {
         return {
