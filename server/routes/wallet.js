@@ -51,7 +51,7 @@ router.get('/balance', async (req, res) => {
         success: true,
         walletAddress: normalizedAddress,
         balance: existingUser.usdtBalance !== undefined && existingUser.usdtBalance !== null ? existingUser.usdtBalance : '0.00',
-        symbol: 'USDT',
+        symbol: 'LXT',
         chainId: Number(chainId),
       });
     }
@@ -60,16 +60,16 @@ router.get('/balance', async (req, res) => {
       success: true,
       walletAddress: normalizedAddress,
       balance: '50.00',
-      symbol: 'USDT',
+      symbol: 'LXT',
       chainId: Number(chainId),
     });
   } catch (error) {
     console.error('[Wallet Balance Error]', error);
     return res.status(500).json({
       success: false,
-      message: 'Failed to fetch USDT token balance.',
+      message: 'Failed to fetch LXT token balance.',
       balance: '50.00',
-      symbol: 'USDT',
+      symbol: 'LXT',
     });
   }
 });
@@ -115,7 +115,7 @@ router.post('/deduct-entry', async (req, res) => {
     if (currentBalance < entryFee) {
       return res.status(400).json({
         success: false,
-        message: `Insufficient USDT balance. Required: ${entryFee.toFixed(2)} USDT, Available: ${currentBalance.toFixed(2)} USDT.`,
+        message: `Insufficient LXT balance. Required: ${entryFee.toFixed(2)} LXT, Available: ${currentBalance.toFixed(2)} LXT.`,
         currentBalance: currentBalance.toFixed(2),
         required: entryFee.toFixed(2),
       });
@@ -139,19 +139,19 @@ router.post('/deduct-entry', async (req, res) => {
         amount: entryFee,
         balanceBefore: currentBalance,
         balanceAfter: parseFloat(newBalance),
-        currency: 'USDT',
+        currency: 'LXT',
         gameId: gameId || null,
         gameTitle: title,
         description: `Game Entry Fee - ${title}`,
         referenceId,
         status: 'completed',
       });
-      console.log(`[Transaction Saved: DEBIT] ${referenceId} | -${entryFee.toFixed(2)} USDT | New Bal: ${newBalance} USDT`);
+      console.log(`[Transaction Saved: DEBIT] ${referenceId} | -${entryFee.toFixed(2)} LXT | New Bal: ${newBalance} LXT`);
     } catch (txErr) {
       console.error('[Transaction Save Error (Debit)]', txErr);
     }
 
-    console.log(`[Game Entry Deducted] User: ${normalizedAddress} | Game: ${gameId} | Deducted: -${entryFee.toFixed(2)} USDT | New Balance: ${newBalance} USDT`);
+    console.log(`[Game Entry Deducted] User: ${normalizedAddress} | Game: ${gameId} | Deducted: -${entryFee.toFixed(2)} LXT | New Balance: ${newBalance} LXT`);
 
     return res.json({
       success: true,
@@ -160,7 +160,7 @@ router.post('/deduct-entry', async (req, res) => {
       gameId,
       referenceId,
       transaction: savedTransaction,
-      message: `Entry pool fee deducted: -${entryFee.toFixed(2)} USDT. Remaining balance: ${newBalance} USDT.`,
+      message: `Entry pool fee deducted: -${entryFee.toFixed(2)} LXT. Remaining balance: ${newBalance} LXT.`,
     });
   } catch (error) {
     console.error('[Deduct Entry Fee Error]', error);
@@ -235,22 +235,22 @@ router.post('/credit-prize', async (req, res) => {
         netReward, // 75% net reward
         balanceBefore: currentBalance,
         balanceAfter: parseFloat(newBalance),
-        currency: 'USDT',
+        currency: 'LXT',
         gameId: gameId || null,
         gameTitle: title,
-        description: `Prize Pool Reward - ${title} (Gross: ${gross.toFixed(2)} USDT, 25% Platform Cut: -${deductionAmount.toFixed(2)} USDT, 75% Credited: +${netReward.toFixed(2)} USDT | Score: ${score} >= ${threshold} PTS)`,
+        description: `Prize Pool Reward - ${title} (Gross: ${gross.toFixed(2)} LXT, 25% Platform Cut: -${deductionAmount.toFixed(2)} LXT, 75% Credited: +${netReward.toFixed(2)} LXT | Score: ${score} >= ${threshold} PTS)`,
         referenceId,
         status: 'completed',
       });
       console.log(
-        `[Transaction Saved: CREDIT (75%)] ${referenceId} | Gross: ${gross.toFixed(2)} USDT | 25% Cut: -${deductionAmount.toFixed(2)} USDT | Net: +${netReward.toFixed(2)} USDT | New Bal: ${newBalance} USDT`
+        `[Transaction Saved: CREDIT (75%)] ${referenceId} | Gross: ${gross.toFixed(2)} LXT | 25% Cut: -${deductionAmount.toFixed(2)} LXT | Net: +${netReward.toFixed(2)} LXT | New Bal: ${newBalance} LXT`
       );
     } catch (txErr) {
       console.error('[Transaction Save Error (Credit)]', txErr);
     }
 
     console.log(
-      `[Prize Pool Won & 75% Credited] User: ${normalizedAddress} | Game: ${gameId} | Gross: ${gross.toFixed(2)} USDT | 25% Cut: -${deductionAmount.toFixed(2)} USDT | Net: +${netReward.toFixed(2)} USDT | New Balance: ${newBalance} USDT`
+      `[Prize Pool Won & 75% Credited] User: ${normalizedAddress} | Game: ${gameId} | Gross: ${gross.toFixed(2)} LXT | 25% Cut: -${deductionAmount.toFixed(2)} LXT | Net: +${netReward.toFixed(2)} LXT | New Balance: ${newBalance} LXT`
     );
 
     return res.json({
@@ -267,7 +267,7 @@ router.post('/credit-prize', async (req, res) => {
       gameId,
       referenceId,
       transaction: savedTransaction,
-      message: `🏆 Congratulations! Score ${score} reached target ${threshold}. Gross Reward: ${gross.toFixed(2)} USDT (-25% platform cut: ${deductionAmount.toFixed(2)} USDT) -> +${netReward.toFixed(2)} USDT (75%) credited to your balance!`,
+      message: `🏆 Congratulations! Score ${score} reached target ${threshold}. Gross Reward: ${gross.toFixed(2)} LXT (-25% platform cut: ${deductionAmount.toFixed(2)} LXT) -> +${netReward.toFixed(2)} LXT (75%) credited to your balance!`,
     });
   } catch (error) {
     console.error('[Credit Prize Error]', error);
@@ -328,8 +328,8 @@ router.post('/deposit', async (req, res) => {
       amount: depositAmount,
       balanceBefore: currentBalance,
       balanceAfter: parseFloat(newBalance),
-      currency: 'USDT',
-      description: description || `USDT Wallet Deposit (+${depositAmount.toFixed(2)} USDT)`,
+      currency: 'LXT',
+      description: description || `LXT Wallet Deposit (+${depositAmount.toFixed(2)} LXT)`,
       referenceId,
       status: 'completed',
     });
@@ -340,7 +340,7 @@ router.post('/deposit', async (req, res) => {
       newBalance: user.usdtBalance,
       referenceId,
       transaction: savedTransaction,
-      message: `Successfully deposited +${depositAmount.toFixed(2)} USDT! New balance: ${newBalance} USDT.`,
+      message: `Successfully deposited +${depositAmount.toFixed(2)} LXT! New balance: ${newBalance} LXT.`,
     });
   } catch (error) {
     console.error('[Wallet Deposit Error]', error);

@@ -308,7 +308,7 @@ export default function IncomeDetails() {
                 </div>
               </div>
               <div className="income-stat-value" style={{ fontSize: '1.9rem', fontWeight: 800, color: '#00E676', letterSpacing: '-0.02em' }}>
-                +{data.summary.totalCredit} <span style={{ fontSize: '1rem', color: '#39FF88', fontWeight: 600 }}>USDT</span>
+                +{data.summary.totalCredit} <span style={{ fontSize: '1rem', color: '#39FF88', fontWeight: 600 }}>LXT</span>
               </div>
               <div style={{ fontSize: '0.76rem', color: '#94a3b8', marginTop: '6px' }}>
                 {data.summary.creditCount} Credit Transaction{data.summary.creditCount !== 1 ? 's' : ''} (Wins &amp; Deposits)
@@ -347,7 +347,7 @@ export default function IncomeDetails() {
                 </div>
               </div>
               <div className="income-stat-value" style={{ fontSize: '1.9rem', fontWeight: 800, color: '#FF5252', letterSpacing: '-0.02em' }}>
-                -{data.summary.totalDebit} <span style={{ fontSize: '1rem', color: '#FF8A80', fontWeight: 600 }}>USDT</span>
+                -{data.summary.totalDebit} <span style={{ fontSize: '1rem', color: '#FF8A80', fontWeight: 600 }}>LXT</span>
               </div>
               <div style={{ fontSize: '0.76rem', color: '#94a3b8', marginTop: '6px' }}>
                 {data.summary.debitCount} Debit Transaction{data.summary.debitCount !== 1 ? 's' : ''} (Game Entry Fees)
@@ -397,14 +397,14 @@ export default function IncomeDetails() {
                 }}
               >
                 {netNum >= 0 ? `+${data.summary.netEarnings}` : data.summary.netEarnings}{' '}
-                <span style={{ fontSize: '1rem', color: '#FFFFFF', fontWeight: 600 }}>USDT</span>
+                <span style={{ fontSize: '1rem', color: '#FFFFFF', fontWeight: 600 }}>LXT</span>
               </div>
               <div style={{ fontSize: '0.76rem', color: '#94a3b8', marginTop: '6px' }}>
                 {netNum >= 0 ? '🟢 Profitable Account' : '🟡 Net Negative (Play to recover)'}
               </div>
             </div>
 
-            {/* Card 4: Current Live USDT Balance */}
+            {/* Card 4: Current Live LXT Balance */}
             <div
               className="glass-panel"
               style={{
@@ -416,7 +416,7 @@ export default function IncomeDetails() {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                 <span style={{ fontSize: '0.82rem', color: '#A3A3A3', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Available USDT Balance
+                  Available LXT Balance
                 </span>
                 <div
                   style={{
@@ -435,7 +435,7 @@ export default function IncomeDetails() {
                 </div>
               </div>
               <div className="income-stat-value" style={{ fontSize: '1.9rem', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.02em' }}>
-                {user?.usdtBalance || '0.00'} <span style={{ fontSize: '1rem', color: '#38BDF8', fontWeight: 600 }}>USDT</span>
+                {user?.usdtBalance || '0.00'} <span style={{ fontSize: '1rem', color: '#38BDF8', fontWeight: 600 }}>LXT</span>
               </div>
               <div style={{ fontSize: '0.76rem', color: '#94a3b8', marginTop: '6px', fontFamily: 'var(--font-mono)' }}>
                 {user?.walletAddress ? `${user.walletAddress.slice(0, 6)}...${user.walletAddress.slice(-4)}` : 'Connected'}
@@ -577,9 +577,9 @@ export default function IncomeDetails() {
                 }}
               >
                 <span>✂️ {cutTotals.count} prize{cutTotals.count !== 1 ? 's' : ''} with 25% cut</span>
-                <span>Gross: <strong style={{ color: '#FFFFFF' }}>{cutTotals.gross} USDT</strong></span>
-                <span>Platform cut: <strong style={{ color: '#FFB300' }}>-{cutTotals.cut} USDT</strong></span>
-                <span>You received: <strong style={{ color: '#00E676' }}>+{cutTotals.net} USDT</strong></span>
+                <span>Gross: <strong style={{ color: '#FFFFFF' }}>{cutTotals.gross} LXT</strong></span>
+                <span>Platform cut: <strong style={{ color: '#FFB300' }}>-{cutTotals.cut} LXT</strong></span>
+                <span>You received: <strong style={{ color: '#00E676' }}>+{cutTotals.net} LXT</strong></span>
               </div>
             )}
 
@@ -667,16 +667,16 @@ export default function IncomeDetails() {
                         <div className="income-card-right">
                           <div className={`income-amount ${isCredit ? 'credit' : 'debit'}`}>
                             {isCredit ? `+${card.amount}` : `-${card.amount}`}
-                            <span className="income-currency">USDT</span>
+                            <span className="income-currency">LXT</span>
                           </div>
                           {card.deductionAmount && (
                             <div className="income-platform-cut" style={{ fontSize: '0.72rem', color: '#f59e0b', fontWeight: 700, margin: '2px 0' }}>
-                              -25% Platform Cut: -{card.deductionAmount} USDT (Gross: {card.grossReward} USDT)
+                              -25% Platform Cut: -{card.deductionAmount} LXT (Gross: {card.grossReward} LXT)
                             </div>
                           )}
                           <div className="income-balance-after">
                             <span className="bal-lbl">Bal after:</span>
-                            <span className="bal-val">{card.balanceAfter} USDT</span>
+                            <span className="bal-val">{card.balanceAfter} LXT</span>
                           </div>
                         </div>
                       </div>

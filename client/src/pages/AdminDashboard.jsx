@@ -322,8 +322,8 @@ export default function AdminDashboard() {
       await reloadGames();
       setToastMessage({
         text: isLudo
-          ? `Saved to database — live on all devices! 2P Entry: ${configLudo2pEntry} / Win: ${configLudo2pPrize} USDT | 4P Entry: ${configLudo4pEntry} / Win: ${configLudo4pPrize} USDT`
-          : `Saved to database — live on all devices! Entry: ${configEntryPool} USDT, Prize: ${configPrizePool} USDT`,
+          ? `Saved to database — live on all devices! 2P Entry: ${configLudo2pEntry} / Win: ${configLudo2pPrize} LXT | 4P Entry: ${configLudo4pEntry} / Win: ${configLudo4pPrize} LXT`
+          : `Saved to database — live on all devices! Entry: ${configEntryPool} LXT, Prize: ${configPrizePool} LXT`,
         type: 'success',
       });
       setConfiguringGame(null);
@@ -339,7 +339,7 @@ export default function AdminDashboard() {
       return;
     }
 
-    const headers = ['Reference ID', 'Type', 'Amount (USDT)', 'Wallet Address', 'Category', 'Description', 'Date'];
+    const headers = ['Reference ID', 'Type', 'Amount (LXT)', 'Wallet Address', 'Category', 'Description', 'Date'];
     const rows = incomeTxs.map((tx) => [
       tx.referenceId,
       tx.type,
@@ -373,11 +373,11 @@ export default function AdminDashboard() {
       'Date & Time',
       'Player Wallet Address',
       'Game / Source',
-      'Gross Reward 100% (USDT)',
-      '25% Platform Cut (USDT)',
-      '75% Net User Credit (USDT)',
-      'Balance Before (USDT)',
-      'Balance After (USDT)',
+      'Gross Reward 100% (LXT)',
+      '25% Platform Cut (LXT)',
+      '75% Net User Credit (LXT)',
+      'Balance Before (LXT)',
+      'Balance After (LXT)',
       'Reference ID',
       'Status',
     ];
@@ -413,10 +413,10 @@ export default function AdminDashboard() {
       const testAddr = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e';
       if (type === 'credit') {
         await api.depositFunds(testAddr, '5.00', 'Admin Simulation: Bonus Credit Test');
-        setToastMessage({ text: 'Simulated +5.00 USDT Credit in MongoDB!', type: 'success' });
+        setToastMessage({ text: 'Simulated +5.00 LXT Credit in MongoDB!', type: 'success' });
       } else {
         await api.deductGameEntry(testAddr, 'tower-crash', '1.00', 'Admin Simulation: Match Entry Fee');
-        setToastMessage({ text: 'Simulated -1.00 USDT Debit in MongoDB!', type: 'info' });
+        setToastMessage({ text: 'Simulated -1.00 LXT Debit in MongoDB!', type: 'info' });
       }
       handleManualRefresh();
     } catch (err) {
@@ -832,7 +832,7 @@ export default function AdminDashboard() {
                   <h2 style={{ fontSize: '1.9rem', fontWeight: 900, color: '#00E676', margin: 0 }}>
                     {statsLoading ? '…' : `+${adminStats.totalCredit}`}
                   </h2>
-                  <span style={{ fontSize: '0.8rem', color: '#00E676', fontWeight: 700 }}>USDT</span>
+                  <span style={{ fontSize: '0.8rem', color: '#00E676', fontWeight: 700 }}>LXT</span>
                 </div>
                 <div style={{ marginTop: '12px', fontSize: '0.74rem', color: '#64748b' }}>
                   {adminStats.creditCount} reward & deposit events
@@ -885,7 +885,7 @@ export default function AdminDashboard() {
                   <h2 style={{ fontSize: '1.9rem', fontWeight: 900, color: '#f87171', margin: 0 }}>
                     {statsLoading ? '…' : `-${adminStats.totalDebit}`}
                   </h2>
-                  <span style={{ fontSize: '0.8rem', color: '#f87171', fontWeight: 700 }}>USDT</span>
+                  <span style={{ fontSize: '0.8rem', color: '#f87171', fontWeight: 700 }}>LXT</span>
                 </div>
                 <div style={{ marginTop: '12px', fontSize: '0.74rem', color: '#64748b' }}>
                   {adminStats.debitCount} game entry deductions
@@ -940,7 +940,7 @@ export default function AdminDashboard() {
                   <h2 style={{ fontSize: '1.9rem', fontWeight: 900, color: '#f59e0b', margin: 0 }}>
                     {statsLoading ? '…' : `+${deductionsSummary.totalDeductionsCollected || adminStats.totalDeductions || '0.00'}`}
                   </h2>
-                  <span style={{ fontSize: '0.8rem', color: '#f59e0b', fontWeight: 700 }}>USDT</span>
+                  <span style={{ fontSize: '0.8rem', color: '#f59e0b', fontWeight: 700 }}>LXT</span>
                 </div>
                 <div style={{ marginTop: '12px', fontSize: '0.74rem', color: '#cbd5e1', display: 'flex', justifyContent: 'space-between' }}>
                   <span>{deductionsSummary.totalCount || adminStats.deductionCount || 0} prize events cut</span>
@@ -956,7 +956,7 @@ export default function AdminDashboard() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                   <div>
                     <h3 style={{ margin: '0 0 4px 0', fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF' }}>
-                      Financial Flow Ratio
+                       Financial Flow Ratio
                     </h3>
                     <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.82rem' }}>
                       Real-time breakdown of player entry debits vs prize/deposit credits
@@ -973,7 +973,7 @@ export default function AdminDashboard() {
                       fontWeight: 600,
                     }}
                   >
-                    Net: {adminStats.netEarnings} USDT
+                    Net: {adminStats.netEarnings} LXT
                   </span>
                 </div>
 
@@ -1029,10 +1029,10 @@ export default function AdminDashboard() {
                       Total Prize Inflow
                     </div>
                     <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#00E676', marginTop: '2px' }}>
-                      +{adminStats.totalCredit} <span style={{ fontSize: '0.74rem' }}>USDT</span>
+                      +{adminStats.totalCredit} <span style={{ fontSize: '0.74rem' }}>LXT</span>
                     </div>
                     <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '4px' }}>
-                      Avg per credit: {(numCredits / (adminStats.creditCount || 1)).toFixed(2)} USDT
+                      Avg per credit: {(numCredits / (adminStats.creditCount || 1)).toFixed(2)} LXT
                     </div>
                   </div>
 
@@ -1041,10 +1041,10 @@ export default function AdminDashboard() {
                       Total Stakes Outflow
                     </div>
                     <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f87171', marginTop: '2px' }}>
-                      -{adminStats.totalDebit} <span style={{ fontSize: '0.74rem' }}>USDT</span>
+                      -{adminStats.totalDebit} <span style={{ fontSize: '0.74rem' }}>LXT</span>
                     </div>
                     <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '4px' }}>
-                      Avg stake fee: {(numDebits / (adminStats.debitCount || 1)).toFixed(2)} USDT
+                      Avg stake fee: {(numDebits / (adminStats.debitCount || 1)).toFixed(2)} LXT
                     </div>
                   </div>
                 </div>
@@ -1126,7 +1126,7 @@ export default function AdminDashboard() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <Coins size={18} />
                       <div style={{ textAlign: 'left' }}>
-                        <div>Simulate +5.00 USDT Credit</div>
+                        <div>Simulate +5.00 LXT Credit</div>
                         <div style={{ fontSize: '0.74rem', color: '#94a3b8', fontWeight: 400 }}>
                           Tests MongoDB deposit & balance credit event
                         </div>
@@ -1158,7 +1158,7 @@ export default function AdminDashboard() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <Activity size={18} />
                       <div style={{ textAlign: 'left' }}>
-                        <div>Simulate -1.00 USDT Match Entry</div>
+                        <div>Simulate -1.00 LXT Match Entry</div>
                         <div style={{ fontSize: '0.74rem', color: '#94a3b8', fontWeight: 400 }}>
                           Tests MongoDB game entry fee deduction
                         </div>
@@ -1582,7 +1582,7 @@ export default function AdminDashboard() {
                               Entry Pool
                             </span>
                             <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#FFFFFF' }}>
-                              {game.entryPool || '1.00'} <span style={{ fontSize: '0.68rem', color: '#00E676' }}>USDT</span>
+                              {game.entryPool || '1.00'} <span style={{ fontSize: '0.68rem', color: '#00E676' }}>LXT</span>
                             </span>
                           </div>
                           <div style={{ textAlign: 'center' }}>
@@ -1590,7 +1590,7 @@ export default function AdminDashboard() {
                               Prize Pool
                             </span>
                             <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#00E676' }}>
-                              {game.prizePool || '100.00'} <span style={{ fontSize: '0.68rem' }}>USDT</span>
+                              {game.prizePool || '100.00'} <span style={{ fontSize: '0.68rem' }}>LXT</span>
                             </span>
                           </div>
                           <div style={{ textAlign: 'right' }}>
@@ -1818,11 +1818,11 @@ export default function AdminDashboard() {
                             </td>
 
                             <td style={{ padding: '12px 18px', fontWeight: 700, color: '#FFFFFF' }}>
-                              {game.entryPool || '1.00'} <span style={{ fontSize: '0.7rem', color: '#00E676' }}>USDT</span>
+                              {game.entryPool || '1.00'} <span style={{ fontSize: '0.7rem', color: '#00E676' }}>LXT</span>
                             </td>
 
                             <td style={{ padding: '12px 18px', fontWeight: 800, color: '#00E676' }}>
-                              {game.prizePool || '100.00'} <span style={{ fontSize: '0.7rem' }}>USDT</span>
+                              {game.prizePool || '100.00'} <span style={{ fontSize: '0.7rem' }}>LXT</span>
                             </td>
 
                             <td style={{ padding: '12px 18px', fontWeight: 800, color: isFixedThresholdGame(game.id) ? '#ef4444' : '#FFB300' }}>
@@ -1998,7 +1998,7 @@ export default function AdminDashboard() {
                     Credits Inflow
                   </div>
                   <div className="admin-ledger-stat-val val-credit">
-                    +{incomeSummary.totalCredit} <span className="stat-cur">USDT</span>
+                    +{incomeSummary.totalCredit} <span className="stat-cur">LXT</span>
                   </div>
                 </div>
 
@@ -2007,7 +2007,7 @@ export default function AdminDashboard() {
                     Debits Outflow
                   </div>
                   <div className="admin-ledger-stat-val val-debit">
-                    -{incomeSummary.totalDebit} <span className="stat-cur">USDT</span>
+                    -{incomeSummary.totalDebit} <span className="stat-cur">LXT</span>
                   </div>
                 </div>
 
@@ -2016,7 +2016,7 @@ export default function AdminDashboard() {
                     Net Flow
                   </div>
                   <div className="admin-ledger-stat-val val-net">
-                    {incomeSummary.netEarnings} <span className="stat-cur">USDT</span>
+                    {incomeSummary.netEarnings} <span className="stat-cur">LXT</span>
                   </div>
                 </div>
 
@@ -2108,7 +2108,7 @@ export default function AdminDashboard() {
                               }}
                             >
                               {isCredit ? '+' : '-'}
-                              {Number(tx.amount || 0).toFixed(2)} USDT
+                              {Number(tx.amount || 0).toFixed(2)} LXT
                             </td>
 
                             <td
@@ -2291,7 +2291,7 @@ export default function AdminDashboard() {
                     <h3 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#f59e0b', margin: 0 }}>
                       +{deductionsSummary.totalDeductionsCollected}
                     </h3>
-                    <span style={{ fontSize: '0.8rem', color: '#f59e0b', fontWeight: 700 }}>USDT</span>
+                    <span style={{ fontSize: '0.8rem', color: '#f59e0b', fontWeight: 700 }}>LXT</span>
                   </div>
                   <span style={{ fontSize: '0.72rem', color: '#f59e0b', opacity: 0.85 }}>Fixed 25% Platform Share</span>
                 </div>
@@ -2304,7 +2304,7 @@ export default function AdminDashboard() {
                     <h3 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#38bdf8', margin: 0 }}>
                       {deductionsSummary.totalGrossRewards}
                     </h3>
-                    <span style={{ fontSize: '0.8rem', color: '#38bdf8', fontWeight: 700 }}>USDT</span>
+                    <span style={{ fontSize: '0.8rem', color: '#38bdf8', fontWeight: 700 }}>LXT</span>
                   </div>
                   <span style={{ fontSize: '0.72rem', color: '#7dd3fc' }}>100% Prize Pool Value</span>
                 </div>
@@ -2317,7 +2317,7 @@ export default function AdminDashboard() {
                     <h3 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#00E676', margin: 0 }}>
                       +{deductionsSummary.totalNetRewardsCredited}
                     </h3>
-                    <span style={{ fontSize: '0.8rem', color: '#00E676', fontWeight: 700 }}>USDT</span>
+                    <span style={{ fontSize: '0.8rem', color: '#00E676', fontWeight: 700 }}>LXT</span>
                   </div>
                   <span style={{ fontSize: '0.72rem', color: '#00E676' }}>Credited to Player Balances</span>
                 </div>
@@ -2495,7 +2495,7 @@ export default function AdminDashboard() {
                             </td>
 
                             <td style={{ padding: '14px 16px', fontWeight: 800, color: '#38bdf8', fontSize: '0.86rem' }}>
-                              {d.grossReward || d.amount} USDT
+                              {d.grossReward || d.amount} LXT
                             </td>
 
                             <td style={{ padding: '14px 16px' }}>
@@ -2513,7 +2513,7 @@ export default function AdminDashboard() {
                                   gap: '4px',
                                 }}
                               >
-                                -{d.deductionAmount || '0.00'} USDT (25%)
+                                -{d.deductionAmount || '0.00'} LXT (25%)
                               </span>
                             </td>
 
@@ -2532,7 +2532,7 @@ export default function AdminDashboard() {
                                   gap: '4px',
                                 }}
                               >
-                                +{d.netReward || d.amount} USDT (75%)
+                                +{d.netReward || d.amount} LXT (75%)
                               </span>
                             </td>
 
@@ -2541,7 +2541,7 @@ export default function AdminDashboard() {
                                 <span>
                                   <span style={{ color: '#94a3b8' }}>{Number(d.balanceBefore).toFixed(2)}</span>
                                   <span style={{ color: '#64748b', margin: '0 6px' }}>&rarr;</span>
-                                  <span style={{ color: '#00E676', fontWeight: 700 }}>{Number(d.balanceAfter).toFixed(2)} USDT</span>
+                                  <span style={{ color: '#00E676', fontWeight: 700 }}>{Number(d.balanceAfter).toFixed(2)} LXT</span>
                                 </span>
                               ) : (
                                 '—'
@@ -2848,7 +2848,7 @@ export default function AdminDashboard() {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                       <div>
                         <label style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>
-                          2P Entry Pool (USDT)
+                          2P Entry Pool (LXT)
                         </label>
                         <input
                           type="number"
@@ -2886,7 +2886,7 @@ export default function AdminDashboard() {
 
                       <div>
                         <label style={{ fontSize: '0.72rem', color: '#00E676', display: 'block', marginBottom: '4px' }}>
-                          2P Prize Pool (USDT)
+                          2P Prize Pool (LXT)
                         </label>
                         <input
                           type="number"
@@ -2947,7 +2947,7 @@ export default function AdminDashboard() {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                       <div>
                         <label style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>
-                          4P Entry Pool (USDT)
+                          4P Entry Pool (LXT)
                         </label>
                         <input
                           type="number"
@@ -2985,7 +2985,7 @@ export default function AdminDashboard() {
 
                       <div>
                         <label style={{ fontSize: '0.72rem', color: '#00E676', display: 'block', marginBottom: '4px' }}>
-                          4P 1st Prize (USDT)
+                          4P 1st Prize (LXT)
                         </label>
                         <input
                           type="number"
@@ -3032,7 +3032,7 @@ export default function AdminDashboard() {
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                       <label style={{ fontSize: '0.84rem', fontWeight: 700, color: '#FFFFFF' }}>
-                        Entry Pool (USDT)
+                        Entry Pool (LXT)
                       </label>
                       <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Player match stake fee</span>
                     </div>
@@ -3069,7 +3069,7 @@ export default function AdminDashboard() {
                           fontSize: '0.82rem',
                         }}
                       >
-                        USDT
+                        LXT
                       </span>
                     </div>
 
@@ -3092,7 +3092,7 @@ export default function AdminDashboard() {
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                       <label style={{ fontSize: '0.84rem', fontWeight: 700, color: '#FFFFFF' }}>
-                        Prize Pool (USDT)
+                        Prize Pool (LXT)
                       </label>
                       <span style={{ fontSize: '0.72rem', color: '#00E676' }}>Jackpot reward pool</span>
                     </div>
@@ -3129,7 +3129,7 @@ export default function AdminDashboard() {
                           fontSize: '0.82rem',
                         }}
                       >
-                        USDT
+                        LXT
                       </span>
                     </div>
 

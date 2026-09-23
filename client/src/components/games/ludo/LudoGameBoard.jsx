@@ -1,8 +1,21 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { Volume2, VolumeX } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { getLudoSocket, getStablePlayerId } from '../../../services/ludoSocket';
 import { BACKEND_URL } from '../../../services/api';
 import styles from './LudoGameBoard.module.css';
+import {
+  playDiceShakeSound,
+  playDiceLandSound,
+  playCoinStepSound,
+  playCoinExitBaseSound,
+  playCoinCutSound,
+  playCoinReachGoalSound,
+  playWinnerFanfareSound,
+  playYourTurnAlertSound,
+  toggleLudoAudioMute,
+  isLudoAudioMuted,
+} from './ludoAudio';
 import {
   PLAYER_COLORS,
   FOUR_PLAYER_COLORS,
@@ -168,7 +181,7 @@ export default function LudoGameBoard({
 
       if (!isNaN(requiredFee) && userBal < requiredFee) {
         setBalanceError(
-          `❌ Insufficient USDT balance! ${modeToStart}P mode requires ${requiredFee.toFixed(2)} USDT, but your balance is ${userBal.toFixed(2)} USDT. Game cannot start.`
+          `❌ Insufficient LXT balance! ${modeToStart}P mode requires ${requiredFee.toFixed(2)} LXT, but your balance is ${userBal.toFixed(2)} LXT. Game cannot start.`
         );
         setPendingMode(null);
         return;
@@ -243,8 +256,9 @@ export default function LudoGameBoard({
   const [knockoutState, setKnockoutState] = useState(null); // { r, c, victimColor, attackerColor }
   const [flyingVictimId, setFlyingVictimId] = useState(null);
   const [knockoutToast, setKnockoutToast] = useState(null);
+  const [isMutedState, setIsMutedState] = useState(isLudoAudioMuted());
 
-  // Sound effects generator (Web Audio API)
+  // Sound effects generator (Web Audio API fallback)
   const playBeep = (freq, duration, type = 'sine') => {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -402,14 +416,14 @@ export default function LudoGameBoard({
         setIsMatchmaking(false);
         setSelectedModeConfirmed(false);
         setBalanceError(
-          `❌ Insufficient USDT balance! Match entry fee is ${fee.toFixed(2)} USDT, but your balance is ${userBal.toFixed(2)} USDT. Game cannot start.`
+          `❌ Insufficient LXT balance! Match entry fee is ${fee.toFixed(2)} LXT, but your balance is ${userBal.toFixed(2)} LXT. Game cannot start.`
         );
         return;
       }
       deductionDispatchedRef.current = true;
 
       // Deduct entry fee right before the match starts!
-      setDeductionMessage(`💳 Deducting Entry Fee: -${fee.toFixed(2)} USDT... Match starting!`);
+      setDeductionMessage(`💳 Deducting Entry Fee: -${fee.toFixed(2)} LXT... Match starting!`);
       if (onGameEvent) {
         onGameEvent({
           state: 'start',
@@ -426,7 +440,7 @@ export default function LudoGameBoard({
         setIsMatchmaking(false);
         setDeductionMessage(null);
         setGameStartedNotified(true);
-        setActionMessage(`Match started (${modeVal} Players)! Prize Pool: ${prize.toFixed(2)} USDT to 1st Winner. Tap dice to roll.`);
+        setActionMessage(`Match started (${modeVal} Players)! Prize Pool: ${prize.toFixed(2)} LXT to 1st Winner. Tap dice to roll.`);
       }, 1400);
     },
     [adminPools, onGameEvent, playerMode, playerName, stopMatchmakingTimers]
@@ -638,6 +652,7 @@ export default function LudoGameBoard({
           try { if (remoteDiceIntRef.current) clearInterval(remoteDiceIntRef.current); } catch (_) {}
           remoteAnimToken.current++;
           setIsRolling(true);
+          playDiceShakeSound();
           let ticks = 0;
           remoteDiceIntRef.current = setInterval(() => {
             ticks++;
@@ -648,7 +663,7 @@ export default function LudoGameBoard({
               rolledNumberRef.current = action.value;
               setLastDiceByColor((prev) => ({ ...prev, [action.color]: action.value }));
               setIsRolling(false);
-              playBeep(540, 0.12, 'square');
+              playDiceLandSound(action.value);
               setActionMessage(`${String(action.color).toUpperCase()} rolled ${action.value} (LIVE).`);
             } else {
               setRolledNumber(1 + Math.floor(Math.random() * 6));
@@ -680,10 +695,12 @@ export default function LudoGameBoard({
           if (typeof action.score === 'number') setScore(action.score);
           if (action.actionMessage) setActionMessage(action.actionMessage);
           if (action.knockoutToast) {
+            playCoinCutSound();
             setKnockoutToast(action.knockoutToast);
             setTimeout(() => setKnockoutToast(null), 1800);
           }
           if (action.winner) {
+            playWinnerFanfareSound(action.winner === myColorRef.current);
             setWinner(action.winner);
             winnerRef.current = action.winner;
             // Ei match-er prize (server/admin value) — kono hardcode noy
@@ -709,6 +726,9 @@ export default function LudoGameBoard({
           remoteDiceIntRef.current = null;
           setCurrentTurn(action.currentTurn);
           currentTurnRef.current = action.currentTurn;
+          if (action.currentTurn === myColorRef.current) {
+            playYourTurnAlertSound();
+          }
           setRolledNumber(null);
           rolledNumberRef.current = null;
         }
@@ -750,7 +770,7 @@ export default function LudoGameBoard({
 
     if (!isNaN(requiredFee) && userBal < requiredFee) {
       setBalanceError(
-        `❌ Insufficient USDT balance! ${mode}P mode requires ${requiredFee.toFixed(2)} USDT, but your balance is ${userBal.toFixed(2)} USDT. Game cannot start.`
+        `❌ Insufficient LXT balance! ${mode}P mode requires ${requiredFee.toFixed(2)} LXT, but your balance is ${userBal.toFixed(2)} LXT. Game cannot start.`
       );
       return;
     }
@@ -882,6 +902,9 @@ export default function LudoGameBoard({
       const mine = isLiveMatchRef.current ? nextColor === myC : nextColor === 'red';
       setCurrentTurn(nextColor);
       currentTurnRef.current = nextColor;
+      if (mine && !winnerRef.current) {
+        playYourTurnAlertSound();
+      }
       setActionMessage(
         mine ? 'Your turn! Tap the dice.' : `${PLAYER_LABELS[nextColor]}'s turn.`
       );
@@ -934,14 +957,13 @@ export default function LudoGameBoard({
             });
           }
 
-          // Trigger board shake and dramatic sound
+          // Trigger board shake and dramatic knockout sound
           setIsBoardShaking(true);
           setFlyingVictimId(victimPawn.id);
           setKnockoutToast(
             `💥 KNOCKOUT! ${pawnToMove.color.toUpperCase()} captured ${knockedColor.toUpperCase()}! (+200 PTS & Extra Roll)`
           );
-          playBeep(210, 0.3, 'sawtooth');
-          setTimeout(() => playBeep(420, 0.2, 'triangle'), 80);
+          playCoinCutSound();
 
           setTimeout(() => {
             setIsBoardShaking(false);
@@ -952,7 +974,6 @@ export default function LudoGameBoard({
             if (animSeqRef.current !== seq) return;
             setFlyingVictimId(null);
             setKnockoutState(null);
-            playBeep(340, 0.1, 'sine');
           }, 520);
 
           setTimeout(() => {
@@ -979,6 +1000,10 @@ export default function LudoGameBoard({
         setJustExitedPawnId(null);
         animatingRef.current = false; // Unlock immediately so next click works!
 
+        if (reachedHome) {
+          playCoinReachGoalSound();
+        }
+
         if (pawnToMove.color === (isLiveMatchRef.current ? myColorRef.current : 'red')) {
           let pts = 50;
           if (scoredKnockout) {
@@ -987,7 +1012,6 @@ export default function LudoGameBoard({
           }
           if (reachedHome) {
             pts += 350;
-            playBeep(700, 0.25);
             setActionMessage('🏆 Your pawn reached Home! (+350 pts)');
           }
           addScore(pts);
@@ -1016,6 +1040,7 @@ export default function LudoGameBoard({
           const iWon = isLiveMatchRef.current
             ? pawnToMove.color === myColorRef.current
             : pawnToMove.color === 'red';
+          playWinnerFanfareSound(iWon);
           if (iWon) {
             addScore(1000);
             if (onGameEvent) {
@@ -1077,7 +1102,7 @@ export default function LudoGameBoard({
       // Base release leap
       if (isBaseRelease) {
         setJustExitedPawnId(pawnToMove.id);
-        playBeep(700, 0.18, 'sine');
+        playCoinExitBaseSound();
         setTimeout(() => {
           if (animSeqRef.current !== seq) return;
           setPawns((prev) =>
@@ -1110,7 +1135,7 @@ export default function LudoGameBoard({
             return updated;
           });
           setRipplingPos(pos);
-          playBeep(520 + i * 35, 0.08, 'triangle');
+          playCoinStepSound(i);
 
           // If reached final square of traversal
           if (i === path.length - 1) {
@@ -1138,7 +1163,7 @@ export default function LudoGameBoard({
     if (pawn.position === pawn.basePos) {
       if (rollVal !== 6) return;
       setJustExitedPawnId(pawnId);
-      playBeep(700, 0.18, 'sine');
+      playCoinExitBaseSound();
       setTimeout(() => {
         if (!stillLive()) return;
         const out = START_SQUARES[pawn.color];
@@ -1164,7 +1189,7 @@ export default function LudoGameBoard({
           return updated;
         });
         setRipplingPos(pos);
-        playBeep(520 + i * 35, 0.08, 'triangle');
+        playCoinStepSound(i);
       }, (i + 1) * STEP_MS);
     });
   }, []);
@@ -1187,12 +1212,11 @@ export default function LudoGameBoard({
 
     triggerGameStart();
     setIsRolling(true);
-    playBeep(320, 0.08, 'sawtooth');
+    playDiceShakeSound();
 
     let count = 0;
     const interval = setInterval(() => {
       setRolledNumber(Math.floor(Math.random() * 6) + 1);
-      playBeep(260 + Math.random() * 80, 0.04, 'sawtooth');
       count++;
       if (count >= 8) {
         clearInterval(interval);
@@ -1202,8 +1226,8 @@ export default function LudoGameBoard({
         recordDiceForColor(myC, finalRoll);
         setIsRolling(false);
         resetTurnTimer();
-        // Crisp dice slam sound
-        playBeep(540, 0.12, 'square');
+        // Crisp wooden dice slam + lucky six chime
+        playDiceLandSound(finalRoll);
 
         // LIVE: opponent ke sathe sathe roll ta dekhiye dao
         broadcastGameAction({ type: 'roll', color: myC, value: finalRoll });
@@ -1252,13 +1276,12 @@ export default function LudoGameBoard({
 
     const thinkTimer = setTimeout(() => {
       setIsRolling(true);
-      playBeep(280, 0.08, 'sawtooth');
+      playDiceShakeSound();
 
       let ticks = 0;
       const rollInterval = setInterval(() => {
         ticks++;
         setRolledNumber(Math.floor(Math.random() * 6) + 1);
-        playBeep(240 + Math.random() * 60, 0.04, 'sawtooth');
 
         if (ticks >= 14) {
           clearInterval(rollInterval);
@@ -1267,7 +1290,7 @@ export default function LudoGameBoard({
           recordDiceForColor(botColor, finalRoll);
           setIsRolling(false);
           resetTurnTimer();
-          playBeep(480, 0.1, 'square');
+          playDiceLandSound(finalRoll);
 
           const currentPawns = pawnsRef.current;
           const botPawns = currentPawns.filter((p) => p.color === botColor && p.isActive);
@@ -1887,13 +1910,13 @@ export default function LudoGameBoard({
                   <div className={styles.modePoolItem}>
                     <span className={styles.modePoolLabel}>Entry Fee:</span>
                     <span className={styles.modePoolValue} style={{ color: '#38bdf8' }}>
-                      {adminPools.p2Entry} USDT
+                      {adminPools.p2Entry} LXT
                     </span>
                   </div>
                   <div className={styles.modePoolItem}>
                     <span className={styles.modePoolLabel}>Prize Pool:</span>
                     <span className={styles.modePoolValue} style={{ color: '#00E676' }}>
-                      {adminPools.p2Prize} USDT
+                      {adminPools.p2Prize} LXT
                     </span>
                   </div>
                   <div className={styles.modePoolItem}>
@@ -1911,7 +1934,7 @@ export default function LudoGameBoard({
                     handleSelectModeAndStart(2);
                   }}
                 >
-                  Join 2-Player Match (-{adminPools.p2Entry} USDT)
+                  Join 2-Player Match (-{adminPools.p2Entry} LXT)
                 </button>
               </div>
 
@@ -1927,13 +1950,13 @@ export default function LudoGameBoard({
                   <div className={styles.modePoolItem}>
                     <span className={styles.modePoolLabel}>Entry Fee:</span>
                     <span className={styles.modePoolValue} style={{ color: '#fbbf24' }}>
-                      {adminPools.p4Entry} USDT
+                      {adminPools.p4Entry} LXT
                     </span>
                   </div>
                   <div className={styles.modePoolItem}>
                     <span className={styles.modePoolLabel}>Prize Pool:</span>
                     <span className={styles.modePoolValue} style={{ color: '#00E676' }}>
-                      {adminPools.p4Prize} USDT
+                      {adminPools.p4Prize} LXT
                     </span>
                   </div>
                   <div className={styles.modePoolItem}>
@@ -1951,7 +1974,7 @@ export default function LudoGameBoard({
                     handleSelectModeAndStart(4);
                   }}
                 >
-                  Join 4-Player Match (-{adminPools.p4Entry} USDT)
+                  Join 4-Player Match (-{adminPools.p4Entry} LXT)
                 </button>
               </div>
             </div>
@@ -2114,17 +2137,17 @@ export default function LudoGameBoard({
             type="button"
             className={`${styles.modeBtn} ${playerMode === 2 ? styles.modeBtnActive : ''}`}
             onClick={() => handleModeChange(2)}
-            title={`Switch to 2 Players (1v1) — Entry ${adminPools.p2Entry} USDT, Prize ${adminPools.p2Prize} USDT`}
+            title={`Switch to 2 Players (1v1) — Entry ${adminPools.p2Entry} LXT, Prize ${adminPools.p2Prize} LXT`}
           >
-            👥 2P ({adminPools.p2Entry} USDT)
+            👥 2P ({adminPools.p2Entry} LXT)
           </button>
           <button
             type="button"
             className={`${styles.modeBtn} ${playerMode === 4 ? styles.modeBtnActive : ''}`}
             onClick={() => handleModeChange(4)}
-            title={`Switch to 4 Players Classic Tournament — Entry ${adminPools.p4Entry} USDT, Prize ${adminPools.p4Prize} USDT`}
+            title={`Switch to 4 Players Classic Tournament — Entry ${adminPools.p4Entry} LXT, Prize ${adminPools.p4Prize} LXT`}
           >
-            👑 4P ({adminPools.p4Entry} USDT)
+            👑 4P ({adminPools.p4Entry} LXT)
           </button>
         </div>
 
@@ -2133,16 +2156,30 @@ export default function LudoGameBoard({
           <span>{score} PTS</span>
         </div>
 
+        {/* Audio FX Mute / Unmute Button */}
+        <button
+          type="button"
+          onClick={() => {
+            const nextMuted = toggleLudoAudioMute();
+            setIsMutedState(nextMuted);
+          }}
+          className={`${styles.soundToggleBtn} ${isMutedState ? styles.soundToggleBtnMuted : ''}`}
+          title={isMutedState ? 'Sound FX Muted — Tap to Unmute' : 'Sound FX Active — Tap to Mute'}
+          aria-label={isMutedState ? 'Unmute Sound' : 'Mute Sound'}
+        >
+          {isMutedState ? <VolumeX size={15} /> : <Volume2 size={15} />}
+        </button>
+
         {/* Both modes' pools visible (admin values) */}
         <div style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 600 }}>
           <span title="2-Player entry fee & prize pool">
-            👥 2P Entry: <strong style={{ color: '#39FF88' }}>{adminPools.p2Entry} USDT</strong>
-            {' '}| Prize: <strong style={{ color: '#00E676' }}>{adminPools.p2Prize} USDT</strong>
+            👥 2P Entry: <strong style={{ color: '#39FF88' }}>{adminPools.p2Entry} LXT</strong>
+            {' '}| Prize: <strong style={{ color: '#00E676' }}>{adminPools.p2Prize} LXT</strong>
           </span>
           <span style={{ margin: '0 6px', color: '#475569' }}>•</span>
           <span title="4-Player entry fee & prize pool">
-            👑 4P Entry: <strong style={{ color: '#39FF88' }}>{adminPools.p4Entry} USDT</strong>
-            {' '}| Prize: <strong style={{ color: '#00E676' }}>{adminPools.p4Prize} USDT</strong>
+            👑 4P Entry: <strong style={{ color: '#39FF88' }}>{adminPools.p4Entry} LXT</strong>
+            {' '}| Prize: <strong style={{ color: '#00E676' }}>{adminPools.p4Prize} LXT</strong>
           </span>{' '}
           <span style={{ color: '#FFB300', fontSize: '0.72rem' }}>(1st Winner)</span>
         </div>
@@ -2309,7 +2346,7 @@ export default function LudoGameBoard({
                     fontSize: '1rem',
                   }}
                 >
-                  🎉 1st Winner Qualified! Prize Pool of {activePrizePool} USDT awarded to your wallet!
+                  🎉 1st Winner Qualified! Prize Pool of {activePrizePool} LXT awarded to your wallet!
                 </span>
               ) : (
                 <span
@@ -2320,7 +2357,7 @@ export default function LudoGameBoard({
                     fontWeight: 700,
                   }}
                 >
-                  Only the 1st Winner takes the {activePrizePool} USDT prize pool. Better luck next tournament!
+                  Only the 1st Winner takes the {activePrizePool} LXT prize pool. Better luck next tournament!
                 </span>
               )}
             </p>

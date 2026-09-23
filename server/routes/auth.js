@@ -218,12 +218,12 @@ router.post('/register', async (req, res) => {
           amount: startingBalance,
           balanceBefore: 0,
           balanceAfter: startingBalance,
-          currency: 'USDT',
-          description: `Welcome Signup Bonus (+${startingBalance.toFixed(2)} USDT)`,
+          currency: 'LXT',
+          description: `Welcome Signup Bonus (+${startingBalance.toFixed(2)} LXT)`,
           referenceId: `TX-BON-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
           status: 'completed',
         });
-        console.log(`[Transaction Saved: SIGNUP BONUS] ${normalizedAddress} | +${startingBalance.toFixed(2)} USDT`);
+        console.log(`[Transaction Saved: SIGNUP BONUS] ${normalizedAddress} | +${startingBalance.toFixed(2)} LXT`);
       }
     } catch (txErr) {
       console.error('[Signup Bonus Transaction Save Error]', txErr);

@@ -126,7 +126,7 @@ export default function Register() {
       loginUser(registerRes.token, registerRes.user, signer);
 
       setToastMessage({
-        text: 'Wallet connected successfully! 50 USDT welcome tokens credited.',
+        text: 'Wallet connected successfully! 50 LXT welcome tokens credited.',
         type: 'success',
       });
 

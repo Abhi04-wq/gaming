@@ -157,18 +157,18 @@ export default function Navbar({ onCopyToast }) {
                 </Link>
               </nav>
 
-              {/* Live USDT Balance Chip */}
-              <Link
-                to="/dashboard"
+              {/* Live LXT Balance Chip */}
+              <div
                 className="navbar-balance-chip"
-                title="Click to view Wallet Dashboard"
+                title="Your LXT Balance"
+                style={{ cursor: 'default' }}
               >
                 <div className="balance-dot" />
                 <div className="balance-info">
-                  <span className="balance-label">USDT</span>
+                  <span className="balance-label">LXT</span>
                   <span className="balance-val">{user?.usdtBalance !== undefined && user?.usdtBalance !== null ? user.usdtBalance : '0.00'}</span>
                 </div>
-              </Link>
+              </div>
 
             {/* Wallet Address Pill with Copy */}
             <div className="navbar-wallet-pill">

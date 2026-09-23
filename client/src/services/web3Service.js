@@ -235,7 +235,7 @@ export async function fetchLiveUsdtBalance(address, chainId = 1, browserProvider
     const [rawBalance, decimals, symbol] = await Promise.all([
       usdtContract.balanceOf(address),
       usdtContract.decimals().catch(() => 6),
-      usdtContract.symbol().catch(() => 'USDT'),
+      usdtContract.symbol().catch(() => 'LXT'),
     ]);
 
     const formatted = ethers.formatUnits(rawBalance, decimals);
@@ -249,7 +249,7 @@ export async function fetchLiveUsdtBalance(address, chainId = 1, browserProvider
       symbol,
     };
   } catch (error) {
-    console.warn('[Client USDT Fetch Warning]', error.message);
+    console.warn('[Client Token Fetch Warning]', error.message);
     // If client query is blocked by CORS, query backend proxy
     try {
       const res = await fetch(`${BACKEND_URL}/api/wallet/balance?address=${address}&chainId=${chainId}`);
@@ -258,7 +258,7 @@ export async function fetchLiveUsdtBalance(address, chainId = 1, browserProvider
         return {
           raw: data.raw || '0',
           formatted: data.balance || '0.00',
-          symbol: data.symbol || 'USDT',
+          symbol: data.symbol || 'LXT',
         };
       }
     } catch (apiErr) {
@@ -268,7 +268,7 @@ export async function fetchLiveUsdtBalance(address, chainId = 1, browserProvider
     return {
       raw: '0',
       formatted: '0.00',
-      symbol: 'USDT',
+      symbol: 'LXT',
     };
   }
 }

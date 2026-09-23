@@ -7,6 +7,7 @@ import { fetchGameConfigs } from '../services/gameConfigService';
 import { getLudoSocket } from '../services/ludoSocket';
 import Navbar from '../components/Navbar';
 import Toast from '../components/Toast';
+import PageLoader from '../components/PageLoader';
 import LogoWebp from '../logo.webp';
 import LudoGameBoard from '../components/games/ludo/LudoGameBoard';
 import {
@@ -631,6 +632,7 @@ export default function GamesLobby() {
   const { user, updateBalance } = useAuth();
   const navigate = useNavigate();
 
+  const [isPageLoading, setIsPageLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('popular');
@@ -695,7 +697,7 @@ export default function GamesLobby() {
     // Strict Daily Challenge & Chess Free Mode Guard: NEVER deduct money for challenge or chess free moves
     if ((isDailyChallengeRef.current || isChessFreeModeRef.current) && !force) {
       console.log('user start challenge / chess free moves');
-      console.log('%c🌟 [LOBBY DEDUCTION ABORTED] Free Play Mode is active (0 USDT deducted)', 'background: #38BDF8; color: #000; font-weight: bold;');
+      console.log('%c🌟 [LOBBY DEDUCTION ABORTED] Free Play Mode is active (0 LXT deducted)', 'background: #38BDF8; color: #000; font-weight: bold;');
       return;
     }
 
@@ -715,7 +717,7 @@ export default function GamesLobby() {
 
     if (balance < fee) {
       setToastMessage({
-        text: `❌ Insufficient USDT balance! Entry pool fee is ${fee.toFixed(2)} USDT, but your balance is ${balance.toFixed(2)} USDT. Game cannot start.`,
+        text: `❌ Insufficient LXT balance! Entry pool fee is ${fee.toFixed(2)} LXT, but your balance is ${balance.toFixed(2)} LXT. Game cannot start.`,
         type: 'error',
       });
       return;
@@ -724,7 +726,7 @@ export default function GamesLobby() {
     isDeductingRef.current = true;
 
     try {
-      console.log(`[LobbyGameStart] Initiating entry deduction of ${fee} USDT for game: ${game.id} (isRestart: ${isRestart})`);
+      console.log(`[LobbyGameStart] Initiating entry deduction of ${fee} LXT for game: ${game.id} (isRestart: ${isRestart})`);
       const res = await api.deductGameEntry(user.walletAddress, game.id, fee, game.title || null);
 
       if (res.success) {
@@ -734,8 +736,8 @@ export default function GamesLobby() {
         isRoundDeductedRef.current = true;
         setToastMessage({
           text: isRestart
-            ? `🔄 Round Restarted! Entry fee deducted: -${fee.toFixed(2)} USDT (Balance: ${res.newBalance} USDT)`
-            : `🎮 Game Started! Entry fee deducted: -${fee.toFixed(2)} USDT (Balance: ${res.newBalance} USDT)`,
+            ? `🔄 Round Restarted! Entry fee deducted: -${fee.toFixed(2)} LXT (Balance: ${res.newBalance} LXT)`
+            : `🎮 Game Started! Entry fee deducted: -${fee.toFixed(2)} LXT (Balance: ${res.newBalance} LXT)`,
           type: 'success',
         });
       } else {
@@ -791,7 +793,7 @@ export default function GamesLobby() {
     if (!game || !user?.walletAddress) return;
 
     try {
-      console.log(`[Lobby: Over] Score ${score} touched/increased threshold ${target}! Crediting prize of ${prize} USDT...`);
+      console.log(`[Lobby: Over] Score ${score} touched/increased threshold ${target}! Crediting prize of ${prize} LXT...`);
       const res = await api.creditPrizeReward({
         address: user.walletAddress,
         gameId: game.id,
@@ -807,7 +809,7 @@ export default function GamesLobby() {
         const cut = res.deductionAmount || (parseFloat(gross) * 0.25).toFixed(2);
         const net = res.netReward || res.prizeCredited || (parseFloat(gross) * 0.75).toFixed(2);
         setToastMessage({
-          text: `🎉 WINNER! Score: ${score} >= ${target}! Gross: ${gross} USDT | -25% Platform Cut: -${cut} USDT | +${net} USDT (75%) credited to your balance!`,
+          text: `🎉 WINNER! Score: ${score} >= ${target}! Gross: ${gross} LXT | -25% Platform Cut: -${cut} LXT | +${net} LXT (75%) credited to your balance!`,
           type: 'success',
         });
       }
@@ -1000,13 +1002,13 @@ export default function GamesLobby() {
         if (lastDeductedAmountRef.current > 0 && user?.walletAddress) {
           const refundAmt = lastDeductedAmountRef.current;
           lastDeductedAmountRef.current = 0;
-          console.log(`%c💸 [LOBBY: CHESS AUTO-REFUND] Refunding ${refundAmt} USDT because player selected free chess mode ${modeNum}.`, 'background: #00E676; color: #000; font-weight: bold;');
+          console.log(`%c💸 [LOBBY: CHESS AUTO-REFUND] Refunding ${refundAmt} LXT because player selected free chess mode ${modeNum}.`, 'background: #00E676; color: #000; font-weight: bold;');
           api.depositFunds(user.walletAddress, refundAmt, `Refund: Chess Free Moves Mode (Mode ${modeNum}) Activated`)
             .then((res) => {
               if (res.success) {
                 updateBalance(res.newBalance);
                 setToastMessage({
-                  text: `♟️ Chess ${modeNum} Moves (Free Play): ${refundAmt} USDT refunded to your wallet!`,
+                  text: `♟️ Chess ${modeNum} Moves (Free Play): ${refundAmt} LXT refunded to your wallet!`,
                   type: 'success',
                 });
               }
@@ -1217,7 +1219,7 @@ export default function GamesLobby() {
         ) {
           const modeNum = chessLogMatch ? chessLogMatch[1] : '2';
           originalLog.apply(console, [`user start free mode: chess mode ${modeNum}`]);
-          originalLog.apply(console, [`%c♟️ [LOBBY CONSOLE LOG] Chess Mode ${modeNum} (${modeNum} Moves) - Free Play (0 USDT)`, 'background: #0284C7; color: #fff; font-weight: 900; font-size: 16px; padding: 4px 10px; border-radius: 4px;']);
+          originalLog.apply(console, [`%c♟️ [LOBBY CONSOLE LOG] Chess Mode ${modeNum} (${modeNum} Moves) - Free Play (0 LXT)`, 'background: #0284C7; color: #fff; font-weight: 900; font-size: 16px; padding: 4px 10px; border-radius: 4px;']);
           setIsDailyChallenge(true);
           isDailyChallengeRef.current = true;
           isChessFreeModeRef.current = true;
@@ -1367,7 +1369,7 @@ export default function GamesLobby() {
 
     if (defaultTab === 'play' && !isNaN(fee) && userBal < fee) {
       setToastMessage({
-        text: `❌ Insufficient USDT balance! Entry fee is ${fee.toFixed(2)} USDT, but your balance is ${userBal.toFixed(2)} USDT. Game cannot start.`,
+        text: `❌ Insufficient LXT balance! Entry fee is ${fee.toFixed(2)} LXT, but your balance is ${userBal.toFixed(2)} LXT. Game cannot start.`,
         type: 'error',
       });
     }
@@ -1427,7 +1429,7 @@ export default function GamesLobby() {
       const userBal = parseFloat(user?.usdtBalance !== undefined && user?.usdtBalance !== null && user?.usdtBalance !== '' ? user.usdtBalance : '0');
       if (!isDailyChallenge && !isNaN(fee) && userBal < fee) {
         setToastMessage({
-          text: `❌ Insufficient USDT balance! Entry fee is ${fee.toFixed(2)} USDT, but your balance is ${userBal.toFixed(2)} USDT. Game cannot start.`,
+          text: `❌ Insufficient LXT balance! Entry fee is ${fee.toFixed(2)} LXT, but your balance is ${userBal.toFixed(2)} LXT. Game cannot start.`,
           type: 'error',
         });
       }
@@ -1452,7 +1454,7 @@ export default function GamesLobby() {
       const userBal = parseFloat(user?.usdtBalance !== undefined && user?.usdtBalance !== null && user?.usdtBalance !== '' ? user.usdtBalance : '0');
       if (!isDailyChallenge && !isNaN(fee) && userBal < fee) {
         setToastMessage({
-          text: `❌ Insufficient USDT balance! Entry fee is ${fee.toFixed(2)} USDT, but your balance is ${userBal.toFixed(2)} USDT. Game cannot restart.`,
+          text: `❌ Insufficient LXT balance! Entry fee is ${fee.toFixed(2)} LXT, but your balance is ${userBal.toFixed(2)} LXT. Game cannot restart.`,
           type: 'error',
         });
         return;
@@ -1496,7 +1498,7 @@ export default function GamesLobby() {
       setTttBoard(newBoard);
       setTttWinner(winCheck);
       if (winCheck === 'X') {
-        setToastMessage({ text: '🎉 You won the Tic Tac Toe match! +20.00 USDT', type: 'success' });
+        setToastMessage({ text: '🎉 You won the Tic Tac Toe match! +20.00 LXT', type: 'success' });
       }
       return;
     }
@@ -1555,7 +1557,7 @@ export default function GamesLobby() {
         cashedMultiplier: prev.multiplier,
       }));
       setToastMessage({
-        text: `🚀 Cashed out at ${crashState.multiplier}x! Won +${win} USDT`,
+        text: `🚀 Cashed out at ${crashState.multiplier}x! Won +${win} LXT`,
         type: 'success',
       });
     }
@@ -1585,6 +1587,11 @@ export default function GamesLobby() {
 
   return (
     <div className="app-container" style={{ backgroundColor: '#050505' }}>
+      {/* Dynamic Cyber Entry Loading Animation with Official Logo & Progress Bar */}
+      {isPageLoading && (
+        <PageLoader onComplete={() => setIsPageLoading(false)} />
+      )}
+
       {/* Notifications */}
       {toastMessage && (
         <div className="toast-container">
@@ -1656,7 +1663,7 @@ export default function GamesLobby() {
 
             {/* Subtitle */}
             <p className="hero-custom-subtitle">
-              Provably fair decentralized gaming powered by smart contracts. Connect, wager USDT, and cash out directly to your EVM wallet.
+              Provably fair decentralized gaming powered by smart contracts. Connect, wager LXT, and cash out directly to your EVM wallet.
             </p>
 
             {/* CTA Action Row: Clean Buttons */}
@@ -1669,13 +1676,7 @@ export default function GamesLobby() {
                 <span>Play Featured: Aether Crash</span>
               </button>
 
-              {/* Manage Wallet & USDT Button without code text lines */}
-              <Link to="/dashboard" className="hero-btn-cyber-bracket">
-                <div className="bracket-content">
-                  <Wallet size={16} color="#00E676" />
-                  <span>Manage Wallet &amp; USDT</span>
-                </div>
-              </Link>
+              {/* End of Hero CTA */}
             </div>
 
             {/* Bottom 4 Modern Rounded Stat Cards with Green Neon Accents */}
@@ -1870,7 +1871,7 @@ export default function GamesLobby() {
                         }}
                       >
                         <span style={{ color: '#94a3b8' }}>
-                          Entry: <strong style={{ color: '#FFFFFF' }}>{game.entryPool || '1.00'} USDT</strong>
+                          Entry: <strong style={{ color: '#FFFFFF' }}>{game.entryPool || '1.00'} LXT</strong>
                         </span>
                         {/* Ludo/Carrom/Chess-e win-score nei (winner takes all) — tai Win dekhabo na */}
                         {!(game.id?.includes('ludo') || game.playableType === 'native-ludo' || game.id === 'carrom-hero' || game.id === 'carrom' || game.id === 'chess-grandmaster' || game.id === 'chess') && (
@@ -1879,7 +1880,7 @@ export default function GamesLobby() {
                           </span>
                         )}
                         <span style={{ color: '#00E676', fontWeight: 700 }}>
-                          Pool: {game.prizePool || '100.00'} USDT
+                          Pool: {game.prizePool || '100.00'} LXT
                         </span>
                       </div>
                     )}
@@ -1920,7 +1921,7 @@ export default function GamesLobby() {
             <div className="feature-icon">
               <Zap size={24} color="#00E676" />
             </div>
-            <h4>Instant USDT Cashouts</h4>
+            <h4>Instant LXT Cashouts</h4>
             <p>Direct smart contract settlement to your EVM wallet address with zero withdrawal delays.</p>
           </div>
           <div className="feature-box">
@@ -1928,7 +1929,7 @@ export default function GamesLobby() {
               <Award size={24} color="#00E676" />
             </div>
             <h4>VIP High-Roller Limits</h4>
-            <p>Flexible wagering limits from 1 USDT up to 50,000 USDT per round with VIP rake back rewards.</p>
+            <p>Flexible wagering limits from 1 LXT up to 50,000 LXT per round with VIP rake back rewards.</p>
           </div>
         </section>
       </div>
@@ -1984,7 +1985,12 @@ export default function GamesLobby() {
 
                 {/* Visible on both Desktop and Mobile */}
                 <button
-                  onClick={() => setIsFullScreen((prev) => !prev)}
+                  onClick={() => {
+                    setIsFullScreen((prev) => {
+                      if (!prev) setModalTab('play');
+                      return !prev;
+                    });
+                  }}
                   className="modal-ctrl-btn expand-btn"
                   title={isFullScreen ? 'Exit Full Screen (ESC)' : 'Full Screen in Website'}
                 >
@@ -1993,12 +1999,12 @@ export default function GamesLobby() {
                 {isDailyChallenge ? (
                   <div className="modal-pool-pill" style={{ background: 'rgba(56, 189, 248, 0.18)', border: '1px solid #38bdf8', color: '#38bdf8' }} title="Daily Challenge Free Mode — No Entry Fee Deducted">
                     <span style={{ fontSize: '0.68rem', fontWeight: 800 }}>🌟 MODE:</span>
-                    <span className="pool-pill-val" style={{ color: '#38bdf8', fontWeight: 800 }}>FREE (0 USDT)</span>
+                    <span className="pool-pill-val" style={{ color: '#38bdf8', fontWeight: 800 }}>FREE (0 LXT)</span>
                   </div>
                 ) : (
                   <div className="modal-pool-pill entry-pill" title="Required Entry Pool Fee">
                     <span style={{ fontSize: '0.68rem', color: '#8D9993' }}>ENTRY:</span>
-                    <span className="pool-pill-val">{activeGameModal.entryPool || '1.00'} USDT</span>
+                    <span className="pool-pill-val">{activeGameModal.entryPool || '1.00'} LXT</span>
                   </div>
                 )}
                 {/* Ludo/Carrom/Chess-e win-score nei — WIN SCORE pill dekhabo na */}
@@ -2010,11 +2016,11 @@ export default function GamesLobby() {
                 )}
                 <div className="modal-pool-pill prize-pill" title="Total Prize Pool">
                   <Trophy size={13} color="#FFB300" />
-                  <span className="pool-pill-val">{activeGameModal.prizePool || '100.00'} USDT</span>
+                  <span className="pool-pill-val">{activeGameModal.prizePool || '100.00'} LXT</span>
                 </div>
-                <div className="modal-balance-pill" title="Your Account USDT Balance">
+                <div className="modal-balance-pill" title="Your Account LXT Balance">
                   <Wallet size={13} color="#00E676" />
-                  <span>{user?.usdtBalance !== undefined && user?.usdtBalance !== null ? user.usdtBalance : '0.00'} USDT</span>
+                  <span>{user?.usdtBalance !== undefined && user?.usdtBalance !== null ? user.usdtBalance : '0.00'} LXT</span>
                 </div>
                 <button
                   onClick={() => {
@@ -2035,31 +2041,33 @@ export default function GamesLobby() {
               </div>
             </div>
 
-            {/* DEMO NAVIGATION TABS (Play Game [LIVE] | Video Trailer | Screenshots | Rules & Specs) */}
-            <div className="demo-tabs-nav">
-              <button
-                onClick={handleSwitchToPlayTab}
-                className={`demo-tab-btn ${modalTab === 'play' ? 'active' : ''}`}
-              >
-                <PlaySquare size={16} />
-                <span>Play Game</span>
-                <span className="live-pill-mini">LIVE</span>
-              </button>
-              <button
-                onClick={() => setModalTab('screenshots')}
-                className={`demo-tab-btn ${modalTab === 'screenshots' ? 'active' : ''}`}
-              >
-                <ImageIcon size={16} />
-                <span>Screenshots ({activeGameModal.screenshots?.length || 4})</span>
-              </button>
-              <button
-                onClick={() => setModalTab('rules')}
-                className={`demo-tab-btn ${modalTab === 'rules' ? 'active' : ''}`}
-              >
-                <Info size={16} />
-                <span>Rules & Specs</span>
-              </button>
-            </div>
+            {/* DEMO NAVIGATION TABS (Play Game [LIVE] | Video Trailer | Screenshots | Rules & Specs) - Hidden in Full Screen */}
+            {!isFullScreen && (
+              <div className="demo-tabs-nav">
+                <button
+                  onClick={handleSwitchToPlayTab}
+                  className={`demo-tab-btn ${modalTab === 'play' ? 'active' : ''}`}
+                >
+                  <PlaySquare size={16} />
+                  <span>Play Game</span>
+                  <span className="live-pill-mini">LIVE</span>
+                </button>
+                <button
+                  onClick={() => setModalTab('screenshots')}
+                  className={`demo-tab-btn ${modalTab === 'screenshots' ? 'active' : ''}`}
+                >
+                  <ImageIcon size={16} />
+                  <span>Screenshots ({activeGameModal.screenshots?.length || 4})</span>
+                </button>
+                <button
+                  onClick={() => setModalTab('rules')}
+                  className={`demo-tab-btn ${modalTab === 'rules' ? 'active' : ''}`}
+                >
+                  <Info size={16} />
+                  <span>Rules & Specs</span>
+                </button>
+              </div>
+            )}
 
             {/* Modal Body Based on Active Tab */}
             <div className="modal-game-arena">
@@ -2077,14 +2085,14 @@ export default function GamesLobby() {
                       <div className="game-insufficient-overlay" style={{ position: 'relative', minHeight: '380px', borderRadius: '12px', background: 'rgba(10, 14, 23, 0.95)' }}>
                         <div className="game-insufficient-card">
                           <ShieldAlert size={44} color="#FF5252" />
-                          <h3 style={{ marginTop: '12px', color: '#FFFFFF' }}>Insufficient USDT Balance</h3>
+                          <h3 style={{ marginTop: '12px', color: '#FFFFFF' }}>Insufficient LXT Balance</h3>
                           <p style={{ color: '#94a3b8', margin: '8px 0 16px' }}>
                             Entering <strong>{activeGameModal.title}</strong> requires an entry fee of{' '}
-                            <strong style={{ color: '#00E676' }}>{modalFee.toFixed(2)} USDT</strong>.
+                            <strong style={{ color: '#00E676' }}>{modalFee.toFixed(2)} LXT</strong>.
                           </p>
                           <div className="game-insufficient-meta" style={{ display: 'flex', gap: '16px', justifyContent: 'center', marginBottom: '20px' }}>
-                            <span>Required: <strong style={{ color: '#FFFFFF' }}>{modalFee.toFixed(2)} USDT</strong></span>
-                            <span>Your Balance: <strong style={{ color: '#FF5252' }}>{userBal.toFixed(2)} USDT</strong></span>
+                            <span>Required: <strong style={{ color: '#FFFFFF' }}>{modalFee.toFixed(2)} LXT</strong></span>
+                            <span>Your Balance: <strong style={{ color: '#FF5252' }}>{userBal.toFixed(2)} LXT</strong></span>
                           </div>
                           <div style={{ color: '#FFB300', fontWeight: 600, fontSize: '0.95rem', margin: '10px 0 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                             <span>⚠️ Add token in your wallet</span>

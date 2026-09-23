@@ -44,7 +44,7 @@ async function getUsdtBalanceFromRpc(walletAddress, chainId = 1) {
     const [rawBalance, decimals, symbol] = await Promise.all([
       contract.balanceOf(walletAddress).catch(() => 0n),
       contract.decimals().catch(() => 6),
-      contract.symbol().catch(() => 'USDT'),
+      contract.symbol().catch(() => 'LXT'),
     ]);
 
     const formatted = ethers.formatUnits(rawBalance, decimals);
@@ -59,11 +59,11 @@ async function getUsdtBalanceFromRpc(walletAddress, chainId = 1) {
       symbol,
     };
   } catch (error) {
-    console.warn(`[USDT RPC Fetch Warning] ${error.message}. Returning default format.`);
+    console.warn(`[Token RPC Fetch Warning] ${error.message}. Returning default format.`);
     return {
       raw: '0',
       formatted: '0.00',
-      symbol: 'USDT',
+      symbol: 'LXT',
     };
   }
 }

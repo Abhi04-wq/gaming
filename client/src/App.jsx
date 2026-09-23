@@ -47,11 +47,7 @@ export default function App() {
           />
           <Route
             path="/dashboard"
-            element={
-              <AuthGuard>
-                <Dashboard />
-              </AuthGuard>
-            }
+            element={<Navigate to="/games" replace />}
           />
           <Route
             path="/income-details"

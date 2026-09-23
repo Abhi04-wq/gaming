@@ -132,7 +132,7 @@ export default function GamePlay() {
     if (!isNaN(fee) && bal < fee) {
       setInsufficientFunds(true);
       setToastAlert({
-        text: `❌ Insufficient USDT balance! Entry fee is ${fee.toFixed(2)} USDT, but your balance is ${bal.toFixed(2)} USDT. Game cannot start.`,
+        text: `❌ Insufficient LXT balance! Entry fee is ${fee.toFixed(2)} LXT, but your balance is ${bal.toFixed(2)} LXT. Game cannot start.`,
         type: 'error',
       });
     } else if (!isNaN(fee) && bal >= fee) {
@@ -147,7 +147,7 @@ export default function GamePlay() {
     // Strict Daily Challenge Guard: NEVER deduct money for challenge or chess free moves
     if ((isDailyChallengeRef.current || isChessFreeModeRef.current) && !force) {
       console.log('user start challenge / chess free moves');
-      console.log('%c🌟 [DEDUCTION ABORTED] Free Play Mode is active (0 USDT deducted)', 'background: #38BDF8; color: #000; font-weight: bold;');
+      console.log('%c🌟 [DEDUCTION ABORTED] Free Play Mode is active (0 LXT deducted)', 'background: #38BDF8; color: #000; font-weight: bold;');
       return;
     }
 
@@ -176,7 +176,7 @@ export default function GamePlay() {
     if (balance < fee) {
       setInsufficientFunds(true);
       setToastAlert({
-        text: `❌ Insufficient USDT balance! Entry fee is ${fee.toFixed(2)} USDT, but your balance is ${balance.toFixed(2)} USDT. Game cannot start.`,
+        text: `❌ Insufficient LXT balance! Entry fee is ${fee.toFixed(2)} LXT, but your balance is ${balance.toFixed(2)} LXT. Game cannot start.`,
         type: 'error',
       });
       return;
@@ -186,7 +186,7 @@ export default function GamePlay() {
     setIsDeducting(true);
 
     try {
-      console.log(`[GamePlay: Start] Return status 'start' confirmed. Deducting entry fee of ${fee} USDT for game: ${gameId}`);
+      console.log(`[GamePlay: Start] Return status 'start' confirmed. Deducting entry fee of ${fee} LXT for game: ${gameId}`);
       const res = await api.deductGameEntry(user.walletAddress, gameId, fee, game?.title || null);
 
       if (res.success) {
@@ -199,8 +199,8 @@ export default function GamePlay() {
 
         setToastAlert({
           text: isRestart
-            ? `🔄 Round Restarted! (Status: start) - Deducted -${fee.toFixed(2)} USDT (Balance: ${res.newBalance} USDT)`
-            : `🎮 Game Started! Return status: 'start' -> Deducted -${fee.toFixed(2)} USDT (Balance: ${res.newBalance} USDT)`,
+            ? `🔄 Round Restarted! (Status: start) - Deducted -${fee.toFixed(2)} LXT (Balance: ${res.newBalance} LXT)`
+            : `🎮 Game Started! Return status: 'start' -> Deducted -${fee.toFixed(2)} LXT (Balance: ${res.newBalance} LXT)`,
           type: 'success',
         });
 
@@ -238,7 +238,7 @@ export default function GamePlay() {
     isPrizeAwardedRef.current = true;
 
     try {
-      console.log(`[GamePlay: Over] Condition 1 (Score ${score} >= ${target}) & Condition 2 (Game Over) MET! Crediting ${prize} USDT...`);
+      console.log(`[GamePlay: Over] Condition 1 (Score ${score} >= ${target}) & Condition 2 (Game Over) MET! Crediting ${prize} LXT...`);
       const res = await api.creditPrizeReward({
         address: user.walletAddress,
         gameId,
@@ -269,7 +269,7 @@ export default function GamePlay() {
         });
 
         setToastAlert({
-          text: `🎉 REWARD CLAIMED! Gross: ${gross} USDT | -25% Cut: -${cut} USDT | +${net} USDT (75%) credited to balance!`,
+          text: `🎉 REWARD CLAIMED! Gross: ${gross} LXT | -25% Cut: -${cut} LXT | +${net} LXT (75%) credited to balance!`,
           type: 'success',
         });
       }
@@ -380,13 +380,13 @@ export default function GamePlay() {
       if (lastDeductedAmountRef.current > 0 && user?.walletAddress) {
         const refundAmt = lastDeductedAmountRef.current;
         lastDeductedAmountRef.current = 0;
-        console.log(`%c💸 [CHESS AUTO-REFUND] Refunding ${refundAmt} USDT because player selected free chess mode ${modeNum}.`, 'background: #00E676; color: #000; font-weight: bold;');
+        console.log(`%c💸 [CHESS AUTO-REFUND] Refunding ${refundAmt} LXT because player selected free chess mode ${modeNum}.`, 'background: #00E676; color: #000; font-weight: bold;');
         api.depositFunds(user.walletAddress, refundAmt, `Refund: Chess Free Moves Mode (Mode ${modeNum}) Activated`)
           .then((res) => {
             if (res.success) {
               updateBalance(res.newBalance);
               setToastAlert({
-                text: `♟️ Chess ${modeNum} Moves (Free Play): ${refundAmt} USDT refunded to your wallet!`,
+                text: `♟️ Chess ${modeNum} Moves (Free Play): ${refundAmt} LXT refunded to your wallet!`,
                 type: 'success',
               });
             }
@@ -731,7 +731,7 @@ export default function GamePlay() {
         ) {
           const modeNum = chessLogMatch ? chessLogMatch[1] : '2';
           originalLog.apply(console, [`user start free mode: chess mode ${modeNum}`]);
-          originalLog.apply(console, [`%c♟️ [CONSOLE LOG DETECTED] Chess Mode ${modeNum} (${modeNum} Moves) - Free Play (0 USDT)`, 'background: #0284C7; color: #fff; font-weight: 900; font-size: 16px; padding: 4px 10px; border-radius: 4px;']);
+          originalLog.apply(console, [`%c♟️ [CONSOLE LOG DETECTED] Chess Mode ${modeNum} (${modeNum} Moves) - Free Play (0 LXT)`, 'background: #0284C7; color: #fff; font-weight: 900; font-size: 16px; padding: 4px 10px; border-radius: 4px;']);
           setIsDailyChallenge(true);
           isDailyChallengeRef.current = true;
           isChessFreeModeRef.current = true;
@@ -831,7 +831,7 @@ export default function GamePlay() {
     if (!isDailyChallenge && bal < fee) {
       setInsufficientFunds(true);
       setToastAlert({
-        text: `❌ Insufficient USDT balance! Entry fee is ${fee.toFixed(2)} USDT, but your balance is ${bal.toFixed(2)} USDT. Game cannot restart.`,
+        text: `❌ Insufficient LXT balance! Entry fee is ${fee.toFixed(2)} LXT, but your balance is ${bal.toFixed(2)} LXT. Game cannot restart.`,
         type: 'error',
       });
       return;
@@ -882,12 +882,12 @@ export default function GamePlay() {
               background: isDailyChallenge ? 'rgba(56, 189, 248, 0.15)' : undefined,
             }}
           >
-            <span className="hud-badge-label">{isDailyChallenge ? (gameId?.includes('chess') ? '♟️ Chess:' : '🌟 Mode:') : `Entry (${entryPool} USDT):`}</span>
+            <span className="hud-badge-label">{isDailyChallenge ? (gameId?.includes('chess') ? '♟️ Chess:' : '🌟 Mode:') : `Entry (${entryPool} LXT):`}</span>
             <span
               className="hud-badge-value"
               style={{ color: isDailyChallenge ? '#38BDF8' : isRoundDeducted ? '#39FF88' : '#cbd5e1', fontWeight: 700 }}
             >
-              {isDailyChallenge ? (gameId?.includes('chess') ? 'Free Moves Mode (0 USDT)' : 'Free Challenge (0 USDT)') : isRoundDeducted ? '✅ Deducted' : '⏳ Awaiting Start'}
+              {isDailyChallenge ? (gameId?.includes('chess') ? 'Free Moves Mode (0 LXT)' : 'Free Challenge (0 LXT)') : isRoundDeducted ? '✅ Deducted' : '⏳ Awaiting Start'}
             </span>
           </div>
 
@@ -943,14 +943,14 @@ export default function GamePlay() {
           <div className="hud-pool-badge prize-badge" title="Prize Pool credited when Condition 1 (Exceed Score) & Condition 2 (Game Over) are BOTH met">
             <Trophy size={13} color="#FFB300" />
             <span className="hud-badge-label">Prize:</span>
-            <span className="hud-badge-value">{prizePool} USDT</span>
+            <span className="hud-badge-value">{prizePool} LXT</span>
           </div>
 
           {/* User Balance */}
           <div className="hud-pool-badge balance-badge" title="Your Live Account Balance">
             <Wallet size={13} color="#39FF88" />
             <span className="hud-badge-label">Balance:</span>
-            <span className="hud-badge-value">{user?.usdtBalance || '0.00'} USDT</span>
+            <span className="hud-badge-value">{user?.usdtBalance || '0.00'} LXT</span>
           </div>
         </div>
 
@@ -1076,7 +1076,7 @@ export default function GamePlay() {
             style={{ padding: '4px 10px', fontSize: '0.75rem', background: '#00E676', color: '#000', borderColor: '#00E676', fontWeight: 800 }}
             title="Simulate game returning status 'start' (Deducts in Normal Mode, Skips in Daily Challenge)"
           >
-            1. Trigger Status 'start' {isDailyChallenge ? '(Free Play: 0 USDT)' : `(-${entryPool} USDT)`}
+            1. Trigger Status 'start' {isDailyChallenge ? '(Free Play: 0 LXT)' : `(-${entryPool} LXT)`}
           </button>
           <button
             onClick={() => {
@@ -1112,7 +1112,7 @@ export default function GamePlay() {
             style={{ padding: '4px 10px', fontSize: '0.75rem', background: '#FFD700', color: '#000', borderColor: '#FFD700', fontWeight: 800 }}
             title="Simulate BOTH Conditions: Score Exceeded + Game Over -> Gives Money!"
           >
-            4. Both Conditions Met (Score {targetNum + 100} &plus; Over &rarr; +{prizePool} USDT)
+            4. Both Conditions Met (Score {targetNum + 100} &plus; Over &rarr; +{prizePool} LXT)
           </button>
           <button
             onClick={() => {
@@ -1123,7 +1123,7 @@ export default function GamePlay() {
             style={{ padding: '4px 10px', fontSize: '0.75rem', background: 'rgba(0, 230, 118, 0.15)', borderColor: '#00E676', color: '#00E676', fontWeight: 700 }}
             title="Simulate In-Game Reload: Game reloads and state is start again -> Deducts entry fee"
           >
-            5. In-Game Reload &rarr; State 'start' (-{entryPool} USDT)
+            5. In-Game Reload &rarr; State 'start' (-{entryPool} LXT)
           </button>
           <button
             onClick={handleRestartNewRound}
@@ -1211,11 +1211,11 @@ export default function GamePlay() {
             <div style={{ fontSize: '0.82rem', marginTop: '4px' }}>
               {gameResult.won ? (
                 <span style={{ color: '#00E676', fontWeight: 800 }}>
-                  Both conditions satisfied! Gross: {gameResult.grossPrize || gameResult.prize} USDT | -25% Platform Cut: -{gameResult.deductionAmount || '0.00'} USDT | +{gameResult.netReward || gameResult.prize} USDT (75%) credited to your account!
+                  Both conditions satisfied! Gross: {gameResult.grossPrize || gameResult.prize} LXT | -25% Platform Cut: -{gameResult.deductionAmount || '0.00'} LXT | +{gameResult.netReward || gameResult.prize} LXT (75%) credited to your account!
                 </span>
               ) : (
                 <span style={{ color: '#94a3b8' }}>
-                  Condition 1 was not satisfied. Prize pool of {gameResult.prize} USDT requires score &ge; {gameResult.threshold} PTS.
+                  Condition 1 was not satisfied. Prize pool of {gameResult.prize} LXT requires score &ge; {gameResult.threshold} PTS.
                 </span>
               )}
             </div>
@@ -1250,9 +1250,9 @@ export default function GamePlay() {
               Please connect your wallet or log in to play <strong>{game.title}</strong> and compete for the prize pool.
             </p>
             <div className="game-insufficient-meta">
-              <span>Entry Fee: <strong style={{ color: '#FFFFFF' }}>{entryPool} USDT</strong></span>
+              <span>Entry Fee: <strong style={{ color: '#FFFFFF' }}>{entryPool} LXT</strong></span>
               <span>Target Score: <strong style={{ color: '#FFB300' }}>{thresholdScore} PTS</strong></span>
-              <span>Prize Pool: <strong style={{ color: '#00E676' }}>{prizePool} USDT</strong></span>
+              <span>Prize Pool: <strong style={{ color: '#00E676' }}>{prizePool} LXT</strong></span>
             </div>
             <div className="game-insufficient-actions">
               <Link to="/login" className="fullscreen-hud-btn" style={{ background: '#00E676', color: '#000', borderColor: '#00E676' }}>
@@ -1273,14 +1273,14 @@ export default function GamePlay() {
         <div className="game-insufficient-overlay">
           <div className="game-insufficient-card">
             <ShieldAlert size={44} color="#FF5252" />
-            <h3>Insufficient USDT Balance</h3>
+            <h3>Insufficient LXT Balance</h3>
             <p>
               Entering the <strong>{game.title}</strong> prize pool requires an entry fee of{' '}
-              <strong style={{ color: '#00E676' }}>{entryPool} USDT</strong>.
+              <strong style={{ color: '#00E676' }}>{entryPool} LXT</strong>.
             </p>
             <div className="game-insufficient-meta">
-              <span>Required: <strong style={{ color: '#FFFFFF' }}>{entryPool} USDT</strong></span>
-              <span>Your Balance: <strong style={{ color: '#FF5252' }}>{user?.usdtBalance || '0.00'} USDT</strong></span>
+              <span>Required: <strong style={{ color: '#FFFFFF' }}>{entryPool} LXT</strong></span>
+              <span>Your Balance: <strong style={{ color: '#FF5252' }}>{user?.usdtBalance || '0.00'} LXT</strong></span>
             </div>
             <div style={{ color: '#FFB300', fontWeight: 600, fontSize: '0.95rem', margin: '10px 0 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
               <span>⚠️ Add token in your wallet</span>

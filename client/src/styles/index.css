@@ -61,6 +61,15 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* Background Ambient Glows - Subtle floating dark green / black */
@@ -2457,6 +2466,14 @@ h6 {
   z-index: 210 !important;
 }
 
+.game-modal-content.modal-fullscreen .demo-tabs-nav {
+  display: none !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
 .game-modal-content.modal-fullscreen .modal-game-arena {
   display: flex !important;
   flex-direction: column !important;
@@ -2479,7 +2496,47 @@ h6 {
 .demo-modal-dialog .modal-game-arena {
   flex: 1;
   overflow-y: auto;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
   padding: 20px 24px;
+}
+
+.demo-modal-dialog .modal-game-arena::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Hide scrollbar in gaming pages, lobby, modals, and fullscreen arenas */
+.app-container,
+.lobby-container,
+.game-modal-content,
+.demo-modal-dialog,
+.modal-fullscreen,
+.website-fullscreen-overlay,
+.fullscreen-hud-pools,
+.gz-embed-arena,
+.gz-iframe-frame,
+.in-game-active,
+body[data-in-game="true"] {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.app-container::-webkit-scrollbar,
+.lobby-container::-webkit-scrollbar,
+.game-modal-content::-webkit-scrollbar,
+.demo-modal-dialog::-webkit-scrollbar,
+.modal-fullscreen::-webkit-scrollbar,
+.website-fullscreen-overlay::-webkit-scrollbar,
+.fullscreen-hud-pools::-webkit-scrollbar,
+.gz-embed-arena::-webkit-scrollbar,
+.gz-iframe-frame::-webkit-scrollbar,
+.in-game-active::-webkit-scrollbar,
+body[data-in-game="true"]::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .modal-ctrl-btn {
@@ -5656,5 +5713,368 @@ img {
   .demo-modal-dialog.ludo-compact .gz-game-alert-banner {
     padding: 6px 10px !important;
     margin-bottom: 4px !important;
+  }
+}
+
+/* ==========================================================================
+   PageLoader - Cyber Web3 Main Page Loading Screen
+   ========================================================================== */
+
+.page-loader-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  background: radial-gradient(circle at center, #0F1411 0%, #070908 70%, #030403 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), filter 0.5s ease;
+  overflow: hidden;
+  user-select: none;
+}
+
+.page-loader-overlay.page-loader-fadeout {
+  opacity: 0;
+  transform: scale(1.04);
+  filter: blur(6px);
+  pointer-events: none;
+}
+
+.loader-ambient-glow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 230, 118, 0.12) 0%, rgba(56, 189, 248, 0.06) 40%, transparent 70%);
+  filter: blur(60px);
+  pointer-events: none;
+  animation: ambientFloat 6s ease-in-out infinite alternate;
+}
+
+.loader-content-card {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 90%;
+  max-width: 480px;
+  padding: 40px 30px;
+  background: rgba(18, 24, 20, 0.65);
+  border: 1px solid rgba(0, 230, 118, 0.2);
+  border-radius: 24px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(0, 230, 118, 0.1);
+  animation: loaderCardIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.loader-logo-wrapper {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.loader-ring {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.loader-ring-outer {
+  width: 136px;
+  height: 136px;
+  border: 2px dashed rgba(0, 230, 118, 0.45);
+  animation: spinOuter 10s linear infinite;
+  box-shadow: 0 0 15px rgba(0, 230, 118, 0.2);
+}
+
+.loader-ring-inner {
+  width: 116px;
+  height: 116px;
+  border: 2px solid transparent;
+  border-top-color: #38BDF8;
+  border-bottom-color: #00E676;
+  animation: spinInner 4s linear infinite;
+}
+
+.loader-ring-pulse {
+  width: 104px;
+  height: 104px;
+  border: 1px solid rgba(0, 230, 118, 0.3);
+  animation: ringPulse 2.4s ease-in-out infinite;
+}
+
+.loader-logo-container {
+  width: 88px;
+  height: 88px;
+  border-radius: 22px;
+  background: radial-gradient(circle, rgba(0, 230, 118, 0.18) 0%, rgba(10, 14, 12, 0.95) 100%);
+  border: 1px solid rgba(0, 230, 118, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(0, 230, 118, 0.15);
+  z-index: 3;
+}
+
+.loader-logo-img {
+  width: 64px;
+  height: auto;
+  max-height: 64px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 14px rgba(0, 230, 118, 0.65));
+  animation: floatLogo 3s ease-in-out infinite;
+}
+
+.loader-brand-header {
+  text-align: center;
+  margin-top: 14px;
+}
+
+.loader-brand-title {
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: 3px;
+  color: #FFFFFF;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.loader-brand-highlight {
+  color: #00E676;
+  text-shadow: 0 0 16px rgba(0, 230, 118, 0.7);
+}
+
+.loader-brand-subtitle {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #94A3B8;
+  letter-spacing: 2.5px;
+  margin-top: 5px;
+  text-transform: uppercase;
+}
+
+.loader-progress-section {
+  width: 100%;
+  margin-top: 26px;
+}
+
+.loader-progress-track {
+  width: 100%;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(0, 230, 118, 0.28);
+  border-radius: 9999px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.8), 0 0 12px rgba(0, 230, 118, 0.1);
+}
+
+.loader-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00E676 0%, #39FF88 50%, #38BDF8 100%);
+  border-radius: 9999px;
+  position: relative;
+  transition: width 0.08s ease-out;
+  box-shadow: 0 0 16px rgba(0, 230, 118, 0.8);
+}
+
+.loader-progress-glow-tip {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  background: #FFFFFF;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #FFFFFF, 0 0 18px #00E676;
+}
+
+.loader-progress-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.6) 50%, transparent 100%);
+  animation: shimmer 1.5s infinite;
+}
+
+.loader-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 14px;
+  width: 100%;
+  gap: 12px;
+}
+
+.loader-status-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #CBD5E1;
+  font-size: 0.8rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.loader-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #00E676;
+  box-shadow: 0 0 8px #00E676;
+  flex-shrink: 0;
+  animation: pulseDot 1s ease-in-out infinite alternate;
+}
+
+.loader-status-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loader-percent-badge {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: #00E676;
+  background: rgba(0, 230, 118, 0.12);
+  border: 1px solid rgba(0, 230, 118, 0.35);
+  padding: 3px 10px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 230, 118, 0.15);
+  flex-shrink: 0;
+}
+
+.loader-footer-nodes {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 24px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #64748B;
+  letter-spacing: 1.2px;
+}
+
+.loader-footer-nodes .node-item {
+  color: #94A3B8;
+}
+
+.loader-footer-nodes .node-sep {
+  color: #334155;
+}
+
+@keyframes spinOuter {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes spinInner {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+}
+
+@keyframes ringPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 12px rgba(0, 230, 118, 0.2);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 0 25px rgba(0, 230, 118, 0.45);
+  }
+}
+
+@keyframes floatLogo {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-5px) scale(1.04);
+  }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+@keyframes pulseDot {
+  0% { opacity: 0.3; transform: scale(0.85); }
+  100% { opacity: 1; transform: scale(1.25); }
+}
+
+@keyframes ambientFloat {
+  0% { transform: translate(-30px, -20px) scale(0.9); }
+  100% { transform: translate(30px, 20px) scale(1.1); }
+}
+
+@keyframes loaderCardIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.94) translateY(15px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@media (max-width: 480px) {
+  .loader-content-card {
+    padding: 30px 20px;
+    width: 92%;
+  }
+
+  .loader-logo-wrapper {
+    width: 120px;
+    height: 120px;
+  }
+
+  .loader-ring-outer {
+    width: 118px;
+    height: 118px;
+  }
+
+  .loader-ring-inner {
+    width: 100px;
+    height: 100px;
+  }
+
+  .loader-logo-container {
+    width: 76px;
+    height: 76px;
+  }
+
+  .loader-logo-img {
+    width: 54px;
+    max-height: 54px;
+  }
+
+  .loader-brand-title {
+    font-size: 1.3rem;
+  }
+
+  .loader-status-text {
+    font-size: 0.72rem;
+  }
+
+  .loader-percent-badge {
+    font-size: 0.78rem;
+    padding: 2px 7px;
+  }
+
+  .loader-footer-nodes {
+    font-size: 0.6rem;
+    gap: 6px;
   }
 }
