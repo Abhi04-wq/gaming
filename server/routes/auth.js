@@ -310,9 +310,9 @@ router.post('/login', async (req, res) => {
     user.lastLoginAt = new Date();
     user.nonce = null;
     user.nonceExpiresAt = null;
-    if (!user.usdtBalance || user.usdtBalance === '0.00') {
-      user.usdtBalance = '50.00';
-    } else if (usdtBalance !== undefined && usdtBalance !== '0.00' && usdtBalance !== null) {
+    if (user.usdtBalance === undefined || user.usdtBalance === null) {
+      user.usdtBalance = '0.00';
+    } else if (usdtBalance !== undefined && usdtBalance !== null && usdtBalance !== '') {
       user.usdtBalance = String(usdtBalance);
     }
     if (chainId !== undefined) {

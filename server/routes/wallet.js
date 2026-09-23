@@ -50,7 +50,7 @@ router.get('/balance', async (req, res) => {
       return res.json({
         success: true,
         walletAddress: normalizedAddress,
-        balance: existingUser.usdtBalance || '50.00',
+        balance: existingUser.usdtBalance !== undefined && existingUser.usdtBalance !== null ? existingUser.usdtBalance : '0.00',
         symbol: 'USDT',
         chainId: Number(chainId),
       });
@@ -106,7 +106,11 @@ router.post('/deduct-entry', async (req, res) => {
       });
     }
 
-    const currentBalance = parseFloat(user.usdtBalance || '50.00');
+    const currentBalance = parseFloat(
+      user.usdtBalance !== undefined && user.usdtBalance !== null && user.usdtBalance !== ''
+        ? user.usdtBalance
+        : '0.00'
+    );
 
     if (currentBalance < entryFee) {
       return res.status(400).json({
@@ -203,7 +207,11 @@ router.post('/credit-prize', async (req, res) => {
       });
     }
 
-    const currentBalance = parseFloat(user.usdtBalance || '50.00');
+    const currentBalance = parseFloat(
+      user.usdtBalance !== undefined && user.usdtBalance !== null && user.usdtBalance !== ''
+        ? user.usdtBalance
+        : '0.00'
+    );
     // Update user's account with 75% of the reward
     const newBalance = (currentBalance + netReward).toFixed(2);
     user.usdtBalance = newBalance;
@@ -301,7 +309,11 @@ router.post('/deposit', async (req, res) => {
       });
     }
 
-    const currentBalance = parseFloat(user.usdtBalance || '50.00');
+    const currentBalance = parseFloat(
+      user.usdtBalance !== undefined && user.usdtBalance !== null && user.usdtBalance !== ''
+        ? user.usdtBalance
+        : '0.00'
+    );
     const newBalance = (currentBalance + depositAmount).toFixed(2);
     user.usdtBalance = newBalance;
     await user.save();
@@ -394,7 +406,7 @@ router.get('/income-details', async (req, res) => {
     return res.json({
       success: true,
       walletAddress: normalizedAddress,
-      currentBalance: user ? user.usdtBalance : '50.00',
+      currentBalance: user && user.usdtBalance !== undefined && user.usdtBalance !== null ? user.usdtBalance : '0.00',
       summary: {
         totalCredit: totalCredit.toFixed(2),
         totalDebit: totalDebit.toFixed(2),

@@ -166,7 +166,7 @@ export default function Navbar({ onCopyToast }) {
                 <div className="balance-dot" />
                 <div className="balance-info">
                   <span className="balance-label">USDT</span>
-                  <span className="balance-val">{user?.usdtBalance || '50.00'}</span>
+                  <span className="balance-val">{user?.usdtBalance !== undefined && user?.usdtBalance !== null ? user.usdtBalance : '0.00'}</span>
                 </div>
               </Link>
 

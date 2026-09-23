@@ -46,6 +46,8 @@ import {
   Lightbulb,
   ChevronDown,
   ChevronUp,
+  ShieldAlert,
+  ArrowLeft,
 } from 'lucide-react';
 
 // Shared game catalog (also used by the /play/:gameId page)
@@ -709,11 +711,11 @@ export default function GamesLobby() {
     const fee = feeOverride !== null && feeOverride !== undefined && !isNaN(parseFloat(feeOverride))
       ? parseFloat(feeOverride)
       : parseFloat(game.entryPool || '1.00');
-    const balance = parseFloat(user.usdtBalance || '0');
+    const balance = parseFloat(user.usdtBalance !== undefined && user.usdtBalance !== null && user.usdtBalance !== '' ? user.usdtBalance : '0');
 
     if (balance < fee) {
       setToastMessage({
-        text: `❌ Insufficient USDT balance! Entry pool fee is ${fee.toFixed(2)} USDT, but your balance is ${balance.toFixed(2)} USDT.`,
+        text: `❌ Insufficient USDT balance! Entry pool fee is ${fee.toFixed(2)} USDT, but your balance is ${balance.toFixed(2)} USDT. Game cannot start.`,
         type: 'error',
       });
       return;
@@ -1358,6 +1360,18 @@ export default function GamesLobby() {
   const handleLaunchGame = (game, defaultTab = 'play') => {
     if (!game) return;
 
+    const fee = game.id?.includes('ludo') || game.playableType === 'native-ludo'
+      ? parseFloat(game.ludo2pEntryPool || game.entryPool || '1.00')
+      : parseFloat(game.entryPool || '1.00');
+    const userBal = parseFloat(user?.usdtBalance !== undefined && user?.usdtBalance !== null && user?.usdtBalance !== '' ? user.usdtBalance : '0');
+
+    if (defaultTab === 'play' && !isNaN(fee) && userBal < fee) {
+      setToastMessage({
+        text: `❌ Insufficient USDT balance! Entry fee is ${fee.toFixed(2)} USDT, but your balance is ${userBal.toFixed(2)} USDT. Game cannot start.`,
+        type: 'error',
+      });
+    }
+
     setIsRoundDeducted(false);
     isRoundDeductedRef.current = false;
     isPrizeAwardedRef.current = false;
@@ -1406,6 +1420,18 @@ export default function GamesLobby() {
   };
 
   const handleSwitchToPlayTab = () => {
+    if (activeGameModal) {
+      const fee = activeGameModal.id?.includes('ludo') || activeGameModal.playableType === 'native-ludo'
+        ? parseFloat(activeGameModal.ludo2pEntryPool || activeGameModal.entryPool || '1.00')
+        : parseFloat(activeGameModal.entryPool || '1.00');
+      const userBal = parseFloat(user?.usdtBalance !== undefined && user?.usdtBalance !== null && user?.usdtBalance !== '' ? user.usdtBalance : '0');
+      if (!isDailyChallenge && !isNaN(fee) && userBal < fee) {
+        setToastMessage({
+          text: `❌ Insufficient USDT balance! Entry fee is ${fee.toFixed(2)} USDT, but your balance is ${userBal.toFixed(2)} USDT. Game cannot start.`,
+          type: 'error',
+        });
+      }
+    }
     setModalTab('play');
     setIsIframeLoading(true);
     setIsRoundDeducted(false);
@@ -1419,6 +1445,19 @@ export default function GamesLobby() {
 
   // Dedicated Restart Function: Resets round state and waits for return status 'start'
   const handleRestartGameModal = () => {
+    if (activeGameModal) {
+      const fee = activeGameModal.id?.includes('ludo') || activeGameModal.playableType === 'native-ludo'
+        ? parseFloat(activeGameModal.ludo2pEntryPool || activeGameModal.entryPool || '1.00')
+        : parseFloat(activeGameModal.entryPool || '1.00');
+      const userBal = parseFloat(user?.usdtBalance !== undefined && user?.usdtBalance !== null && user?.usdtBalance !== '' ? user.usdtBalance : '0');
+      if (!isDailyChallenge && !isNaN(fee) && userBal < fee) {
+        setToastMessage({
+          text: `❌ Insufficient USDT balance! Entry fee is ${fee.toFixed(2)} USDT, but your balance is ${userBal.toFixed(2)} USDT. Game cannot restart.`,
+          type: 'error',
+        });
+        return;
+      }
+    }
     console.log('[GameModal] Restarting game round: will wait for return status "start" to deduct');
     setIsRoundDeducted(false);
     isRoundDeductedRef.current = false;
@@ -1975,7 +2014,7 @@ export default function GamesLobby() {
                 </div>
                 <div className="modal-balance-pill" title="Your Account USDT Balance">
                   <Wallet size={13} color="#00E676" />
-                  <span>{user?.usdtBalance || '50.00'} USDT</span>
+                  <span>{user?.usdtBalance !== undefined && user?.usdtBalance !== null ? user.usdtBalance : '0.00'} USDT</span>
                 </div>
                 <button
                   onClick={() => {
@@ -2025,73 +2064,111 @@ export default function GamesLobby() {
             {/* Modal Body Based on Active Tab */}
             <div className="modal-game-arena">
               {/* TAB 1: EMBEDDED GAMEZOP HTML5 GAME */}
-              {modalTab === 'play' && (
-                <div className="gz-embed-arena">
-                  {/* Responsive Game Iframe Frame */}
-                  <div className={`gz-iframe-frame ${isForceLandscape ? 'is-force-landscape' : ''}`}>
-                    {isForceLandscape && (
-                      <button
-                        onClick={() => setIsForceLandscape(false)}
-                        className="gz-rotate-exit-btn"
-                        title="Exit Landscape Rotation"
-                      >
-                        <X size={15} />
-                        <span>Exit Rotation</span>
-                      </button>
-                    )}
-                    {activeGameModal.id === 'ludo-with-friends' || activeGameModal.id === 'ludo-dash' ? (
-                      <LudoGameBoard
-                        onGameEvent={handleLudoGameEvent}
-                        entryPool={activeGameModal.entryPool || '1.00'}
-                        prizePool={activeGameModal.prizePool || '100.00'}
-                        thresholdScore={activeGameModal.thresholdScore || '500'}
-                        ludo2pEntryPool={activeGameModal.ludo2pEntryPool || '1.00'}
-                        ludo2pPrizePool={activeGameModal.ludo2pPrizePool || '20.00'}
-                        ludo4pEntryPool={activeGameModal.ludo4pEntryPool || '2.00'}
-                        ludo4pPrizePool={activeGameModal.ludo4pPrizePool || '50.00'}
-                      />
-                    ) : (
-                      <>
-                        {isIframeLoading && (
-                          <div className="gz-iframe-loader">
-                            <div className="gz-spinner" />
-                            <h4>Loading {activeGameModal.title}...</h4>
-                          </div>
-                        )}
-                        <iframe
-                          key={iframeKey}
-                          src={activeGameModal.embedUrl || `https://gamescdn.gamezop.com/_game-files/${activeGameModal.gzCode}/index.html`}
-                          title={activeGameModal.title}
-                          className="gz-game-iframe"
-                          allow="autoplay; fullscreen; screen-wake-lock; orientation-lock; accelerometer; gyroscope; magnetometer;"
-                          sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-pointer-lock allow-modals allow-orientation-lock"
-                          onLoad={() => {
-                            setIsIframeLoading(false);
-                            console.log('[GameIframe] Modal iframe loaded/reloaded (Ready to deduct on status "start"):', activeGameModal.embedUrl);
-    setIsRoundDeducted(false);
-    isRoundDeductedRef.current = false;
-    isPrizeAwardedRef.current = false;
-    lobbyGameOverRef.current = false;
-    lobbyCurrentScoreRef.current = 0;
-                          }}
-                        />
-                      </>
-                    )}
-                  </div>
+              {modalTab === 'play' && (() => {
+                const modalFee = activeGameModal?.id?.includes('ludo') || activeGameModal?.playableType === 'native-ludo'
+                  ? parseFloat(activeGameModal.ludo2pEntryPool || activeGameModal.entryPool || '1.00')
+                  : parseFloat(activeGameModal?.entryPool || '1.00');
+                const userBal = parseFloat(user?.usdtBalance !== undefined && user?.usdtBalance !== null && user?.usdtBalance !== '' ? user.usdtBalance : '0');
+                const isInsufficient = !isDailyChallenge && !isRoundDeducted && userBal < modalFee;
 
-                  {/* Bottom Controls & Gameplay Hints */}
-                  <div className="gz-embed-footer">
-                    <div className="gz-hint">
-                      🎮 <strong>Controls:</strong> Mouse click/drag or touch to aim, slice, tap, and play.
+                if (isInsufficient) {
+                  return (
+                    <div className="gz-embed-arena">
+                      <div className="game-insufficient-overlay" style={{ position: 'relative', minHeight: '380px', borderRadius: '12px', background: 'rgba(10, 14, 23, 0.95)' }}>
+                        <div className="game-insufficient-card">
+                          <ShieldAlert size={44} color="#FF5252" />
+                          <h3 style={{ marginTop: '12px', color: '#FFFFFF' }}>Insufficient USDT Balance</h3>
+                          <p style={{ color: '#94a3b8', margin: '8px 0 16px' }}>
+                            Entering <strong>{activeGameModal.title}</strong> requires an entry fee of{' '}
+                            <strong style={{ color: '#00E676' }}>{modalFee.toFixed(2)} USDT</strong>.
+                          </p>
+                          <div className="game-insufficient-meta" style={{ display: 'flex', gap: '16px', justifyContent: 'center', marginBottom: '20px' }}>
+                            <span>Required: <strong style={{ color: '#FFFFFF' }}>{modalFee.toFixed(2)} USDT</strong></span>
+                            <span>Your Balance: <strong style={{ color: '#FF5252' }}>{userBal.toFixed(2)} USDT</strong></span>
+                          </div>
+                          <div style={{ color: '#FFB300', fontWeight: 600, fontSize: '0.95rem', margin: '10px 0 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                            <span>⚠️ Add token in your wallet</span>
+                          </div>
+                          <div className="game-insufficient-actions" style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                            <button onClick={() => setActiveGameModal(null)} className="fullscreen-hud-btn">
+                              <ArrowLeft size={14} />
+                              <span>Back to Lobby</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="gz-specs-summary">
-                      <span>RTP: <strong>{activeGameModal.rtp}</strong></span>
-                      <span>Max Win: <strong>{activeGameModal.maxWin}</strong></span>
-                      <span>Online: <strong>{activeGameModal.players}</strong></span>
+                  );
+                }
+
+                return (
+                  <div className="gz-embed-arena">
+                    {/* Responsive Game Iframe Frame */}
+                    <div className={`gz-iframe-frame ${isForceLandscape ? 'is-force-landscape' : ''}`}>
+                      {isForceLandscape && (
+                        <button
+                          onClick={() => setIsForceLandscape(false)}
+                          className="gz-rotate-exit-btn"
+                          title="Exit Landscape Rotation"
+                        >
+                          <X size={15} />
+                          <span>Exit Rotation</span>
+                        </button>
+                      )}
+                      {activeGameModal.id === 'ludo-with-friends' || activeGameModal.id === 'ludo-dash' ? (
+                        <LudoGameBoard
+                          onGameEvent={handleLudoGameEvent}
+                          entryPool={activeGameModal.entryPool || '1.00'}
+                          prizePool={activeGameModal.prizePool || '100.00'}
+                          thresholdScore={activeGameModal.thresholdScore || '500'}
+                          ludo2pEntryPool={activeGameModal.ludo2pEntryPool || '1.00'}
+                          ludo2pPrizePool={activeGameModal.ludo2pPrizePool || '20.00'}
+                          ludo4pEntryPool={activeGameModal.ludo4pEntryPool || '2.00'}
+                          ludo4pPrizePool={activeGameModal.ludo4pPrizePool || '50.00'}
+                        />
+                      ) : (
+                        <>
+                          {isIframeLoading && (
+                            <div className="gz-iframe-loader">
+                              <div className="gz-spinner" />
+                              <h4>Loading {activeGameModal.title}...</h4>
+                            </div>
+                          )}
+                          <iframe
+                            key={iframeKey}
+                            src={activeGameModal.embedUrl || `https://gamescdn.gamezop.com/_game-files/${activeGameModal.gzCode}/index.html`}
+                            title={activeGameModal.title}
+                            className="gz-game-iframe"
+                            allow="autoplay; fullscreen; screen-wake-lock; orientation-lock; accelerometer; gyroscope; magnetometer;"
+                            sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-pointer-lock allow-modals allow-orientation-lock"
+                            onLoad={() => {
+                              setIsIframeLoading(false);
+                              console.log('[GameIframe] Modal iframe loaded/reloaded (Ready to deduct on status "start"):', activeGameModal.embedUrl);
+                              setIsRoundDeducted(false);
+                              isRoundDeductedRef.current = false;
+                              isPrizeAwardedRef.current = false;
+                              lobbyGameOverRef.current = false;
+                              lobbyCurrentScoreRef.current = 0;
+                            }}
+                          />
+                        </>
+                      )}
+                    </div>
+
+                    {/* Bottom Controls & Gameplay Hints */}
+                    <div className="gz-embed-footer">
+                      <div className="gz-hint">
+                        🎮 <strong>Controls:</strong> Mouse click/drag or touch to aim, slice, tap, and play.
+                      </div>
+                      <div className="gz-specs-summary">
+                        <span>RTP: <strong>{activeGameModal.rtp}</strong></span>
+                        <span>Max Win: <strong>{activeGameModal.maxWin}</strong></span>
+                        <span>Online: <strong>{activeGameModal.players}</strong></span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* TAB 2: SCREENSHOTS GALLERY */}
               {modalTab === 'screenshots' && (

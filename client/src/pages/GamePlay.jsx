@@ -117,6 +117,29 @@ export default function GamePlay() {
     return () => clearTimeout(timer);
   }, [gameId, iframeKey, isNativeLudo]);
 
+  // Pre-flight check: Immediately block game and show error overlay if wallet balance < entry fee
+  useEffect(() => {
+    if (!user) return;
+    if (isDailyChallenge || isRoundDeducted) {
+      setInsufficientFunds(false);
+      return;
+    }
+    const bal = parseFloat(user.usdtBalance !== undefined && user.usdtBalance !== null && user.usdtBalance !== '' ? user.usdtBalance : '0');
+    const fee = isNativeLudo
+      ? parseFloat(initialLudo2pEntry || entryPool || '1.00')
+      : parseFloat(entryPool || '1.00');
+
+    if (!isNaN(fee) && bal < fee) {
+      setInsufficientFunds(true);
+      setToastAlert({
+        text: `❌ Insufficient USDT balance! Entry fee is ${fee.toFixed(2)} USDT, but your balance is ${bal.toFixed(2)} USDT. Game cannot start.`,
+        type: 'error',
+      });
+    } else if (!isNaN(fee) && bal >= fee) {
+      setInsufficientFunds(false);
+    }
+  }, [user?.usdtBalance, entryPool, initialLudo2pEntry, isNativeLudo, isDailyChallenge, isRoundDeducted]);
+
   // Core Deduction Function: Triggered ONLY when return status is 'start' and NOT in daily challenge
   const handleGameStartDeduction = async (isRestart = false, force = false, feeOverride = null) => {
     if (!game) return;
@@ -148,10 +171,14 @@ export default function GamePlay() {
     const fee = feeOverride !== null && feeOverride !== undefined && !isNaN(parseFloat(feeOverride))
       ? parseFloat(feeOverride)
       : parseFloat(entryPool);
-    const balance = parseFloat(user.usdtBalance || '0');
+    const balance = parseFloat(user.usdtBalance !== undefined && user.usdtBalance !== null && user.usdtBalance !== '' ? user.usdtBalance : '0');
 
     if (balance < fee) {
       setInsufficientFunds(true);
+      setToastAlert({
+        text: `❌ Insufficient USDT balance! Entry fee is ${fee.toFixed(2)} USDT, but your balance is ${balance.toFixed(2)} USDT. Game cannot start.`,
+        type: 'error',
+      });
       return;
     }
 
@@ -796,6 +823,20 @@ export default function GamePlay() {
 
   // Manual Restart Action: Resets round deduction flag and reloads game; deduction will trigger on status 'start'
   const handleRestartNewRound = () => {
+    const bal = parseFloat(user?.usdtBalance !== undefined && user?.usdtBalance !== null && user?.usdtBalance !== '' ? user.usdtBalance : '0');
+    const fee = isNativeLudo
+      ? parseFloat(initialLudo2pEntry || entryPool || '1.00')
+      : parseFloat(entryPool || '1.00');
+
+    if (!isDailyChallenge && bal < fee) {
+      setInsufficientFunds(true);
+      setToastAlert({
+        text: `❌ Insufficient USDT balance! Entry fee is ${fee.toFixed(2)} USDT, but your balance is ${bal.toFixed(2)} USDT. Game cannot restart.`,
+        type: 'error',
+      });
+      return;
+    }
+
     console.log('[GamePlay] User clicked Restart: Resetting round and waiting for status start');
     setIsDailyChallenge(false);
     isDailyChallengeRef.current = false;
@@ -1241,11 +1282,10 @@ export default function GamePlay() {
               <span>Required: <strong style={{ color: '#FFFFFF' }}>{entryPool} USDT</strong></span>
               <span>Your Balance: <strong style={{ color: '#FF5252' }}>{user?.usdtBalance || '0.00'} USDT</strong></span>
             </div>
+            <div style={{ color: '#FFB300', fontWeight: 600, fontSize: '0.95rem', margin: '10px 0 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+              <span>⚠️ Add token in your wallet</span>
+            </div>
             <div className="game-insufficient-actions">
-              <Link to="/dashboard" className="fullscreen-hud-btn" style={{ background: '#00E676', color: '#000', borderColor: '#00E676' }}>
-                <Wallet size={14} />
-                <span>Deposit / Manage USDT</span>
-              </Link>
               <Link to="/games" className="fullscreen-hud-btn">
                 <ArrowLeft size={14} />
                 <span>Back to Lobby</span>

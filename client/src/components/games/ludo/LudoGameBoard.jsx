@@ -103,6 +103,7 @@ export default function LudoGameBoard({
   const [isNamePromptOpen, setIsNamePromptOpen] = useState(false);
   const [nameInputVal, setNameInputVal] = useState('');
   const [nameError, setNameError] = useState('');
+  const [balanceError, setBalanceError] = useState('');
 
   const [pendingMode, setPendingMode] = useState(null);
 
@@ -161,6 +162,16 @@ export default function LudoGameBoard({
 
     if (pendingMode) {
       const modeToStart = pendingMode;
+      const requiredFee = parseFloat(modeToStart === 2 ? adminPools.p2Entry : adminPools.p4Entry);
+      const userBal = parseFloat(user?.usdtBalance !== undefined && user?.usdtBalance !== null && user?.usdtBalance !== '' ? user.usdtBalance : '0');
+
+      if (!isNaN(requiredFee) && userBal < requiredFee) {
+        setBalanceError(
+          `❌ Insufficient USDT balance! ${modeToStart}P mode requires ${requiredFee.toFixed(2)} USDT, but your balance is ${userBal.toFixed(2)} USDT. Game cannot start.`
+        );
+        setPendingMode(null);
+        return;
+      }
       setPendingMode(null);
       setPlayerMode(modeToStart);
       setSelectedModeConfirmed(true);
@@ -277,6 +288,7 @@ export default function LudoGameBoard({
   const remoteDiceIntRef = useRef(null); // opponent-er dice tumble interval
   const matchFeeRef = useRef(null); // ei match-er entry fee (server/admin value)
   const matchPrizeRef = useRef(null); // ei match-er prize pool (server/admin value)
+  const deductionDispatchedRef = useRef(false);
   useEffect(() => { myColorRef.current = myColor; }, [myColor]);
   useEffect(() => { isLiveMatchRef.current = isLiveMatch; }, [isLiveMatch]);
   useEffect(() => { liveMatchIdRef.current = liveMatchId; }, [liveMatchId]);
@@ -381,6 +393,19 @@ export default function LudoGameBoard({
       // Ei match-er authoritative fee/prize mone rakho — winner prize ekhan thekei asbe (hardcode noy)
       matchFeeRef.current = fee;
       matchPrizeRef.current = prize;
+
+      const userBal = parseFloat(user?.usdtBalance !== undefined && user?.usdtBalance !== null && user?.usdtBalance !== '' ? user.usdtBalance : '0');
+      if (!deductionDispatchedRef.current && !isNaN(fee) && userBal < fee) {
+        stopMatchmakingTimers();
+        matchedDoneRef.current = false;
+        setIsMatchmaking(false);
+        setSelectedModeConfirmed(false);
+        setBalanceError(
+          `❌ Insufficient USDT balance! Match entry fee is ${fee.toFixed(2)} USDT, but your balance is ${userBal.toFixed(2)} USDT. Game cannot start.`
+        );
+        return;
+      }
+      deductionDispatchedRef.current = true;
 
       // Deduct entry fee right before the match starts!
       setDeductionMessage(`💳 Deducting Entry Fee: -${fee.toFixed(2)} USDT... Match starting!`);
@@ -719,6 +744,18 @@ export default function LudoGameBoard({
 
   // User selects mode (2 Players or 4 Players) first
   const handleSelectModeAndStart = (mode) => {
+    const requiredFee = parseFloat(mode === 2 ? adminPools.p2Entry : adminPools.p4Entry);
+    const userBal = parseFloat(user?.usdtBalance !== undefined && user?.usdtBalance !== null && user?.usdtBalance !== '' ? user.usdtBalance : '0');
+
+    if (!isNaN(requiredFee) && userBal < requiredFee) {
+      setBalanceError(
+        `❌ Insufficient USDT balance! ${mode}P mode requires ${requiredFee.toFixed(2)} USDT, but your balance is ${userBal.toFixed(2)} USDT. Game cannot start.`
+      );
+      return;
+    }
+    setBalanceError('');
+    deductionDispatchedRef.current = false;
+
     if (!playerName || !playerName.trim()) {
       setPendingMode(mode);
       setNameInputVal('');
@@ -754,6 +791,7 @@ export default function LudoGameBoard({
     setSelectedModeConfirmed(false);
     setMatchStatus('searching');
     setDeductionMessage(null);
+    deductionDispatchedRef.current = false;
   }, [stopMatchmakingTimers]);
 
   useEffect(() => {
@@ -1811,6 +1849,29 @@ export default function LudoGameBoard({
                 </button>
               </div>
             </div>
+
+            {balanceError && (
+              <div style={{
+                background: 'rgba(255, 82, 82, 0.15)',
+                border: '1px solid #FF5252',
+                color: '#FF5252',
+                padding: '12px 16px',
+                borderRadius: '10px',
+                marginBottom: '16px',
+                fontSize: '0.88rem',
+                fontWeight: 600,
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <span>{balanceError}</span>
+                <div style={{ color: '#FFB300', fontWeight: 600, fontSize: '0.88rem', marginTop: '4px' }}>
+                  ⚠️ Add token in your wallet
+                </div>
+              </div>
+            )}
 
             <div className={styles.modeSelectGrid}>
               {/* Option 1: 2 Players (1 vs 1) */}
