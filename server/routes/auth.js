@@ -45,6 +45,7 @@ router.post('/check-wallet', async (req, res) => {
       success: true,
       exists: !!existingUser,
       walletAddress: normalizedAddress,
+      walletType: existingUser?.walletType || null,
     });
   } catch (error) {
     console.error('[Check Wallet Error]', error);
@@ -102,6 +103,7 @@ router.post('/nonce', async (req, res) => {
       message,
       walletAddress: normalizedAddress,
       exists: !!existingUser,
+      walletType: existingUser?.walletType || null,
     });
   } catch (error) {
     console.error('[Nonce Error]', error);

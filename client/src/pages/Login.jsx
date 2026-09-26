@@ -3,6 +3,10 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ethers } from 'ethers';
 import {
   detectInjectedProvider,
+  connectInjectedWallet,
+  getAllInjectedProviders,
+  getSignerForAddress,
+  isWalletDetected,
   createDemoWallet,
   signChallengeMessage,
   fetchLiveUsdtBalance,
@@ -45,21 +49,62 @@ export default function Login() {
   // Shortcut: Auto-fill from connected browser wallet
   const handleAutoDetectWallet = async () => {
     try {
-      const injectedProvider = detectInjectedProvider();
-      if (!injectedProvider) {
-        setToastMessage({
-          text: 'No injected Web3 wallet found in browser. Please open your wallet extension or enter an address.',
-          type: 'info',
-        });
-        return;
+      const allProviders = getAllInjectedProviders();
+      let foundAccount = null;
+      let foundProviderName = '';
+
+      // Check silently across all extensions (zero popups)
+      for (const { name, provider } of allProviders) {
+        try {
+          const bp = new ethers.BrowserProvider(provider);
+          const accounts = await bp.send('eth_accounts', []);
+          if (accounts && accounts[0]) {
+            foundAccount = accounts[0];
+            foundProviderName = name;
+            break;
+          }
+        } catch (e) {
+          // ignore
+        }
       }
-      const provider = new ethers.BrowserProvider(injectedProvider);
-      const accounts = await provider.send('eth_requestAccounts', []);
-      if (accounts && accounts[0]) {
-        setWalletAddress(accounts[0]);
+
+      // If no unlocked account was found, check if SafePal is available
+      if (!foundAccount) {
+        const safePalProvider = detectInjectedProvider('SafePal');
+        if (safePalProvider) {
+          try {
+            const bp = new ethers.BrowserProvider(safePalProvider);
+            const accounts = await bp.send('eth_requestAccounts', []);
+            if (accounts && accounts[0]) {
+              foundAccount = accounts[0];
+              foundProviderName = 'SafePal';
+            }
+          } catch (e) {}
+        }
+      }
+
+      // If still not found, check window.ethereum
+      if (!foundAccount && typeof window !== 'undefined' && window.ethereum) {
+        try {
+          const bp = new ethers.BrowserProvider(window.ethereum);
+          const accounts = await bp.send('eth_requestAccounts', []);
+          if (accounts && accounts[0]) {
+            foundAccount = accounts[0];
+            foundProviderName = 'Wallet';
+          }
+        } catch (e) {}
+      }
+
+      if (foundAccount) {
+        setWalletAddress(foundAccount);
         setToastMessage({
-          text: `Address detected: ${shortenAddress(accounts[0])}`,
+          text: `Detected from ${foundProviderName || 'Wallet'}: ${shortenAddress(foundAccount)}`,
           type: 'success',
+        });
+      } else {
+        setToastMessage({
+          text: 'No unlocked Web3 wallet account detected. Please open and unlock your wallet.',
+          type: 'info',
         });
       }
     } catch (err) {
@@ -71,75 +116,6 @@ export default function Login() {
     }
   };
 
-  // Direct 1-Click Login with a specific wallet (e.g. SafePal)
-  const handleQuickWalletLogin = async (walletName) => {
-    setErrorMessage('');
-    setNotRegistered(false);
-    setLoading(true);
-    setAuthStep('connecting');
-
-    try {
-      const connection = await connectInjectedWallet(walletName);
-      const { address, signer } = connection;
-      const normalizedAddress = address.toLowerCase();
-      setWalletAddress(normalizedAddress);
-
-      // Check registration status
-      setAuthStep('checking');
-      const checkRes = await api.checkWallet(normalizedAddress);
-      if (!checkRes.exists) {
-        setNotRegistered(true);
-        setErrorMessage(`Wallet ${shortenAddress(normalizedAddress)} is not registered yet.`);
-        setLoading(false);
-        setAuthStep(null);
-        return;
-      }
-
-      // Request login nonce challenge
-      setAuthStep('connecting');
-      const nonceRes = await api.getNonce(normalizedAddress, 'login');
-      if (!nonceRes.success || !nonceRes.nonce) {
-        throw new Error('Failed to generate secure authentication challenge.');
-      }
-
-      // Cryptographic signature
-      setAuthStep('signing');
-      const signature = await signChallengeMessage(signer, nonceRes.message);
-
-      // Backend verification
-      setAuthStep('verifying');
-      const loginRes = await api.login({
-        walletAddress: normalizedAddress,
-        signature,
-        nonce: nonceRes.nonce,
-      });
-
-      if (!loginRes.success) {
-        throw new Error(loginRes.message || 'Login signature verification failed.');
-      }
-
-      loginUser(loginRes.token, loginRes.user, signer);
-      setToastMessage({
-        text: `Welcome back! Authenticated with ${walletName}.`,
-        type: 'success',
-      });
-
-      setTimeout(() => {
-        navigate('/games');
-      }, 900);
-    } catch (err) {
-      console.error('[Quick Wallet Login Error]', err);
-      if (err.code === 4001 || err.message?.includes('reject') || err.message?.includes('denied')) {
-        setErrorMessage('Connection or signature request cancelled.');
-      } else {
-        setErrorMessage(err.message || 'Failed to connect and sign in with wallet.');
-      }
-      setToastMessage({ text: err.message, type: 'error' });
-    } finally {
-      setLoading(false);
-      setAuthStep(null);
-    }
-  };
 
   // Main Login Workflow
   const handleLoginSubmit = async (e) => {
@@ -178,44 +154,23 @@ export default function Login() {
       }
 
       // Step 3: Connect to wallet signer (Injected or Demo)
-      let signer;
-      if (typeof window !== 'undefined' && window.ethereum) {
-        try {
-          const browserProvider = new ethers.BrowserProvider(window.ethereum);
-          await browserProvider.send('eth_requestAccounts', []);
-          const browserSigner = await browserProvider.getSigner();
-          const signerAddr = await browserSigner.getAddress();
+      // Pass registered walletType (e.g. 'SafePal') so SafePal is prioritized and Rabby does not hijack it
+      const targetWalletType = checkRes.walletType || nonceRes.walletType || null;
+      setAuthStep('connecting');
+      const resolved = await getSignerForAddress(normalizedAddress, targetWalletType);
+      const signer = resolved.signer;
 
-          if (signerAddr.toLowerCase() === normalizedAddress) {
-            signer = browserSigner;
-          }
-        } catch (injectedErr) {
-          console.warn('[Injected Signer Match Failed]', injectedErr);
-        }
-      }
-
-      // If address belongs to demo wallet or extension not available for this address, use demo wallet
+      // If no signer matches this address
       if (!signer) {
-        // Look in localStorage for demo keys
-        const wallets = ['MetaMask', 'Trust Wallet', 'SafePal', 'Rabby Wallet', 'Coinbase Wallet'];
-        for (const w of wallets) {
-          const dw = createDemoWallet(w);
-          if (dw.address.toLowerCase() === normalizedAddress) {
-            signer = dw.signer;
-            break;
-          }
-        }
-      }
-
-      // Fallback: If no signer yet matches this address
-      if (!signer) {
-        if (typeof window !== 'undefined' && window.ethereum) {
-          const browserProvider = new ethers.BrowserProvider(window.ethereum);
-          signer = await browserProvider.getSigner();
+        if (resolved.connectedAddresses && resolved.connectedAddresses.length > 0) {
+          const connectedAddr = resolved.connectedAddresses[0];
+          throw new Error(
+            `Account mismatch: Your wallet extension is connected to ${shortenAddress(connectedAddr)}, but you entered ${shortenAddress(normalizedAddress)}. Please switch to ${shortenAddress(normalizedAddress)} inside your ${targetWalletType || 'wallet'} extension.`
+          );
         } else {
-          // Fallback simulation signer
-          const dw = createDemoWallet('MetaMask');
-          signer = dw.signer;
+          throw new Error(
+            `No matching wallet found for ${shortenAddress(normalizedAddress)}. Please open your ${targetWalletType || 'SafePal'} extension and ensure it is unlocked and connected.`
+          );
         }
       }
 

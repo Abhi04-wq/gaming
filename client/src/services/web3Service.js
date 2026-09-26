@@ -1,4 +1,5 @@
 
+
 import { ethers } from 'ethers';
 import { BACKEND_URL } from './api';
 
@@ -59,10 +60,37 @@ export const SUPPORTED_WALLETS = [
   },
 ];
 
+// EIP-6963 Provider Storage (Multi-wallet discovery standard)
+const announcedProviders = new Map();
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('eip6963:announceProvider', (event) => {
+    if (event?.detail?.info?.rdns && event?.detail?.provider) {
+      announcedProviders.set(event.detail.info.rdns.toLowerCase(), event.detail);
+    }
+  });
+  try {
+    window.dispatchEvent(new Event('eip6963:requestProvider'));
+  } catch (e) {}
+}
+
+export function getEip6963Provider(pattern) {
+  if (typeof window === 'undefined') return null;
+
+  const pat = pattern.toLowerCase();
+  for (const [rdns, detail] of announcedProviders.entries()) {
+    const name = (detail.info?.name || '').toLowerCase();
+    if (rdns.includes(pat) || name.includes(pat)) {
+      return detail.provider;
+    }
+  }
+  return null;
+}
+
 /**
  * Check which wallet provider matches the requested wallet.
- * Supports dedicated provider objects like window.safepalProvider,
- * as well as window.ethereum multi-provider arrays without hijacking.
+ * Supports EIP-6963 multi-wallet discovery, dedicated provider objects (SafePal, Trust, Rabby),
+ * and window.ethereum multi-provider arrays without hijacking.
  */
 export function detectInjectedProvider(walletName) {
   if (typeof window === 'undefined') {
@@ -73,11 +101,12 @@ export function detectInjectedProvider(walletName) {
   const providers = Array.isArray(eth?.providers) ? eth.providers : [];
 
   // SafePal Wallet:
-  // SafePal injects window.safepalProvider as its dedicated EVM provider,
-  // or window.safepal?.ethereum, or flags in window.ethereum
   if (walletName === 'SafePal') {
+    const eip = getEip6963Provider('safepal');
+    if (eip) return eip;
     if (window.safepalProvider) return window.safepalProvider;
     if (window.safepal?.ethereum) return window.safepal.ethereum;
+    if (window.safepal && typeof window.safepal.request === 'function') return window.safepal;
     if (eth?.isSafePal) return eth;
     const safePalInProviders = providers.find((p) => p.isSafePal);
     if (safePalInProviders) return safePalInProviders;
@@ -87,18 +116,34 @@ export function detectInjectedProvider(walletName) {
   // MetaMask:
   // Must NOT be SafePal, Rabby, Trust, or Coinbase spoofing MetaMask
   if (walletName === 'MetaMask') {
+    // 1. Check EIP-6963 (Standard multi-injected provider - bypasses Rabby/SafePal override)
+    const eip = getEip6963Provider('metamask');
+    if (eip) return eip;
+
+    // 2. Check window.ethereum.providers multi-wallet array
     const metaMaskInProviders = providers.find(
       (p) => p.isMetaMask && !p.isSafePal && !p.isRabby && !p.isTrust && !p.isTrustWallet && !p.isCoinbaseWallet
     );
     if (metaMaskInProviders) return metaMaskInProviders;
+
+    // 3. Check window.ethereum directly if not spoofed
     if (eth?.isMetaMask && !eth?.isSafePal && !eth?.isRabby && !eth?.isTrust && !eth?.isCoinbaseWallet) {
       return eth;
     }
+
+    // 4. Check if window.ethereum has detected providers
+    if (eth?.detectedProviders && Array.isArray(eth.detectedProviders)) {
+      const dp = eth.detectedProviders.find((p) => p.isMetaMask && !p.isRabby && !p.isSafePal);
+      if (dp) return dp;
+    }
+
     return null;
   }
 
   // Trust Wallet:
   if (walletName === 'Trust Wallet') {
+    const eip = getEip6963Provider('trust');
+    if (eip) return eip;
     if (window.trustwallet?.Provider) return window.trustwallet.Provider;
     if (window.trustwallet) return window.trustwallet;
     if (window.trustWallet) return window.trustWallet;
@@ -110,6 +155,8 @@ export function detectInjectedProvider(walletName) {
 
   // Rabby Wallet:
   if (walletName === 'Rabby Wallet') {
+    const eip = getEip6963Provider('rabby');
+    if (eip) return eip;
     if (window.rabby) return window.rabby;
     const rabbyInProviders = providers.find((p) => p.isRabby);
     if (rabbyInProviders) return rabbyInProviders;
@@ -119,6 +166,8 @@ export function detectInjectedProvider(walletName) {
 
   // Coinbase Wallet:
   if (walletName === 'Coinbase Wallet') {
+    const eip = getEip6963Provider('coinbase');
+    if (eip) return eip;
     if (window.coinbaseWalletExtension) return window.coinbaseWalletExtension;
     const coinbaseInProviders = providers.find((p) => p.isCoinbaseWallet);
     if (coinbaseInProviders) return coinbaseInProviders;
@@ -133,7 +182,6 @@ export function detectInjectedProvider(walletName) {
   }
 
   // Generic EVM auto-detect (when no specific walletName is requested):
-  // Prefer standard ethereum over safepalProvider
   return eth || window.safepalProvider || null;
 }
 
@@ -142,6 +190,153 @@ export function detectInjectedProvider(walletName) {
  */
 export function isWalletDetected(walletName) {
   return detectInjectedProvider(walletName) !== null;
+}
+
+/**
+ * Detect all unique injected wallet providers available in the browser window
+ */
+export function getAllInjectedProviders() {
+  if (typeof window === 'undefined') return [];
+  const list = [];
+  const seen = new Set();
+
+  function add(name, provider) {
+    if (provider && typeof provider.request === 'function' && !seen.has(provider)) {
+      seen.add(provider);
+      list.push({ name, provider });
+    }
+  }
+
+  // 0. EIP-6963 announced providers (MetaMask, SafePal, Rabby, Trust, Coinbase)
+  for (const [rdns, detail] of announcedProviders.entries()) {
+    let n = detail.info?.name || 'Injected Wallet';
+    if (rdns.includes('metamask') || n.toLowerCase().includes('metamask')) n = 'MetaMask';
+    else if (rdns.includes('safepal') || n.toLowerCase().includes('safepal')) n = 'SafePal';
+    else if (rdns.includes('rabby') || n.toLowerCase().includes('rabby')) n = 'Rabby Wallet';
+    else if (rdns.includes('trust') || n.toLowerCase().includes('trust')) n = 'Trust Wallet';
+    else if (rdns.includes('coinbase') || n.toLowerCase().includes('coinbase')) n = 'Coinbase Wallet';
+    add(n, detail.provider);
+  }
+
+  // 1. SafePal dedicated
+  if (window.safepalProvider) add('SafePal', window.safepalProvider);
+  if (window.safepal?.ethereum) add('SafePal', window.safepal.ethereum);
+  if (window.safepal && typeof window.safepal.request === 'function') add('SafePal', window.safepal);
+
+  // 2. Trust Wallet dedicated
+  if (window.trustwallet?.Provider) add('Trust Wallet', window.trustwallet.Provider);
+  if (window.trustwallet && typeof window.trustwallet.request === 'function') add('Trust Wallet', window.trustwallet);
+  if (window.trustWallet && typeof window.trustWallet.request === 'function') add('Trust Wallet', window.trustWallet);
+
+  // 3. Rabby dedicated
+  if (window.rabby) add('Rabby Wallet', window.rabby);
+
+  // 4. Coinbase dedicated
+  if (window.coinbaseWalletExtension) add('Coinbase Wallet', window.coinbaseWalletExtension);
+
+  // 5. Multi-provider array (EIP-5749 / EIP-6963)
+  const eth = window.ethereum;
+  if (eth) {
+    if (Array.isArray(eth.providers)) {
+      for (const p of eth.providers) {
+        let n = 'Injected Wallet';
+        if (p.isSafePal) n = 'SafePal';
+        else if (p.isRabby) n = 'Rabby Wallet';
+        else if (p.isTrust || p.isTrustWallet) n = 'Trust Wallet';
+        else if (p.isCoinbaseWallet) n = 'Coinbase Wallet';
+        else if (p.isMetaMask) n = 'MetaMask';
+        add(n, p);
+      }
+    }
+    // Also add window.ethereum itself
+    let defaultName = 'MetaMask';
+    if (eth.isSafePal) defaultName = 'SafePal';
+    else if (eth.isRabby) defaultName = 'Rabby Wallet';
+    else if (eth.isTrust || eth.isTrustWallet) defaultName = 'Trust Wallet';
+    else if (eth.isCoinbaseWallet) defaultName = 'Coinbase Wallet';
+    add(defaultName, eth);
+  }
+
+  return list;
+}
+
+/**
+ * Find an active signer that matches targetAddress.
+ * 1. Checks all installed extensions silently (eth_accounts - ZERO popups)
+ * 2. Checks demo wallets in localStorage
+ * 3. If registered walletType is known (e.g. SafePal), requests ONLY that provider
+ * 4. NEVER blindly loops or forces MetaMask popup for other wallets!
+ */
+export async function getSignerForAddress(targetAddress, preferredWalletType = null) {
+  const normalized = targetAddress.toLowerCase();
+  const allProviders = getAllInjectedProviders();
+
+  let connectedAddresses = [];
+
+  // Step 1: SILENT DISCOVERY across all extensions (ZERO POPUPS)
+  // Check which extension currently holds this address without opening any modal
+  for (const { name, provider } of allProviders) {
+    try {
+      const bp = new ethers.BrowserProvider(provider);
+      const accounts = await bp.send('eth_accounts', []);
+      if (accounts && accounts.length > 0) {
+        connectedAddresses.push(...accounts);
+        if (accounts.some((a) => a.toLowerCase() === normalized)) {
+          try {
+            const signer = await bp.getSigner(normalized);
+            return { signer, walletType: name, provider: bp };
+          } catch (signerErr) {
+            console.warn(`[Silent getSigner on ${name} failed]`, signerErr?.message || signerErr);
+          }
+        }
+      }
+    } catch (e) {
+      // Ignore silent check errors
+    }
+  }
+
+  // Step 2: Check demo wallets in localStorage
+  const demoWallets = ['MetaMask', 'Trust Wallet', 'SafePal', 'Rabby Wallet', 'Coinbase Wallet'];
+  for (const w of demoWallets) {
+    const dw = createDemoWallet(w);
+    if (dw.address.toLowerCase() === normalized) {
+      return { signer: dw.signer, walletType: `${w} (Demo)`, provider: null, isDemo: true };
+    }
+  }
+
+  // Step 3: If target wallet type is specifically registered (e.g. SafePal, Rabby Wallet, Trust Wallet)
+  // Connect ONLY to that targeted provider. NEVER fallback to popping up MetaMask!
+  if (preferredWalletType) {
+    const targetProviderObj = detectInjectedProvider(preferredWalletType);
+    if (targetProviderObj) {
+      try {
+        const bp = new ethers.BrowserProvider(targetProviderObj);
+        const accounts = await bp.send('eth_requestAccounts', []);
+        if (accounts && accounts.length > 0) {
+          connectedAddresses.push(...accounts);
+          if (accounts.some((a) => a.toLowerCase() === normalized)) {
+            const signer = await bp.getSigner(normalized);
+            return { signer, walletType: preferredWalletType, provider: bp };
+          }
+        }
+        return {
+          signer: null,
+          connectedAddresses,
+          walletType: preferredWalletType,
+        };
+      } catch (err) {
+        console.warn(`[Request accounts on ${preferredWalletType} failed]`, err?.message || err);
+        return {
+          signer: null,
+          connectedAddresses,
+          walletType: preferredWalletType,
+          error: err,
+        };
+      }
+    }
+  }
+
+  return { signer: null, connectedAddresses };
 }
 
 /**

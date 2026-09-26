@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ethers } from 'ethers';
 import { useAuth } from '../context/AuthContext';
@@ -64,6 +64,38 @@ export default function Register() {
   const [errorMessage, setErrorMessage] = useState('');
   const [alreadyRegisteredAddress, setAlreadyRegisteredAddress] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
+  const [detectedWallets, setDetectedWallets] = useState({});
+
+  // Dynamically listen for EIP-6963 provider announcements (e.g. MetaMask, SafePal)
+  useEffect(() => {
+    let mounted = true;
+    const checkWallets = () => {
+      if (!mounted) return;
+      const detected = {};
+      for (const w of SUPPORTED_WALLETS) {
+        detected[w.name] = isWalletDetected(w.name);
+      }
+      setDetectedWallets(detected);
+    };
+
+    checkWallets();
+
+    const onAnnounce = () => {
+      setTimeout(checkWallets, 50);
+    };
+
+    window.addEventListener('eip6963:announceProvider', onAnnounce);
+    try {
+      window.dispatchEvent(new Event('eip6963:requestProvider'));
+    } catch (e) {}
+
+    const timer = setTimeout(checkWallets, 300);
+    return () => {
+      mounted = false;
+      window.removeEventListener('eip6963:announceProvider', onAnnounce);
+      clearTimeout(timer);
+    };
+  }, []);
 
   const handleConnectAndRegister = async (walletName) => {
     setConnectingWallet(walletName);
@@ -223,7 +255,7 @@ export default function Register() {
               key={wallet.id}
               wallet={wallet}
               isConnecting={connectingWallet === wallet.name}
-              isDetected={isWalletDetected(wallet.name)}
+              isDetected={Boolean(detectedWallets[wallet.name])}
               onConnect={() => handleConnectAndRegister(wallet.name)}
             />
           ))}
