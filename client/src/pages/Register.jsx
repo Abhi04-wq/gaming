@@ -87,7 +87,7 @@ export default function Register() {
     window.addEventListener('eip6963:announceProvider', onAnnounce);
     try {
       window.dispatchEvent(new Event('eip6963:requestProvider'));
-    } catch (e) {}
+    } catch (e) { }
 
     const timer = setTimeout(checkWallets, 300);
     return () => {
@@ -114,7 +114,12 @@ export default function Register() {
       const checkRes = await api.checkWallet(address);
       if (checkRes.exists) {
         setAlreadyRegisteredAddress(address);
-        setErrorMessage(`Wallet address ${shortenAddress(address)} is already registered. Please login instead.`);
+        const alertMsg = `Wallet address ${shortenAddress(address)} is already registered. Please login instead.`;
+        setErrorMessage(alertMsg);
+        setToastMessage({
+          text: alertMsg,
+          type: 'error',
+        });
         setConnectingWallet(null);
         setAuthStep(null);
         return;
@@ -138,7 +143,25 @@ export default function Register() {
         throw new Error(`Signature failed: ${sigErr.message || 'Signature request cancelled.'}`);
       }
 
-      // Step 6: Send signature, nonce, and details to Express backend with 50 starting tokens
+      // Fetch live on-chain balance from the connected wallet address (USDT ERC-20 or native coin)
+      let initialBalance = '0.00';
+      try {
+        const usdtData = await fetchLiveUsdtBalance(address, chainId).catch(() => null);
+        if (usdtData && usdtData.formatted && parseFloat(usdtData.formatted) > 0) {
+          initialBalance = usdtData.formatted;
+        } else {
+          const prov = connection.provider || connection.signer?.provider || (window.ethereum ? new ethers.BrowserProvider(window.ethereum) : null);
+          if (prov) {
+            const rawEth = await prov.getBalance(address).catch(() => 0n);
+            const numEth = parseFloat(ethers.formatEther(rawEth));
+            if (!isNaN(numEth) && numEth > 0) {
+              initialBalance = numEth.toFixed(2);
+            }
+          }
+        }
+      } catch (_) { }
+
+      // Step 6: Send signature, nonce, and details to Express backend with live wallet balance (no dummy bonus)
       setAuthStep('registering');
       const registerRes = await api.register({
         walletAddress: address,
@@ -146,7 +169,7 @@ export default function Register() {
         nonce: nonceRes.nonce,
         walletType: walletName,
         chainId,
-        usdtBalance: '50.00',
+        usdtBalance: initialBalance,
       });
 
       if (!registerRes.success) {
@@ -158,17 +181,18 @@ export default function Register() {
       loginUser(registerRes.token, registerRes.user, signer);
 
       setToastMessage({
-        text: 'Wallet connected successfully! 50 LXT welcome tokens credited.',
+        text: 'Account registered successfully! Welcome to Loyalty Game.',
         type: 'success',
       });
 
       setTimeout(() => {
         navigate('/games');
-      }, 900);
+      }, 1100);
     } catch (error) {
       console.error('[Registration Error]', error);
-      setErrorMessage(error.message || 'An unexpected error occurred during registration.');
-      setToastMessage({ text: error.message, type: 'error' });
+      const errMsg = error.message || 'An unexpected error occurred during registration.';
+      setErrorMessage(errMsg);
+      setToastMessage({ text: errMsg, type: 'error' });
     } finally {
       setConnectingWallet(null);
       setAuthStep(null);
@@ -272,3 +296,5 @@ export default function Register() {
     </div>
   );
 }
+
+

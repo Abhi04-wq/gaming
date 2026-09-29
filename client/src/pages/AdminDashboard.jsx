@@ -5,6 +5,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   getAdminSession,
+  isAdminAuthenticated,
   logoutAdmin,
   isFixedThresholdGame,
 } from '../services/adminAuthService';
@@ -54,6 +55,16 @@ import {
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const adminUser = getAdminSession();
+
+  useEffect(() => {
+    if (!isAdminAuthenticated() || !adminUser) {
+      navigate('/admin/login', { replace: true });
+    }
+  }, [navigate, adminUser]);
+
+  if (!adminUser || !isAdminAuthenticated()) {
+    return null;
+  }
 
   // Active view tab: 'overview' | 'games' | 'ledger' | 'system'
   const [activeTab, setActiveTab] = useState('overview');
@@ -956,7 +967,7 @@ export default function AdminDashboard() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                   <div>
                     <h3 style={{ margin: '0 0 4px 0', fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF' }}>
-                       Financial Flow Ratio
+                      Financial Flow Ratio
                     </h3>
                     <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.82rem' }}>
                       Real-time breakdown of player entry debits vs prize/deposit credits

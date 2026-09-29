@@ -9,8 +9,17 @@ export const getAdminConfigCredentials = () => ({
   name: 'Platform Administrator',
 });
 
-const TOKEN_KEY = 'loyalty_admin_token';
-const USER_KEY = 'loyalty_admin_user';
+const TOKEN_KEY = 'loyalty_admin_session_token';
+const USER_KEY = 'loyalty_admin_session_user';
+const EXPIRES_KEY = 'loyalty_admin_session_expires';
+
+// Immediately clear any legacy permanent localStorage tokens from older versions
+try {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('loyalty_admin_token');
+    localStorage.removeItem('loyalty_admin_user');
+  }
+} catch (_) {}
 
 /**
  * Authenticate with configured admin credentials
@@ -27,17 +36,19 @@ export async function loginAdmin(email, password) {
     trimmedEmail === adminCredentials.email.toLowerCase() &&
     trimmedPassword === adminCredentials.password
   ) {
-    // Generate a deterministic pseudo-token for the session
-    const sessionToken = 'admin_jwt_' + btoa(`${trimmedEmail}:${Date.now()}`);
+    const sessionToken = 'admin_session_' + btoa(`${trimmedEmail}:${Date.now()}`);
+    const expiresAt = Date.now() + 2 * 60 * 60 * 1000; // 2 hours active session
     const adminUser = {
       email: adminCredentials.email,
       role: adminCredentials.role,
       name: adminCredentials.name,
       loggedInAt: new Date().toISOString(),
+      expiresAt,
     };
 
-    localStorage.setItem(TOKEN_KEY, sessionToken);
-    localStorage.setItem(USER_KEY, JSON.stringify(adminUser));
+    sessionStorage.setItem(TOKEN_KEY, sessionToken);
+    sessionStorage.setItem(USER_KEY, JSON.stringify(adminUser));
+    sessionStorage.setItem(EXPIRES_KEY, String(expiresAt));
 
     return {
       success: true,
@@ -53,20 +64,36 @@ export async function loginAdmin(email, password) {
 }
 
 /**
- * Check if the admin is currently authenticated
+ * Check if the admin is currently authenticated in this browser session
  */
 export function isAdminAuthenticated() {
-  const token = localStorage.getItem(TOKEN_KEY);
-  const user = localStorage.getItem(USER_KEY);
-  return Boolean(token && user);
+  if (typeof window === 'undefined') return false;
+
+  const token = sessionStorage.getItem(TOKEN_KEY);
+  const user = sessionStorage.getItem(USER_KEY);
+  const expiresAt = sessionStorage.getItem(EXPIRES_KEY);
+
+  if (!token || !user) {
+    return false;
+  }
+
+  // Check if session has expired
+  if (expiresAt && Date.now() > Number(expiresAt)) {
+    logoutAdmin();
+    return false;
+  }
+
+  return true;
 }
 
 /**
  * Get active admin session user info
  */
 export function getAdminSession() {
+  if (typeof window === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(USER_KEY);
+    if (!isAdminAuthenticated()) return null;
+    const raw = sessionStorage.getItem(USER_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -77,8 +104,14 @@ export function getAdminSession() {
  * Clear admin session
  */
 export function logoutAdmin() {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
+  if (typeof window === 'undefined') return;
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(USER_KEY);
+  sessionStorage.removeItem(EXPIRES_KEY);
+  try {
+    localStorage.removeItem('loyalty_admin_token');
+    localStorage.removeItem('loyalty_admin_user');
+  } catch (_) {}
 }
 
 /**

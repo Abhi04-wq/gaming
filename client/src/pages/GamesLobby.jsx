@@ -54,29 +54,30 @@ import {
 // Shared game catalog (also used by the /play/:gameId page)
 export const GAME_CATALOG = [
   {
-    id: 'valley-of-terror',
-    gzCode: 'B1jZWUoXUIe',
-    title: 'Valley of Terror',
+    id: 'traffic-command',
+    gzCode: 'SykGDfUKOkg',
+    title: 'Loyalty Racing',
     category: 'originals',
-    categoryLabel: 'Zombie FPS / Action',
-    tag: 'HOT',
-    tagColor: '#FF5252',
-    maxWin: '5,000x',
-    rtp: '98.9%',
-    players: '4,620',
-    description: 'First-person zombie survival shooter. Eliminate oncoming undead hordes, manage your ammunition, and defend your town bunker!',
-    coverUrl: 'https://static.gamezop.com/B1jZWUoXUIe/wall.png',
-    logoUrl: 'https://static.gamezop.com/B1jZWUoXUIe/square.png',
+    categoryLabel: 'High-Speed Traffic & Arcade Racing',
+    tag: 'POPULAR',
+    tagColor: '#00E676',
+    maxWin: '3,800x',
+    rtp: '99.4%',
+    players: '16,280',
+    description: 'Fast-paced traffic racing and crossroads control! Direct speeding vehicles, switch traffic signals, and avoid collisions.',
+    coverUrl: 'https://static.gamezop.com/SykGDfUKOkg/wall.png',
+    logoUrl: 'https://static.gamezop.com/SykGDfUKOkg/square.png',
     screenshots: [
-      { title: 'Zombie Horde Onslaught', url: 'https://static.gamezop.com/B1jZWUoXUIe/game-1.png' },
-      { title: 'First-Person Crosshair Aim', url: 'https://static.gamezop.com/B1jZWUoXUIe/game-2.png' },
-      { title: 'Bunker Defense Showdown', url: 'https://static.gamezop.com/B1jZWUoXUIe/game-3.png' },
-      { title: 'Valley of Terror Artwork', url: 'https://static.gamezop.com/B1jZWUoXUIe/wall.png' },
+      { title: 'Crossroad Intersection Rush Hour', url: 'https://static.gamezop.com/SykGDfUKOkg/wall.png' },
+      { title: 'Signal Light Control & Speed Boost', url: 'https://static.gamezop.com/SykGDfUKOkg/game-1.png' },
+      { title: 'High-Speed Junction Multiplier Flow', url: 'https://static.gamezop.com/SykGDfUKOkg/game-2.png' },
+      { title: 'Loyalty Racing HD Square Artwork', url: 'https://static.gamezop.com/SykGDfUKOkg/square.png' },
     ],
     videoDuration: '0:45',
-    videoTeaser: 'Zombie Wave Survival & Precision Headshot Streak',
-    playableType: 'valleyofterror',
+    videoTeaser: 'Crossroad Intersection Signal Timing & Multi-Car Flow Command',
+    playableType: 'generic',
   },
+  /*
   {
     id: 'bottle-shoot',
     gzCode: 'B1fSpMkP51m',
@@ -101,10 +102,11 @@ export const GAME_CATALOG = [
     videoTeaser: 'Rapid-Fire Bottle Shatter & Bullseye Shooting Streak',
     playableType: 'bottleshoot',
   },
+  */
   {
     id: 'chess-grandmaster',
     gzCode: 'rkAXTzkD5kX',
-    title: 'Chess Grandmaster',
+    title: 'Loyalty Chess',
     category: 'table',
     categoryLabel: 'Strategy Board',
     tag: 'VIP',
@@ -112,7 +114,7 @@ export const GAME_CATALOG = [
     maxWin: '250x',
     rtp: '99.6%',
     players: '1,890',
-    description: 'Master the 64-square battlefield with grandmaster engine heuristics. Challenge players or top AI bots.',
+    description: 'Fast paced chess and strategy game',
     coverUrl: 'https://static.gamezop.com/rkAXTzkD5kX/wall.png',
     logoUrl: 'https://static.gamezop.com/rkAXTzkD5kX/square.png',
     screenshots: [
@@ -127,7 +129,7 @@ export const GAME_CATALOG = [
   {
     id: 'ludo-with-friends',
     gzCode: 'SkhljT2fdgb',
-    title: 'Play With Friends Ludo',
+    title: 'Loyalty Ludo',
     category: 'table',
     categoryLabel: 'Board / Multiplayer',
     tag: 'MULTIPLAYER',
@@ -135,7 +137,7 @@ export const GAME_CATALOG = [
     maxWin: '250x',
     rtp: '99.5%',
     players: '5,120',
-    description: 'Classic 4-player board game. Roll the dice, deploy pawns on 6, capture enemy pawns, and race home to claim the pool jackpot.',
+    description: 'Classic board strategy game',
     coverUrl: '/games/ludo/gameplay.png',
     logoUrl: '/games/ludo/logo.png',
     screenshots: [
@@ -147,11 +149,17 @@ export const GAME_CATALOG = [
     videoDuration: '1:10',
     videoTeaser: 'Live 4-Player Ludo Tournament & Pawn Knockout',
     playableType: 'native-ludo',
+    entryPool: '5.00',
+    prizePool: '10.00',
+    ludo2pEntryPool: '5.00',
+    ludo2pPrizePool: '10.00',
+    ludo4pEntryPool: '20.00',
+    ludo4pPrizePool: '70.00',
   },
   {
     id: 'sudoku-classic',
     gzCode: 'SJgx126Qc0H',
-    title: 'Sudoku Classic',
+    title: 'Loyalty Puzzle Verse',
     category: 'originals',
     categoryLabel: 'Brain / Logic',
     tag: 'PROVABLE',
@@ -159,7 +167,7 @@ export const GAME_CATALOG = [
     maxWin: '350x',
     rtp: '99.0%',
     players: '1,240',
-    description: 'Challenge your mental prowess with 9x9 Japanese number puzzles across Easy, Medium, and Expert master tiers.',
+    description: 'Competitive puzzle challenge',
     coverUrl: 'https://static.gamezop.com/SJgx126Qc0H/wall.png',
     logoUrl: 'https://static.gamezop.com/SJgx126Qc0H/square.png',
     screenshots: [
@@ -172,48 +180,48 @@ export const GAME_CATALOG = [
     playableType: 'generic',
   },
   {
-    id: 'shade-shuffle',
-    gzCode: 'SyFcNzAX6',
-    title: 'Shade Shuffle',
+    id: 'hex-burst',
+    gzCode: 'H1abja2M_eb',
+    title: 'Loyalty Mindrush',
     category: 'originals',
-    categoryLabel: 'Arcade / Reflex & Color',
-    tag: 'POPULAR',
-    tagColor: '#00E676',
-    maxWin: '3,200x',
-    rtp: '99.1%',
-    players: '5,140',
-    description: 'Balance and rotate dual color wheels to match cascading cosmic meteors. Test your lightning reflexes and build massive combo streaks!',
-    coverUrl: 'https://static.gamezop.com/SyFcNzAX6/wall.png',
-    logoUrl: 'https://static.gamezop.com/SyFcNzAX6/square.png',
+    categoryLabel: 'Strategy / Math & Reflex Arcade',
+    tag: 'HOT',
+    tagColor: '#FFB300',
+    maxWin: '4,200x',
+    rtp: '99.3%',
+    players: '9,150',
+    description: 'Fast paced brain and reaction game',
+    coverUrl: 'https://static.gamezop.com/H1abja2M_eb/wall.png',
+    logoUrl: 'https://static.gamezop.com/H1abja2M_eb/square.png',
     screenshots: [
-      { title: 'Dual Neon Wheel Rotation', url: 'https://static.gamezop.com/SyFcNzAX6/game-1.png' },
-      { title: 'Color Match Pulse Frenzy', url: 'https://static.gamezop.com/SyFcNzAX6/game-2.png' },
-      { title: 'High-Speed Orbit Reflexes', url: 'https://static.gamezop.com/SyFcNzAX6/game-3.png' },
-      { title: 'Shade Shuffle HD Artwork', url: 'https://static.gamezop.com/SyFcNzAX6/wall.png' },
+      { title: 'Hexagon Number Smash', url: 'https://static.gamezop.com/H1abja2M_eb/game-1.png' },
+      { title: 'Piercing Arrow Chain Boost', url: 'https://static.gamezop.com/H1abja2M_eb/game-2.png' },
+      { title: 'High-Density Hex Grid Frenzy', url: 'https://static.gamezop.com/H1abja2M_eb/game-3.png' },
+      { title: 'Loyalty Mindrush HD Artwork', url: 'https://static.gamezop.com/H1abja2M_eb/wall.png' },
     ],
     videoDuration: '0:35',
-    videoTeaser: 'Neon Wheel Rotation & Perfect Color Match Combo Frenzy',
-    playableType: 'shadeshuffle',
+    videoTeaser: 'Chain Hexagon Shatter & High-Multiplier Arrow Blitz',
+    playableType: 'generic',
   },
   {
     id: 'word-finder',
     gzCode: 'r1K-J3TQ5Ar',
-    title: 'Word Finder',
+    title: 'Loyalty Quiz',
     category: 'originals',
-    categoryLabel: 'Word Puzzle / Logic',
+    categoryLabel: 'Knowledge & Trivia / Word Puzzle',
     tag: 'PROVABLE',
     tagColor: '#00E676',
     maxWin: '2,500x',
     rtp: '99.3%',
     players: '4,890',
-    description: 'Sharpen your mind and uncover hidden words in dynamic letter grids. Connect adjacent letters, hunt down thematic vocabulary, and claim high-score multipliers!',
+    description: 'Knowledge and trivia game',
     coverUrl: 'https://static.gamezop.com/r1K-J3TQ5Ar/wall.png',
     logoUrl: 'https://static.gamezop.com/r1K-J3TQ5Ar/square.png',
     screenshots: [
       { title: 'Letter Grid Word Matrix', url: 'https://static.gamezop.com/r1K-J3TQ5Ar/game-1.png' },
       { title: 'Omnidirectional Word Trace', url: 'https://static.gamezop.com/r1K-J3TQ5Ar/game-2.png' },
       { title: 'Thematic Word Unveil', url: 'https://static.gamezop.com/r1K-J3TQ5Ar/game-3.png' },
-      { title: 'Word Finder HD Artwork', url: 'https://static.gamezop.com/r1K-J3TQ5Ar/wall.png' },
+      { title: 'Loyalty Quiz HD Artwork', url: 'https://static.gamezop.com/r1K-J3TQ5Ar/wall.png' },
     ],
     videoDuration: '0:42',
     videoTeaser: 'Word Search Grid Solving & Consecutive Word Find Blitz',
@@ -222,7 +230,7 @@ export const GAME_CATALOG = [
   {
     id: 'carrom-hero',
     gzCode: 'H1Hgyn6XqAS',
-    title: 'Carrom Hero',
+    title: 'Loyalty Carrom',
     category: 'table',
     categoryLabel: 'Board / Strategy Duel',
     tag: 'VIP',
@@ -230,35 +238,112 @@ export const GAME_CATALOG = [
     maxWin: '4,000x',
     rtp: '99.4%',
     players: '7,920',
-    description: 'The premier online Carrom showdown! Strike, pocket carrom men, sink the Queen with cover, and conquer rivals across Freestyle and Professional modes.',
+    description: 'Classical board game',
     coverUrl: 'https://static.gamezop.com/H1Hgyn6XqAS/wall.png',
     logoUrl: 'https://static.gamezop.com/H1Hgyn6XqAS/square.png',
     screenshots: [
       { title: 'Classic Board Striker Setup', url: 'https://static.gamezop.com/H1Hgyn6XqAS/game-1.png' },
       { title: 'Queen Pocket & Cover Aim', url: 'https://static.gamezop.com/H1Hgyn6XqAS/game-2.png' },
       { title: 'Freestyle Tournament Arena', url: 'https://static.gamezop.com/H1Hgyn6XqAS/game-3.png' },
-      { title: 'Carrom Hero HD Artwork', url: 'https://static.gamezop.com/H1Hgyn6XqAS/wall.png' },
+      { title: 'Loyalty Carrom HD Artwork', url: 'https://static.gamezop.com/H1Hgyn6XqAS/wall.png' },
     ],
     videoDuration: '0:45',
     videoTeaser: 'Carrom Hero Master Trick Shots & Queen Cover Pocket Blitz',
     playableType: 'carrom',
   },
+  {
+    id: 'shape-smash',
+    gzCode: 'B1PfyhpQ5Ar',
+    title: 'Loyalty Bubble',
+    category: 'originals',
+    categoryLabel: 'Arcade / Bubble & Rebound Puzzle',
+    tag: 'HOT',
+    tagColor: '#38BDF8',
+    maxWin: '3,500x',
+    rtp: '99.2%',
+    players: '11,450',
+    description: 'Launch bouncy spheres to shatter colorful bubble shapes and geometric targets with high-multiplier ricochet combos!',
+    coverUrl: 'https://static.gamezop.com/B1PfyhpQ5Ar/wall.png',
+    logoUrl: 'https://static.gamezop.com/B1PfyhpQ5Ar/square.png',
+    screenshots: [
+      { title: 'Loyalty Bubble Launch Arena', url: 'https://static.gamezop.com/B1PfyhpQ5Ar/wall.png' },
+      { title: 'Geometric Rebound Combo', url: 'https://static.gamezop.com/B1PfyhpQ5Ar/game-1.png' },
+      { title: 'Multi-Ball Chain Blitz', url: 'https://static.gamezop.com/B1PfyhpQ5Ar/square.png' },
+    ],
+    videoDuration: '0:40',
+    videoTeaser: 'Precision Angle Launch & Multi-Hit Geometric Ricochet',
+    playableType: 'generic',
+  },
+  {
+    id: 'slide-and-divide',
+    gzCode: 'PLQTtp9Ei',
+    title: 'Loyalty MemoryX',
+    category: 'originals',
+    categoryLabel: 'Puzzle / Memory & Strategy',
+    tag: 'POPULAR',
+    tagColor: '#38BDF8',
+    maxWin: '2,900x',
+    rtp: '99.4%',
+    players: '7,820',
+    description: 'Slide number tiles across the grid, match divisors, and test your memory and strategic problem-solving skills.',
+    coverUrl: 'https://static.gamezop.com/PLQTtp9Ei/wall.png',
+    logoUrl: 'https://static.gamezop.com/PLQTtp9Ei/square.png',
+    screenshots: [
+      { title: 'Sliding Tile Board Setup', url: 'https://static.gamezop.com/PLQTtp9Ei/game-1.png' },
+      { title: 'Number Division Chain Reaction', url: 'https://static.gamezop.com/PLQTtp9Ei/game-2.png' },
+      { title: 'High-Score Grid Solution', url: 'https://static.gamezop.com/PLQTtp9Ei/game-3.png' },
+      { title: 'Loyalty MemoryX HD Artwork', url: 'https://static.gamezop.com/PLQTtp9Ei/wall.png' },
+    ],
+    videoDuration: '0:40',
+    videoTeaser: 'Smooth Tile Sliding & Dynamic Number Division Combo',
+    playableType: 'generic',
+  },
+  {
+    id: 'hill-top-tanks',
+    gzCode: 'Cg8EBuMp7',
+    title: 'Loyalty Shooting',
+    category: 'originals',
+    categoryLabel: 'Artillery Duel / Action Target Shooting',
+    tag: 'ACTION',
+    tagColor: '#FF5722',
+    maxWin: '4,500x',
+    rtp: '99.3%',
+    players: '9,820',
+    description: 'Action based target and shooting game',
+    coverUrl: 'https://static.gamezop.com/Cg8EBuMp7/wall.png',
+    logoUrl: 'https://static.gamezop.com/Cg8EBuMp7/square.png',
+    screenshots: [
+      { title: 'Desert Canyon Artillery Duel', url: 'https://static.gamezop.com/Cg8EBuMp7/wall.png' },
+      { title: 'Trajectory Angle & Power Calibration', url: 'https://static.gamezop.com/Cg8EBuMp7/game-1.png' },
+      { title: 'Explosive Shell Direct Impact', url: 'https://static.gamezop.com/Cg8EBuMp7/game-2.png' },
+      { title: 'Loyalty Shooting HD Square Artwork', url: 'https://static.gamezop.com/Cg8EBuMp7/square.png' },
+    ],
+    videoDuration: '0:45',
+    videoTeaser: 'Desert Tank Artillery Duel & Trajectory Shell Blast',
+    playableType: 'generic',
+  },
 ].map((game) => {
   const youtubeMap = {
-    'valley-of-terror': '1O6QstnCpnc',
+    'hill-top-tanks': '0kF1_PZ-39I',
+    'shape-smash': '0kF1_PZ-39I',
+    'guess-the-flag': '0kF1_PZ-39I',
     'bottle-shoot': '1O6QstnCpnc',
     'fruit-chop': 'M8Xog3seOU8',
     'ludo-with-friends': 'Q0F6a3Z9Kxk',
     'ludo-dash': 'Q0F6a3Z9Kxk',
     'chess-grandmaster': 'qM2_96N6c6o',
     'sudoku-classic': 'cZ6YvY-c2wU',
-    'shade-shuffle': 'p5-C3LCCkfM',
+    'hex-burst': 'p5-C3LCCkfM',
     'bubble-shooter-classic': '1O6QstnCpnc',
     'word-finder': '0kF1_PZ-39I',
     'spell-wizard': '0kF1_PZ-39I',
     'carrom-hero': 'HJ8SnM_3Tnp',
     'carrom': 'HJ8SnM_3Tnp',
     'tic-tac-toe': 'HJ8SnM_3Tnp',
+    'traffic-command': '0kF1_PZ-39I',
+    'road-safety': '0kF1_PZ-39I',
+    'furious-speed': '0kF1_PZ-39I',
+    'slide-and-divide': '0kF1_PZ-39I',
   };
 
   const yId = youtubeMap[game.id] || 'p5-C3LCCkfM';
@@ -276,11 +361,11 @@ export const GAME_CATALOG = [
       game.screenshots && game.screenshots.length > 0
         ? game.screenshots
         : [
-            { title: `${game.title} - Official In-Game Gameplay Screen 1`, url: `https://static.gamezop.com/${game.gzCode}/game-1.png` },
-            { title: `${game.title} - Official In-Game Gameplay Screen 2`, url: `https://static.gamezop.com/${game.gzCode}/game-2.png` },
-            { title: `${game.title} - Official In-Game Gameplay Screen 3`, url: `https://static.gamezop.com/${game.gzCode}/game-3.png` },
-            { title: `${game.title} - Official HD Wallpaper Artwork`, url: `https://static.gamezop.com/${game.gzCode}/wall.png` },
-          ],
+          { title: `${game.title} - Official In-Game Gameplay Screen 1`, url: `https://static.gamezop.com/${game.gzCode}/game-1.png` },
+          { title: `${game.title} - Official In-Game Gameplay Screen 2`, url: `https://static.gamezop.com/${game.gzCode}/game-2.png` },
+          { title: `${game.title} - Official In-Game Gameplay Screen 3`, url: `https://static.gamezop.com/${game.gzCode}/game-3.png` },
+          { title: `${game.title} - Official HD Wallpaper Artwork`, url: `https://static.gamezop.com/${game.gzCode}/wall.png` },
+        ],
   };
 });
 
@@ -295,37 +380,123 @@ export const getGamePlayPath = (game) => `/play/${game?.id || 'ludo-dash'}`;
 
 // Comprehensive Game-Specific Rules, Mechanics, Scoring & Pro Tips Database
 const GAME_RULES = {
-  'valley-of-terror': {
-    genre: 'First-Person Zombie Survival Shooter',
-    objective: 'Defend your town bunker against relentless waves of encroaching zombies, timing accurate shots and tactical reloads.',
-    controls: 'Left Click or Tap on screen to aim and shoot zombies. Click the Reload button when ammunition runs dry.',
+  'traffic-command': {
+    genre: 'City Intersection Strategy & Traffic Management Arcade',
+    objective: 'Direct traffic through chaotic city crossroads by switching traffic lights. Prevent vehicle pileups, speed up stalled cars, and maintain smooth multi-lane traffic flow.',
+    controls: 'Click or tap traffic lights at junctions to change signals (Red/Green) or click cars to give them a quick acceleration boost.',
     rules: [
       {
-        title: 'Wave-Based Undead Assault',
-        desc: 'Zombies advance from the foggy ruins toward your bunker perimeter. Eliminate them before they breach your barricade.',
+        title: 'Signal Light Control',
+        desc: 'Switch junction traffic lights between red and green to clear queues and avert cross-traffic collisions.',
       },
       {
-        title: 'Critical Headshot Accuracy',
-        desc: 'Aim directly for the zombies\' heads to score instant one-shot eliminations and build consecutive hit-streak multipliers.',
+        title: 'Vehicle Speed Boost',
+        desc: 'Tap moving vehicles to accelerate them across the intersection before crossing lanes open.',
       },
       {
-        title: 'Ammunition & Tactical Reloading',
-        desc: 'Your handgun has limited magazine capacity. Monitor your round count and reload during pauses between zombie waves.',
+        title: 'Rush Hour Congestion',
+        desc: 'Do not let vehicle lines back up past entry borders or road gridlock will trigger round failure.',
       },
       {
-        title: 'Survival Multiplier Escalation',
-        desc: 'Surviving consecutive zombie waves without sustaining barrier damage increases your win multiplier up to 5,000x.',
+        title: 'Zero Collision Milestone',
+        desc: 'Guide the required number of vehicles safely through intersections to surpass the threshold score.',
       },
     ],
     scoring: [
-      { label: 'Zombie Kill', value: '+150 pts (1.0x)' },
-      { label: 'Headshot Critical', value: '+350 pts (2.5x)' },
-      { label: 'Wave Clear Bonus', value: '+1,000 pts' },
-      { label: 'Perimeter Breach', value: '-1 Life Strike' },
+      { label: 'Safe Car Crossing', value: '+100 pts' },
+      { label: 'Intersection Flow Combo', value: '+250 pts' },
+      { label: 'No-Stall Rush Bonus', value: '+500 pts' },
+      { label: 'Intersection Crash', value: 'Game Over' },
     ],
     proTips: [
-      'Prioritize fast-sprinting zombies closest to your bunker before targeting distant slow walkers.',
-      'Reload preemptively when you have 1-2 bullets remaining rather than waiting for an empty chamber during a zombie swarm.',
+      'Give priority to lanes that have long lines forming to prevent vehicles spilling past the screen margin.',
+      'Tap cars right as they enter the junction box to quickly clear lanes before oncoming traffic arrives.',
+    ],
+  },
+  'road-safety': {
+    genre: 'City Traffic Reflex & Road Crossing Arcade',
+    objective: 'Safely guide pedestrians across busy city roads without anyone getting struck by passing vehicles.',
+    controls: 'Click or tap on waiting pedestrians at the crosswalk curb to send them crossing.',
+    rules: [
+      {
+        title: 'Traffic Gap Timing',
+        desc: 'Observe the speed and density of incoming vehicles before launching pedestrians across zebra crossings.',
+      },
+      {
+        title: 'Zero Incident Victory',
+        desc: 'Reach the round threshold score safely to claim the prize pool.',
+      },
+    ],
+    scoring: [
+      { label: 'Safe Crossing', value: '+100 pts' },
+      { label: 'Traffic Collision', value: 'Game Over' },
+    ],
+    proTips: ['Watch for slower-moving heavy vans and buses that create long shadows or gaps behind them.'],
+  },
+  'shape-smash': {
+    genre: 'Arcade Physics & Rebound Puzzle',
+    objective: 'Aim and fire bouncy spheres at numbered geometric blocks underwater. Chip away block durability with ricochets and clear the board before shapes reach the bottom baseline.',
+    controls: 'Click/drag or touch and pull back to set your trajectory aiming guide, then release to fire a volley of spheres.',
+    rules: [
+      {
+        title: 'Geometric Rebound Trajectory',
+        desc: 'Bank your shots off the sidewalls to squeeze spheres behind dense clusters of blocks for cascading chain-reaction hits.',
+      },
+      {
+        title: 'Durability Counter Countdown',
+        desc: 'Each block displays a number indicating how many hits it requires. Reduce every block counter to 0 to destroy it.',
+      },
+      {
+        title: 'Multi-Ball Power-Ups',
+        desc: 'Collect glowing white sphere tokens on the playfield to permanently increase the number of balls fired in every round.',
+      },
+      {
+        title: 'Threshold Victory Condition',
+        desc: 'Score points with every block hit and destruction. Exceed the target score threshold to secure the prize pool.',
+      },
+    ],
+    scoring: [
+      { label: 'Block Hit', value: '+10 pts per ricochet' },
+      { label: 'Block Shattered', value: '+100 pts' },
+      { label: 'Multi-Ball Clear Combo', value: '+500 pts Bonus' },
+      { label: 'Bottom Baseline Breach', value: 'Game Over' },
+    ],
+    proTips: [
+      'Aim for acute bank shots near top walls so the balls get trapped in the upper rows, creating dozens of bounces automatically.',
+      'Prioritize aiming at extra ball power-ups early in the game to build a massive cannon volley.',
+    ],
+  },
+  'guess-the-flag': {
+    genre: 'World Geography Trivia & IQ Challenge',
+    objective: 'Identify country flags accurately and rapidly. Maintain an unbroken streak of correct answers under escalating time pressure to reach peak multipliers.',
+    controls: 'Click or tap on the correct country name from the multiple-choice options before the timer runs out.',
+    rules: [
+      {
+        title: 'Single-Strike Precision',
+        desc: 'One incorrect guess ends your streak! Every choice requires precision and quick geographical recall.',
+      },
+      {
+        title: 'Speed Streak Multipliers',
+        desc: 'Answering correctly within the first few seconds awards speed multipliers and powers up your consecutive streak points.',
+      },
+      {
+        title: 'Global Flag Variety',
+        desc: 'Encounter flags from Europe, Asia, Africa, the Americas, and Oceania with increasing difficulty as your round advances.',
+      },
+      {
+        title: 'Threshold Victory Condition',
+        desc: 'Achieve the target score threshold before making a mistake to unlock and secure the round prize pool.',
+      },
+    ],
+    scoring: [
+      { label: 'Correct Flag Guess', value: '+100 pts' },
+      { label: 'Quick Response Bonus', value: '+50 pts (under 3s)' },
+      { label: '5-in-a-Row Streak', value: '+300 pts Bonus' },
+      { label: 'Wrong Answer', value: 'Streak Reset / Over' },
+    ],
+    proTips: [
+      'Look for distinctive emblems, star patterns, and color striping (tricolors) to rapidly differentiate similar national flags.',
+      'Trust your initial instinct—hesitation wastes your quick-answer time multiplier bonus.',
     ],
   },
   'bottle-shoot': {
@@ -494,37 +665,37 @@ const GAME_RULES = {
       'Use pencil notes for cells that have only 2 possible candidates (pairs). This reveals naked pairs that eliminate possibilities elsewhere.',
     ],
   },
-  'shade-shuffle': {
-    genre: 'Fast-Paced Color Matching & Reflex Arcade',
-    objective: 'Rotate dual neon wheel segments to match the hue of oncoming descending cosmic orbs before collision, surviving escalating orbit speeds.',
-    controls: 'Click or tap left/right halves of the screen (or use arrow keys / swipe) to rotate the matching colored segments into position.',
+  'hex-burst': {
+    genre: 'Hyper-Casual Strategy & Reflex Arcade',
+    objective: 'Guide your arrow chain to smash through numbered hexagonal blocks, collecting extra piercing arrows while avoiding running your chain count down to zero.',
+    controls: 'Click and drag / slide mouse or finger left and right to steer your arrow chain across the board.',
     rules: [
       {
-        title: 'Color Wheel Alignment',
-        desc: 'Incoming colored orbs plunge toward the central hub. Rotate wheel segments so the matching color absorbs the falling orb.',
+        title: 'Numbered Hexagon Demolition',
+        desc: 'Each hexagon displays the number of hits required to burst it. Your chain decreases by that number as you pass through.',
       },
       {
-        title: 'Combo Streak Multipliers',
-        desc: 'Successfully absorbing consecutive orbs without a miscue raises your multiplier gauge from 1.0x up to 3,200x.',
+        title: 'Collect Arrow Upgrades',
+        desc: 'Pick up glowing purple triangles along the pathway to expand your arrow count and sustain your chain for heavy blocks.',
       },
       {
-        title: 'Escalating Orbit Velocity',
-        desc: 'As your score climbs, orbs spawn faster and alternate drop angles, requiring split-second reaction times.',
+        title: 'Low-Number Pathfinding',
+        desc: 'Always steer toward hexagons with lower numbers when your arrow supply is low to survive bottlenecks.',
       },
       {
-        title: 'Color Mismatch Game Over',
-        desc: 'Allowing an orb to collide with a mismatching color segment shatters the wheel and ends the current round.',
+        title: 'Threshold Score Target',
+        desc: 'Burst consecutive high-value hex clusters and clear rows to exceed the score threshold and secure the pool rewards.',
       },
     ],
     scoring: [
-      { label: 'Correct Color Match', value: '+50 pts' },
-      { label: '5x Clean Streak', value: '+250 pts Combo' },
-      { label: '10x Speed Frenzy', value: '+1,000 pts (3.0x)' },
-      { label: 'Color Mismatch', value: 'Round Over' },
+      { label: 'Hexagon Burst (per point)', value: '+10 pts' },
+      { label: 'Triangle Collected', value: '+25 pts' },
+      { label: 'Cluster Demolition Bonus', value: '+200 pts' },
+      { label: 'Arrow Depleted (0 count)', value: 'Game Over' },
     ],
     proTips: [
-      'Keep your eyes fixed slightly above the wheel rim so you can anticipate the color order of approaching orbs early.',
-      'Develop a steady double-tap rhythm to quickly flip opposite color segments with minimal delay.',
+      'Look ahead 2 to 3 rows down the track to anticipate impassable walls and guide your chain toward the lowest-numbered block.',
+      'Prioritize collecting arrow pick-ups even if it requires a slight swerve, as arrow count is your lifeline.',
     ],
   },
   'word-finder': {
@@ -626,13 +797,132 @@ const GAME_RULES = {
       'Never pocket the Queen unless you have a straightforward, high-probability cover shot lined up for the next turn.',
     ],
   },
+  'furious-speed': {
+    genre: 'High-Octane Highway Pursuit & Racing',
+    objective: 'Race your muscle car down crowded highways as far as possible, dodging police patrols and civilian traffic while racking up distance and drift multipliers.',
+    controls: 'Press Left / Right arrows or swipe left / right on screen to switch lanes and dodge traffic.',
+    rules: [
+      {
+        title: 'High-Speed Traffic Navigation',
+        desc: 'Weave through lanes to overtake civilian cars and avoid collisions that drastically reduce speed.',
+      },
+      {
+        title: 'Police Pursuit Evasion',
+        desc: 'Evade aggressive police cruisers attempting to corner your vehicle and cause a crash.',
+      },
+      {
+        title: 'Near-Miss Multipliers',
+        desc: 'Skimming closely past traffic without touching triggers near-miss speed boost bonuses.',
+      },
+      {
+        title: 'Survival Distance Jackpot',
+        desc: 'Survive longer distances at peak speeds to exceed the score threshold and secure the pool payout.',
+      },
+    ],
+    scoring: [
+      { label: 'Distance Traveled', value: '+10 pts / 100m' },
+      { label: 'Near-Miss Overtake', value: '+150 pts' },
+      { label: 'Police Evasion Streak', value: '+500 pts Bonus' },
+      { label: 'Head-On Crash', value: 'Game Over' },
+    ],
+    proTips: [
+      'Anticipate traffic openings by looking 2 cars ahead rather than focusing on the bumper directly in front.',
+      'Feint to one lane to draw pursuing police cars before swiftly darting into an open opposite lane.',
+    ],
+  },
+  'slide-and-divide': {
+    genre: 'Brain Teaser Math & Sliding Tile Puzzle',
+    objective: 'Slide number tiles across the grid, positioning them strategically to divide numbers evenly and clear the board before moves run out.',
+    controls: 'Click and drag / swipe tiles up, down, left, or right into adjacent empty slots on the grid.',
+    rules: [
+      {
+        title: 'Tile Sliding Mechanics',
+        desc: 'Move numbered tiles across the board into free spaces to line up compatible divisors.',
+      },
+      {
+        title: 'Even Division Clears',
+        desc: 'Dividing numbers evenly without remainders merges and eliminates tiles, freeing valuable board space.',
+      },
+      {
+        title: 'Cascade Chain Reactions',
+        desc: 'Setting up cascading chain divisions awards massive combo multipliers and bonus scores.',
+      },
+      {
+        title: 'Threshold Score Milestone',
+        desc: 'Accumulate target points by executing clean division streaks to reach the threshold score.',
+      },
+    ],
+    scoring: [
+      { label: 'Clean Division', value: '+100 pts' },
+      { label: 'Chain Combo (2x+)', value: '+250 pts' },
+      { label: 'Board Clear Milestone', value: '+1,000 pts' },
+      { label: 'No Valid Moves', value: 'Round Over' },
+    ],
+    proTips: [
+      'Keep your highest-value tiles near the corners so they do not obstruct mid-board sliding pathways.',
+      'Plan your divisor tiles 1-2 moves in advance so incoming tiles can immediately be factored.',
+    ],
+  },
+  'hill-top-tanks': {
+    genre: 'Artillery Duel & Desert Tank Battle Arcade',
+    objective: 'Calculate firing angles and shell velocity to bombard enemy tanks across cliffs and canyon chasms. Destroy opposing tanks before their artillery zeros in on your position.',
+    controls: 'Drag to adjust cannon elevation and launch power. Release to fire artillery shells across the battlefield.',
+    rules: [
+      {
+        title: 'Ballistic Arc Calculation',
+        desc: 'Estimate wind resistance and gravity trajectory arcs to accurately lob shells onto enemy positions.',
+      },
+      {
+        title: 'Terrain Destruction',
+        desc: 'Shell blasts deform desert terrain, altering cover elevations and changing shot trajectories.',
+      },
+      {
+        title: 'Critical Direct Hits',
+        desc: 'Score direct hits on enemy armor hulls for devastating critical damage multipliers.',
+      },
+      {
+        title: 'Target Score Threshold',
+        desc: 'Eliminate incoming waves of armored rival tanks and score enough points to beat the prize threshold.',
+      },
+    ],
+    scoring: [
+      { label: 'Direct Tank Hit', value: '+200 pts' },
+      { label: 'Long-Range Ballistic Snipe', value: '+350 pts' },
+      { label: 'Armor Obliteration Bonus', value: '+500 pts' },
+      { label: 'Tank Destroyed', value: 'Round Over' },
+    ],
+    proTips: [
+      'Use initial sighting shots to calibrate distance; adjust angle slightly if your shot falls short or overshoots.',
+      'Target the terrain beneath enemy tanks to send them sliding down into canyon crevices.',
+    ],
+  },
 };
 
 export default function GamesLobby() {
   const { user, updateBalance } = useAuth();
   const navigate = useNavigate();
 
-  const [isPageLoading, setIsPageLoading] = useState(true);
+  const [isPageLoading, setIsPageLoading] = useState(() => {
+    try {
+      if (typeof window !== 'undefined' && sessionStorage.getItem('loyalty_lobby_loaded') === 'true') {
+        return false;
+      }
+    } catch (_) { }
+    return true;
+  });
+
+  // Safety fallback: ensure page loader never gets stuck
+  useEffect(() => {
+    if (isPageLoading) {
+      const timer = setTimeout(() => {
+        setIsPageLoading(false);
+        try {
+          sessionStorage.setItem('loyalty_lobby_loaded', 'true');
+        } catch (_) { }
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [isPageLoading]);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('popular');
@@ -667,18 +957,18 @@ export default function GamesLobby() {
     let cancelled = false;
     fetchGameConfigs()
       .then((cfg) => { if (!cancelled) setGameConfigs(cfg); })
-      .catch(() => {});
+      .catch(() => { });
     let sock = null;
-    try { sock = getLudoSocket(); } catch (_) {}
+    try { sock = getLudoSocket(); } catch (_) { }
     const onCfg = () => {
       fetchGameConfigs()
         .then((cfg) => { if (!cancelled) setGameConfigs(cfg); })
-        .catch(() => {});
+        .catch(() => { });
     };
     if (sock) sock.on('game-config:updated', onCfg);
     return () => {
       cancelled = true;
-      try { sock?.off('game-config:updated', onCfg); } catch (_) {}
+      try { sock?.off('game-config:updated', onCfg); } catch (_) { }
     };
   }, []);
 
@@ -840,7 +1130,7 @@ export default function GamesLobby() {
       let msgJson = '';
       try {
         msgJson = typeof event.data === 'object' && event.data !== null ? JSON.stringify(event.data).toLowerCase() : '';
-      } catch (_) {}
+      } catch (_) { }
 
       if (msgStr.includes('challenge') || msgJson.includes('challenge')) {
         console.log('user start challenge');
@@ -908,11 +1198,11 @@ export default function GamesLobby() {
       // Extract numerical score if provided in the event
       const incomingScore =
         parsed?.score !== undefined ? Number(parsed.score) :
-        parsed?.data?.score !== undefined ? Number(parsed.data.score) :
-        parsed?.payload?.score !== undefined ? Number(parsed.payload.score) :
-        parsed?.points !== undefined ? Number(parsed.points) :
-        parsed?.value !== undefined ? Number(parsed.value) :
-        null;
+          parsed?.data?.score !== undefined ? Number(parsed.data.score) :
+            parsed?.payload?.score !== undefined ? Number(parsed.payload.score) :
+              parsed?.points !== undefined ? Number(parsed.points) :
+                parsed?.value !== undefined ? Number(parsed.value) :
+                  null;
 
       if (incomingScore !== null && !isNaN(incomingScore)) {
         lobbyCurrentScoreRef.current = Math.max(lobbyCurrentScoreRef.current, incomingScore);
@@ -939,7 +1229,7 @@ export default function GamesLobby() {
       let jsonStr = '';
       try {
         jsonStr = typeof parsed === 'object' && parsed !== null ? JSON.stringify(parsed).toLowerCase() : '';
-      } catch (_) {}
+      } catch (_) { }
 
       const isChallengeEvent =
         rawDataStr.includes('challenge') ||
@@ -984,7 +1274,7 @@ export default function GamesLobby() {
         const combined = `${rawDataStr} ${parsedStr} ${jsonStr} ${rawEventId}`;
         const modeNum = chessModeMatch ? chessModeMatch[1] : (
           combined.includes('mode:3') || combined.includes('mode_3') ? '3' :
-          combined.includes('mode:4') || combined.includes('mode_4') ? '4' : '2'
+            combined.includes('mode:4') || combined.includes('mode_4') ? '4' : '2'
         );
         console.log(`user start free mode: chess mode ${modeNum}`);
         console.log(
@@ -1059,14 +1349,14 @@ export default function GamesLobby() {
       const isChess = Boolean(activeGameModal?.id?.includes('chess') || activeGameModal?.id === 'chess-grandmaster');
       const isNormalPlayEvent = isChess
         ? (/(?:session:menu:click:)?mode[:_]1(?::|$)/i.test(rawDataStr + ' ' + jsonStr + ' ' + rawEventId) ||
-           isQuickGameEvent)
+          isQuickGameEvent)
         : (
-            rawEventId === 'normal_started' ||
-            rawEventId === 'classic_started' ||
-            rawEventId === 'difficulty_selected' ||
-            rawEventId.includes('normal') ||
-            rawEventId.includes('classic')
-          );
+          rawEventId === 'normal_started' ||
+          rawEventId === 'classic_started' ||
+          rawEventId === 'difficulty_selected' ||
+          rawEventId.includes('normal') ||
+          rawEventId.includes('classic')
+        );
 
       if (isNormalPlayEvent) {
         console.log('%c🎮 [LOBBY: NORMAL PLAY DETECTED] Setting to Normal Play Mode (Entry fee will be deducted on start).', 'background: #00E676; color: #000; font-weight: bold;');
@@ -1246,7 +1536,7 @@ export default function GamesLobby() {
           isDeductingRef.current = false;
           handleGameMessage({ data: { eventId: 'session:menu:click:quickgame', state: 'start' }, origin: window.location.origin });
         }
-      } catch (_) {}
+      } catch (_) { }
     };
 
     console.log = (...args) => {
@@ -1587,9 +1877,16 @@ export default function GamesLobby() {
 
   return (
     <div className="app-container" style={{ backgroundColor: '#050505' }}>
-      {/* Dynamic Cyber Entry Loading Animation with Official Logo & Progress Bar */}
+      {/* Dynamic Cyber Entry Loading Animation with Official Logo & Progress Bar (Runs once per session) */}
       {isPageLoading && (
-        <PageLoader onComplete={() => setIsPageLoading(false)} />
+        <PageLoader
+          onComplete={() => {
+            try {
+              sessionStorage.setItem('loyalty_lobby_loaded', 'true');
+            } catch (_) { }
+            setIsPageLoading(false);
+          }}
+        />
       )}
 
       {/* Notifications */}
@@ -1855,7 +2152,68 @@ export default function GamesLobby() {
                     <p className="game-desc">{game.description}</p>
 
                     {/* Entry & Prize Pool Info */}
-                    {(game.entryPool || game.prizePool) && (
+                    {(game.id?.includes('ludo') || game.playableType === 'native-ludo') ? (
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px',
+                          background: 'rgba(0, 230, 118, 0.05)',
+                          border: '1px solid rgba(0, 230, 118, 0.22)',
+                          padding: '7px 10px',
+                          borderRadius: '8px',
+                          marginBottom: '12px',
+                          fontSize: '0.74rem',
+                        }}
+                      >
+                        {/* 2 Player Mode */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#94a3b8' }}>
+                            <span style={{
+                              background: 'rgba(56, 189, 248, 0.18)',
+                              color: '#38bdf8',
+                              border: '1px solid rgba(56, 189, 248, 0.35)',
+                              padding: '1px 5px',
+                              borderRadius: '4px',
+                              fontSize: '0.66rem',
+                              fontWeight: 800,
+                            }}>2P</span>
+                            <span>Entry:</span>
+                            <strong style={{ color: '#FFFFFF' }}>{game.ludo2pEntryPool || '5.00'} LXT</strong>
+                          </span>
+                          <span style={{ color: '#00E676', fontWeight: 700 }}>
+                            Pool: {game.ludo2pPrizePool || '10.00'} LXT
+                          </span>
+                        </div>
+
+                        {/* 4 Player Mode */}
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '6px',
+                          borderTop: '1px dashed rgba(255, 255, 255, 0.1)',
+                          paddingTop: '5px',
+                        }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#94a3b8' }}>
+                            <span style={{
+                              background: 'rgba(255, 179, 0, 0.18)',
+                              color: '#FFB300',
+                              border: '1px solid rgba(255, 179, 0, 0.35)',
+                              padding: '1px 5px',
+                              borderRadius: '4px',
+                              fontSize: '0.66rem',
+                              fontWeight: 800,
+                            }}>4P</span>
+                            <span>Entry:</span>
+                            <strong style={{ color: '#FFFFFF' }}>{game.ludo4pEntryPool || '20.00'} LXT</strong>
+                          </span>
+                          <span style={{ color: '#FFB300', fontWeight: 700 }}>
+                            Pool: {game.ludo4pPrizePool || '70.00'} LXT
+                          </span>
+                        </div>
+                      </div>
+                    ) : (game.entryPool || game.prizePool) ? (
                       <div
                         style={{
                           display: 'flex',
@@ -1874,7 +2232,7 @@ export default function GamesLobby() {
                           Entry: <strong style={{ color: '#FFFFFF' }}>{game.entryPool || '1.00'} LXT</strong>
                         </span>
                         {/* Ludo/Carrom/Chess-e win-score nei (winner takes all) — tai Win dekhabo na */}
-                        {!(game.id?.includes('ludo') || game.playableType === 'native-ludo' || game.id === 'carrom-hero' || game.id === 'carrom' || game.id === 'chess-grandmaster' || game.id === 'chess') && (
+                        {!(game.id === 'carrom-hero' || game.id === 'carrom' || game.id === 'chess-grandmaster' || game.id === 'chess') && (
                           <span style={{ color: '#38bdf8', fontWeight: 600 }}>
                             Win: <strong style={{ color: '#FFFFFF' }}>≥{game.thresholdScore || '500'}</strong> pts
                           </span>
@@ -1883,7 +2241,7 @@ export default function GamesLobby() {
                           Pool: {game.prizePool || '100.00'} LXT
                         </span>
                       </div>
-                    )}
+                    ) : null}
 
                     {/* Card Actions: Green Play Now + Translucent Rules & Specs */}
                     <div className="game-card-actions">
@@ -2001,23 +2359,40 @@ export default function GamesLobby() {
                     <span style={{ fontSize: '0.68rem', fontWeight: 800 }}>🌟 MODE:</span>
                     <span className="pool-pill-val" style={{ color: '#38bdf8', fontWeight: 800 }}>FREE (0 LXT)</span>
                   </div>
+                ) : (activeGameModal.id?.includes('ludo') || activeGameModal.playableType === 'native-ludo') ? (
+                  <>
+                    <div className="modal-pool-pill" style={{ background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.35)', display: 'inline-flex', alignItems: 'center', gap: '4px' }} title="2-Player Mode: Entry Fee & Prize Pool">
+                      <span style={{ fontSize: '0.68rem', color: '#38bdf8', fontWeight: 800 }}>2P ENTRY:</span>
+                      <span className="pool-pill-val" style={{ color: '#FFFFFF' }}>{activeGameModal.ludo2pEntryPool || '5.00'} LXT</span>
+                      <span style={{ fontSize: '0.68rem', color: '#00E676', fontWeight: 800, marginLeft: '4px' }}>POOL:</span>
+                      <span className="pool-pill-val" style={{ color: '#00E676' }}>{activeGameModal.ludo2pPrizePool || '10.00'} LXT</span>
+                    </div>
+                    <div className="modal-pool-pill" style={{ background: 'rgba(255, 179, 0, 0.12)', border: '1px solid rgba(255, 179, 0, 0.35)', display: 'inline-flex', alignItems: 'center', gap: '4px' }} title="4-Player Mode: Entry Fee & Prize Pool">
+                      <span style={{ fontSize: '0.68rem', color: '#FFB300', fontWeight: 800 }}>4P ENTRY:</span>
+                      <span className="pool-pill-val" style={{ color: '#FFFFFF' }}>{activeGameModal.ludo4pEntryPool || '20.00'} LXT</span>
+                      <span style={{ fontSize: '0.68rem', color: '#FFB300', fontWeight: 800, marginLeft: '4px' }}>POOL:</span>
+                      <span className="pool-pill-val" style={{ color: '#FFB300' }}>{activeGameModal.ludo4pPrizePool || '70.00'} LXT</span>
+                    </div>
+                  </>
                 ) : (
-                  <div className="modal-pool-pill entry-pill" title="Required Entry Pool Fee">
-                    <span style={{ fontSize: '0.68rem', color: '#8D9993' }}>ENTRY:</span>
-                    <span className="pool-pill-val">{activeGameModal.entryPool || '1.00'} LXT</span>
-                  </div>
+                  <>
+                    <div className="modal-pool-pill entry-pill" title="Required Entry Pool Fee">
+                      <span style={{ fontSize: '0.68rem', color: '#8D9993' }}>ENTRY:</span>
+                      <span className="pool-pill-val">{activeGameModal.entryPool || '1.00'} LXT</span>
+                    </div>
+                    {/* Ludo/Carrom/Chess-e win-score nei — WIN SCORE pill dekhabo na */}
+                    {!(activeGameModal.id === 'carrom-hero' || activeGameModal.id === 'carrom' || activeGameModal.id === 'chess-grandmaster' || activeGameModal.id === 'chess') && (
+                      <div className="modal-pool-pill" style={{ background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', color: '#38bdf8' }} title="Target Score needed to win Prize Pool">
+                        <span style={{ fontSize: '0.68rem', color: '#7dd3fc' }}>WIN SCORE:</span>
+                        <span className="pool-pill-val" style={{ color: '#ffffff', fontWeight: 700 }}>≥{activeGameModal.thresholdScore || '500'}</span>
+                      </div>
+                    )}
+                    <div className="modal-pool-pill prize-pill" title="Total Prize Pool">
+                      <Trophy size={13} color="#FFB300" />
+                      <span className="pool-pill-val">{activeGameModal.prizePool || '100.00'} LXT</span>
+                    </div>
+                  </>
                 )}
-                {/* Ludo/Carrom/Chess-e win-score nei — WIN SCORE pill dekhabo na */}
-                {!(activeGameModal.id?.includes('ludo') || activeGameModal.playableType === 'native-ludo' || activeGameModal.id === 'carrom-hero' || activeGameModal.id === 'carrom' || activeGameModal.id === 'chess-grandmaster' || activeGameModal.id === 'chess') && (
-                  <div className="modal-pool-pill" style={{ background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', color: '#38bdf8' }} title="Target Score needed to win Prize Pool">
-                    <span style={{ fontSize: '0.68rem', color: '#7dd3fc' }}>WIN SCORE:</span>
-                    <span className="pool-pill-val" style={{ color: '#ffffff', fontWeight: 700 }}>≥{activeGameModal.thresholdScore || '500'}</span>
-                  </div>
-                )}
-                <div className="modal-pool-pill prize-pill" title="Total Prize Pool">
-                  <Trophy size={13} color="#FFB300" />
-                  <span className="pool-pill-val">{activeGameModal.prizePool || '100.00'} LXT</span>
-                </div>
                 <div className="modal-balance-pill" title="Your Account LXT Balance">
                   <Wallet size={13} color="#00E676" />
                   <span>{user?.usdtBalance !== undefined && user?.usdtBalance !== null ? user.usdtBalance : '0.00'} LXT</span>

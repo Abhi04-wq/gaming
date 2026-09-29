@@ -71,7 +71,7 @@ if (typeof window !== 'undefined') {
   });
   try {
     window.dispatchEvent(new Event('eip6963:requestProvider'));
-  } catch (e) {}
+  } catch (e) { }
 }
 
 export function getEip6963Provider(pattern) {
@@ -421,8 +421,8 @@ export async function fetchLiveUsdtBalance(address, chainId = 1, browserProvider
         chainId === 56
           ? 'https://binance.llamarpc.com'
           : chainId === 137
-          ? 'https://polygon.llamarpc.com'
-          : 'https://eth.llamarpc.com';
+            ? 'https://polygon.llamarpc.com'
+            : 'https://eth.llamarpc.com';
       provider = new ethers.JsonRpcProvider(rpcUrl);
     }
 

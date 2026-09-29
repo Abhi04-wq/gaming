@@ -79,7 +79,7 @@ export default function Login() {
               foundAccount = accounts[0];
               foundProviderName = 'SafePal';
             }
-          } catch (e) {}
+          } catch (e) { }
         }
       }
 
@@ -92,7 +92,7 @@ export default function Login() {
             foundAccount = accounts[0];
             foundProviderName = 'Wallet';
           }
-        } catch (e) {}
+        } catch (e) { }
       }
 
       if (foundAccount) {
@@ -127,6 +127,10 @@ export default function Login() {
     const trimmedAddress = walletAddress.trim();
     if (!trimmedAddress || !ethers.isAddress(trimmedAddress)) {
       setErrorMessage('Please enter a valid EVM wallet address (e.g. 0x...).');
+      setToastMessage({
+        text: 'Please enter a valid EVM wallet address (0x...).',
+        type: 'error',
+      });
       return;
     }
 
@@ -140,7 +144,12 @@ export default function Login() {
 
       if (!checkRes.exists) {
         setNotRegistered(true);
-        setErrorMessage('Wallet not registered.');
+        const errMsg = 'Wallet not registered. Please create an account first.';
+        setErrorMessage(errMsg);
+        setToastMessage({
+          text: errMsg,
+          type: 'error',
+        });
         setLoading(false);
         setAuthStep(null);
         return;
@@ -198,21 +207,22 @@ export default function Login() {
         throw new Error(loginRes.message || 'Login signature verification failed.');
       }
 
-      // Step 6: Store JWT & redirect to /dashboard
+      // Step 6: Store JWT & redirect to /games
       loginUser(loginRes.token, loginRes.user, signer);
 
       setToastMessage({
-        text: 'Authenticated successfully! Welcome back.',
+        text: 'Login successful! Welcome back.',
         type: 'success',
       });
 
       setTimeout(() => {
         navigate('/games');
-      }, 900);
+      }, 1100);
     } catch (error) {
       console.error('[Login Error]', error);
-      setErrorMessage(error.message || 'An error occurred during wallet login.');
-      setToastMessage({ text: error.message, type: 'error' });
+      const errMsg = error.message || 'An error occurred during wallet login.';
+      setErrorMessage(errMsg);
+      setToastMessage({ text: errMsg, type: 'error' });
     } finally {
       setLoading(false);
       setAuthStep(null);

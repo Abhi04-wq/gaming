@@ -25,7 +25,9 @@ import LudoGameBoard from '../components/games/ludo/LudoGameBoard';
 export default function GamePlay() {
   const { gameId } = useParams();
   const game = GAME_CATALOG.find((g) => g.id === gameId) ||
-    (gameId === 'carrom' ? GAME_CATALOG.find((g) => g.id === 'carrom-hero') : null);
+    (gameId === 'carrom' ? GAME_CATALOG.find((g) => g.id === 'carrom-hero') : null) ||
+    (gameId === 'guess-the-flag' ? GAME_CATALOG.find((g) => g.id === 'shape-smash') : null) ||
+    (gameId === 'furious-speed' || gameId === 'road-safety' ? GAME_CATALOG.find((g) => g.id === 'traffic-command') : null);
   const { user, updateBalance } = useAuth();
 
   // Admin pools database theke (kono localStorage noy) — sob browser-e same value
@@ -34,7 +36,7 @@ export default function GamePlay() {
     let cancelled = false;
     fetchGameConfigs()
       .then((cfg) => { if (!cancelled) setGameConfigs(cfg); })
-      .catch(() => {});
+      .catch(() => { });
     return () => { cancelled = true; };
   }, []);
 
@@ -315,7 +317,7 @@ export default function GamePlay() {
     let jsonStr = '';
     try {
       jsonStr = typeof parsed === 'object' && parsed !== null ? JSON.stringify(parsed).toLowerCase() : '';
-    } catch (_) {}
+    } catch (_) { }
 
     const isChallengeEvent =
       rawDataStr.includes('challenge') ||
@@ -361,7 +363,7 @@ export default function GamePlay() {
       const combined = `${rawDataStr} ${parsedStr} ${jsonStr} ${rawEventId}`;
       const modeNum = chessModeMatch ? chessModeMatch[1] : (
         combined.includes('mode:3') || combined.includes('mode_3') ? '3' :
-        combined.includes('mode:4') || combined.includes('mode_4') ? '4' : '2'
+          combined.includes('mode:4') || combined.includes('mode_4') ? '4' : '2'
       );
       console.log(`user start free mode: chess mode ${modeNum}`);
       console.log(
@@ -436,14 +438,14 @@ export default function GamePlay() {
     const isChessGame = Boolean(gameId?.includes('chess') || game?.id?.includes('chess'));
     const isNormalPlayEvent = isChessGame
       ? (/(?:session:menu:click:)?mode[:_]1(?::|$)/i.test(rawDataStr + ' ' + jsonStr + ' ' + rawEventId) ||
-         isQuickGameEvent)
+        isQuickGameEvent)
       : (
-          rawEventId === 'normal_started' ||
-          rawEventId === 'classic_started' ||
-          rawEventId === 'difficulty_selected' ||
-          rawEventId.includes('normal') ||
-          rawEventId.includes('classic')
-        );
+        rawEventId === 'normal_started' ||
+        rawEventId === 'classic_started' ||
+        rawEventId === 'difficulty_selected' ||
+        rawEventId.includes('normal') ||
+        rawEventId.includes('classic')
+      );
 
     if (isNormalPlayEvent) {
       console.log('%c🎮 [NORMAL PLAY DETECTED] Setting to Normal Play Mode (Entry fee will be deducted on start).', 'background: #00E676; color: #000; font-weight: bold;');
@@ -458,11 +460,11 @@ export default function GamePlay() {
     // Extract numerical score if present
     const incomingScore =
       parsed?.score !== undefined ? Number(parsed.score) :
-      parsed?.data?.score !== undefined ? Number(parsed.data.score) :
-      parsed?.payload?.score !== undefined ? Number(parsed.payload.score) :
-      parsed?.points !== undefined ? Number(parsed.points) :
-      parsed?.value !== undefined ? Number(parsed.value) :
-      null;
+        parsed?.data?.score !== undefined ? Number(parsed.data.score) :
+          parsed?.payload?.score !== undefined ? Number(parsed.payload.score) :
+            parsed?.points !== undefined ? Number(parsed.points) :
+              parsed?.value !== undefined ? Number(parsed.value) :
+                null;
 
     const target = parseFloat(thresholdScore || '500');
     const prize = parseFloat(prizePool || '100.00');
@@ -656,7 +658,7 @@ export default function GamePlay() {
       let msgJson = '';
       try {
         msgJson = typeof event.data === 'object' && event.data !== null ? JSON.stringify(event.data).toLowerCase() : '';
-      } catch (_) {}
+      } catch (_) { }
 
       if (msgStr.includes('challenge') || msgJson.includes('challenge')) {
         console.log('user start challenge');
@@ -758,7 +760,7 @@ export default function GamePlay() {
           isDeductingRef.current = false;
           processGameEvent({ eventId: 'session:menu:click:quickgame', state: 'start' }, text);
         }
-      } catch (_) {}
+      } catch (_) { }
     };
 
     console.log = (...args) => {

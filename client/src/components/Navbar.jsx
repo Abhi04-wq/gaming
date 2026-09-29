@@ -105,17 +105,17 @@ export default function Navbar({ onCopyToast }) {
                     transition: 'all 0.2s ease',
                     ...(isIncomeActive
                       ? {
-                          background: 'rgba(0, 230, 118, 0.20)',
-                          border: '1.5px solid #00E676',
-                          color: '#00E676',
-                          boxShadow:
-                            '0 0 14px rgba(0, 230, 118, 0.55), inset 0 0 10px rgba(0, 230, 118, 0.18)',
-                        }
+                        background: 'rgba(0, 230, 118, 0.20)',
+                        border: '1.5px solid #00E676',
+                        color: '#00E676',
+                        boxShadow:
+                          '0 0 14px rgba(0, 230, 118, 0.55), inset 0 0 10px rgba(0, 230, 118, 0.18)',
+                      }
                       : {
-                          background: 'transparent',
-                          border: '1.5px solid transparent',
-                          color: '#7d8f87',
-                        }),
+                        background: 'transparent',
+                        border: '1.5px solid transparent',
+                        color: '#7d8f87',
+                      }),
                   }}
                 >
                   <BarChart3 size={13} />
@@ -139,17 +139,17 @@ export default function Navbar({ onCopyToast }) {
                     transition: 'all 0.2s ease',
                     ...(isGamesActive
                       ? {
-                          background: 'rgba(0, 230, 118, 0.20)',
-                          border: '1.5px solid #00E676',
-                          color: '#00E676',
-                          boxShadow:
-                            '0 0 14px rgba(0, 230, 118, 0.55), inset 0 0 10px rgba(0, 230, 118, 0.18)',
-                        }
+                        background: 'rgba(0, 230, 118, 0.20)',
+                        border: '1.5px solid #00E676',
+                        color: '#00E676',
+                        boxShadow:
+                          '0 0 14px rgba(0, 230, 118, 0.55), inset 0 0 10px rgba(0, 230, 118, 0.18)',
+                      }
                       : {
-                          background: 'transparent',
-                          border: '1.5px solid transparent',
-                          color: '#7d8f87',
-                        }),
+                        background: 'transparent',
+                        border: '1.5px solid transparent',
+                        color: '#7d8f87',
+                      }),
                   }}
                 >
                   <Gamepad2 size={13} />
@@ -170,70 +170,70 @@ export default function Navbar({ onCopyToast }) {
                 </div>
               </div>
 
-            {/* Wallet Address Pill with Copy */}
-            <div className="navbar-wallet-pill">
-              <div
-                style={{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  background: '#00E676',
-                  boxShadow: '0 0 6px #00E676',
-                }}
-              />
-              <span
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '0.85rem',
-                  fontWeight: 600,
-                  color: '#FFFFFF',
-                }}
-              >
-                {shortenAddress(user.walletAddress)}
-              </span>
-              <button
-                onClick={handleCopy}
-                title="Copy full wallet address"
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: copied ? '#00E676' : '#A3A3A3',
-                  cursor: 'pointer',
-                  padding: '4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                {copied ? <Check size={14} /> : <Copy size={14} />}
-              </button>
-            </div>
+              {/* Wallet Address Pill with Copy */}
+              <div className="navbar-wallet-pill">
+                <div
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: '#00E676',
+                    boxShadow: '0 0 6px #00E676',
+                  }}
+                />
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    color: '#FFFFFF',
+                  }}
+                >
+                  {shortenAddress(user.walletAddress)}
+                </span>
+                <button
+                  onClick={handleCopy}
+                  title="Copy full wallet address"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: copied ? '#00E676' : '#A3A3A3',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  {copied ? <Check size={14} /> : <Copy size={14} />}
+                </button>
+              </div>
 
-            {/* Logout Button */}
-            <button
-              onClick={handleLogout}
-              className="btn-ghost"
-              style={{
-                border: '1px solid #242424',
-                color: '#FF5252',
-                background: 'rgba(255, 82, 82, 0.08)',
-                padding: '8px 14px',
-              }}
-            >
-              <LogOut size={16} />
-              <span style={{ fontSize: '0.85rem' }}>Logout</span>
-            </button>
-          </>
-        ) : (
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <Link to="/login" className="btn-secondary" style={{ padding: '8px 18px', fontSize: '0.88rem' }}>
-              Login
-            </Link>
-            <Link to="/register" className="btn-primary" style={{ padding: '8px 18px', fontSize: '0.88rem' }}>
-              Create Account
-            </Link>
-          </div>
-        )}
+              {/* Logout Button */}
+              <button
+                onClick={handleLogout}
+                className="btn-ghost"
+                style={{
+                  border: '1px solid #242424',
+                  color: '#FF5252',
+                  background: 'rgba(255, 82, 82, 0.08)',
+                  padding: '8px 14px',
+                }}
+              >
+                <LogOut size={16} />
+                <span style={{ fontSize: '0.85rem' }}>Logout</span>
+              </button>
+            </>
+          ) : (
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <Link to="/login" className="btn-secondary" style={{ padding: '8px 18px', fontSize: '0.88rem' }}>
+                Login
+              </Link>
+              <Link to="/register" className="btn-primary" style={{ padding: '8px 18px', fontSize: '0.88rem' }}>
+                Create Account
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </header>

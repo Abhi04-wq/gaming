@@ -23,7 +23,7 @@ import {
 export default function Dashboard() {
   const { user, updateBalance, refreshProfile } = useAuth();
 
-  const [liveBalance, setLiveBalance] = useState(user?.usdtBalance || '50.00');
+  const [liveBalance, setLiveBalance] = useState(user?.usdtBalance || '0.00');
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);

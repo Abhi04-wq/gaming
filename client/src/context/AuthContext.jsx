@@ -45,7 +45,7 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      await api.logout().catch(() => {});
+      await api.logout().catch(() => { });
     } finally {
       localStorage.removeItem('web3_auth_token');
       setToken(null);
