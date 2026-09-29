@@ -3,11 +3,12 @@ const router = express.Router();
 const { ethers } = require('ethers');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const User = require('../models/User');
+// const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 const NonceChallenge = require('../models/NonceChallenge');
 const { protect } = require('../middleware/auth');
 const { generateAccountId } = require('../utils/accountId');
+const { getUsdtBalanceFromRpc } = require('../utils/usdtContract');
 
 /**
  * Generate a JWT token for a user
@@ -122,7 +123,7 @@ router.post('/register', async (req, res) => {
       nonce,
       walletType = 'MetaMask',
       chainId = 1,
-      usdtBalance = '50.00',
+      usdtBalance = '0.00',
     } = req.body;
 
     if (!walletAddress || !signature || !nonce) {
@@ -192,14 +193,27 @@ router.post('/register', async (req, res) => {
       existsId = await User.findOne({ accountId });
     }
 
-    // Create user in MongoDB
+    // Determine actual live wallet balance from user's connected wallet address (never dummy 50)
+    let actualWalletBalance = '0.00';
+    if (usdtBalance !== undefined && usdtBalance !== null && usdtBalance !== '' && usdtBalance !== '50.00' && !isNaN(parseFloat(usdtBalance)) && parseFloat(usdtBalance) > 0) {
+      actualWalletBalance = parseFloat(usdtBalance).toFixed(2);
+    } else {
+      try {
+        const rpcData = await getUsdtBalanceFromRpc(normalizedAddress, Number(chainId) || 1);
+        if (rpcData && rpcData.formatted && parseFloat(rpcData.formatted) > 0) {
+          actualWalletBalance = parseFloat(rpcData.formatted).toFixed(2);
+        }
+      } catch (_) { }
+    }
+
+    // Create user in MongoDB with actual wallet balance
     const newUser = await User.create({
       accountId,
       walletAddress: normalizedAddress,
       walletType: ['MetaMask', 'Trust Wallet', 'SafePal', 'Rabby Wallet', 'Coinbase Wallet'].includes(walletType)
         ? walletType
         : 'MetaMask',
-      usdtBalance: String(usdtBalance && usdtBalance !== '0.00' ? usdtBalance : '50.00'),
+      usdtBalance: actualWalletBalance,
       chainId: Number(chainId) || 1,
       lastLoginAt: new Date(),
       isActive: true,
@@ -207,33 +221,9 @@ router.post('/register', async (req, res) => {
 
     const token = generateToken(newUser);
 
-    // Record initial signup bonus as CREDIT in income ledger so
-    // Income Details shows where the starting balance came from
-    try {
-      const startingBalance = parseFloat(newUser.usdtBalance || '50.00');
-      if (startingBalance > 0) {
-        await Transaction.create({
-          walletAddress: normalizedAddress,
-          userId: newUser._id,
-          type: 'credit',
-          category: 'bonus',
-          amount: startingBalance,
-          balanceBefore: 0,
-          balanceAfter: startingBalance,
-          currency: 'LXT',
-          description: `Welcome Signup Bonus (+${startingBalance.toFixed(2)} LXT)`,
-          referenceId: `TX-BON-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
-          status: 'completed',
-        });
-        console.log(`[Transaction Saved: SIGNUP BONUS] ${normalizedAddress} | +${startingBalance.toFixed(2)} LXT`);
-      }
-    } catch (txErr) {
-      console.error('[Signup Bonus Transaction Save Error]', txErr);
-    }
-
     return res.status(201).json({
       success: true,
-      message: 'Wallet registered successfully! Welcome to MyWeb3App.',
+      message: 'Wallet registered successfully! Welcome to Loyalty Game.',
       token,
       user: newUser.toPublicJSON(),
     });
@@ -308,15 +298,28 @@ router.post('/login', async (req, res) => {
     // Invalidate nonce challenge
     await NonceChallenge.deleteOne({ _id: challenge._id });
 
-    // Update user login timestamp & balance if provided
+    // Update user login timestamp & sync live wallet balance
     user.lastLoginAt = new Date();
     user.nonce = null;
     user.nonceExpiresAt = null;
-    if (user.usdtBalance === undefined || user.usdtBalance === null) {
-      user.usdtBalance = '0.00';
-    } else if (usdtBalance !== undefined && usdtBalance !== null && usdtBalance !== '') {
-      user.usdtBalance = String(usdtBalance);
+
+    let liveBal = null;
+    if (usdtBalance !== undefined && usdtBalance !== null && usdtBalance !== '' && usdtBalance !== '50.00' && !isNaN(parseFloat(usdtBalance))) {
+      liveBal = parseFloat(usdtBalance).toFixed(2);
     }
+    try {
+      const rpcData = await getUsdtBalanceFromRpc(normalizedAddress, Number(chainId || user.chainId) || 1);
+      if (rpcData && rpcData.formatted && parseFloat(rpcData.formatted) > 0) {
+        liveBal = parseFloat(rpcData.formatted).toFixed(2);
+      }
+    } catch (_) { }
+
+    if (liveBal !== null) {
+      user.usdtBalance = liveBal;
+    } else if (user.usdtBalance === '50.00' || !user.usdtBalance) {
+      user.usdtBalance = '0.00';
+    }
+
     if (chainId !== undefined) {
       user.chainId = Number(chainId);
     }

@@ -10,7 +10,16 @@ const initLudoSocket = require('./socket/ludoSocket');
 dotenv.config();
 
 // Connect to MongoDB
-connectDB();
+connectDB().then(() => {
+  const User = require('./models/User');
+  User.updateMany({ usdtBalance: '50.00' }, { $set: { usdtBalance: '0.00' } })
+    .then((res) => {
+      if (res.modifiedCount > 0) {
+        console.log(`[Database Cleanup] Reset ${res.modifiedCount} legacy 50.00 balance accounts to 0.00`);
+      }
+    })
+    .catch((err) => console.error('[Cleanup Error]', err));
+}).catch(() => {});
 
 const app = express();
 

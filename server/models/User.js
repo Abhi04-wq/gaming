@@ -24,7 +24,7 @@ const userSchema = new mongoose.Schema(
     },
     usdtBalance: {
       type: String,
-      default: '50.00',
+      default: '0.00',
     },
     chainId: {
       type: Number,

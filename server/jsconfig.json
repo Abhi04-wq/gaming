@@ -1,0 +1,11 @@
+
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es2020",
+    "checkJs": false,
+    "forceConsistentCasingInFileNames": false
+  },
+  "include": ["**/*.js"],
+  "exclude": ["node_modules"]
+}

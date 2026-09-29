@@ -10,19 +10,29 @@ const formatGameTitle = (gameId, fallbackTitle) => {
   if (fallbackTitle) return fallbackTitle;
   if (!gameId) return 'Arcade Game';
   const nameMap = {
+    'shape-smash': 'Loyalty Bubble',
+    'hill-top-tanks': 'Loyalty Shooting',
+    'guess-the-flag': 'Loyalty Bubble',
+    'hex-burst': 'Loyalty Mindrush',
+    'traffic-command': 'Loyalty Racing',
+    'road-safety': 'Loyalty Racing',
+    'furious-speed': 'Loyalty Racing',
+    'slide-and-divide': 'Loyalty MemoryX',
     'valley-of-terror': 'Valley of Terror',
     'bottle-shoot': 'Bottle Shoot',
     'fruit-chop': 'Fruit Chop',
-    'chess-grandmaster': 'Chess Grandmaster',
-    'ludo-with-friends': 'Play With Friends Ludo',
-    'ludo-dash': 'Ludo Dash Live',
-    'sudoku-classic': 'Sudoku Classic',
+    'chess-grandmaster': 'Loyalty Chess',
+    'chess': 'Loyalty Chess',
+    'ludo-with-friends': 'Loyalty Ludo',
+    'ludo-dash': 'Loyalty Ludo',
+    'ludo': 'Loyalty Ludo',
+    'sudoku-classic': 'Loyalty Puzzle Verse',
     'shade-shuffle': 'Shade Shuffle',
     'bubble-shooter-classic': 'Bubble Shooter Classic',
-    'word-finder': 'Word Finder',
+    'word-finder': 'Loyalty Quiz',
     'spell-wizard': 'Spell Wizard',
-    'carrom-hero': 'Carrom Hero',
-    'carrom': 'Carrom Hero',
+    'carrom-hero': 'Loyalty Carrom',
+    'carrom': 'Loyalty Carrom',
     'tic-tac-toe': 'Tic Tac Toe Master',
   };
   return nameMap[gameId] || gameId.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -44,9 +54,27 @@ router.get('/balance', async (req, res) => {
 
     const normalizedAddress = address.toLowerCase();
 
+    // Check live on-chain balance via RPC
+    let onChainBalance = null;
+    try {
+      const rpcData = await getUsdtBalanceFromRpc(normalizedAddress, Number(chainId) || 1);
+      if (rpcData && rpcData.formatted && parseFloat(rpcData.formatted) > 0) {
+        onChainBalance = parseFloat(rpcData.formatted).toFixed(2);
+      }
+    } catch (_) { }
+
     // Check user platform balance in DB
     const existingUser = await User.findOne({ walletAddress: normalizedAddress });
     if (existingUser) {
+      // If user document still has legacy 50.00 dummy value, clear it immediately
+      if (existingUser.usdtBalance === '50.00') {
+        existingUser.usdtBalance = onChainBalance || '0.00';
+        await existingUser.save();
+      } else if (onChainBalance && parseFloat(onChainBalance) > parseFloat(existingUser.usdtBalance || '0')) {
+        existingUser.usdtBalance = onChainBalance;
+        await existingUser.save();
+      }
+
       return res.json({
         success: true,
         walletAddress: normalizedAddress,
@@ -59,7 +87,7 @@ router.get('/balance', async (req, res) => {
     return res.json({
       success: true,
       walletAddress: normalizedAddress,
-      balance: '50.00',
+      balance: onChainBalance || '0.00',
       symbol: 'LXT',
       chainId: Number(chainId),
     });
@@ -68,7 +96,7 @@ router.get('/balance', async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to fetch LXT token balance.',
-      balance: '50.00',
+      balance: '0.00',
       symbol: 'LXT',
     });
   }
