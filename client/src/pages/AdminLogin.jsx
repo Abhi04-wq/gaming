@@ -5,6 +5,7 @@ import LogoWebp from '../logo.webp';
 import Toast from '../components/Toast';
 import {
   ShieldAlert,
+  ShieldCheck,
   Lock,
   Mail,
   Eye,
@@ -119,56 +120,87 @@ export default function AdminLogin() {
         />
 
         {/* Logo & Brand Header */}
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            marginBottom: '28px',
+          }}
+        >
+          {/* Glowing Circular Logo Emblem */}
           <div
             style={{
-              display: 'inline-flex',
+              display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: '64px',
-              height: '64px',
+              width: '76px',
+              height: '76px',
               borderRadius: '50%',
-              background: 'rgba(0, 230, 118, 0.08)',
-              border: '1px solid rgba(0, 230, 118, 0.3)',
+              background: 'radial-gradient(circle, rgba(0, 230, 118, 0.16) 0%, rgba(13, 15, 20, 0.95) 100%)',
+              border: '1.5px solid rgba(0, 230, 118, 0.45)',
               marginBottom: '16px',
-              boxShadow: '0 0 25px rgba(0, 230, 118, 0.15)',
+              boxShadow: '0 0 28px rgba(0, 230, 118, 0.25), inset 0 0 14px rgba(0, 230, 118, 0.12)',
+              padding: '8px',
             }}
           >
             <img
               src={LogoWebp}
               alt="Loyalty Game"
-              style={{ width: '42px', height: '42px', objectFit: 'contain', borderRadius: '50%' }}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.6))',
+              }}
             />
           </div>
 
+          {/* Centered Admin Portal Badge */}
           <div
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              background: 'rgba(239, 68, 68, 0.12)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              padding: '4px 12px',
+              background: 'rgba(0, 230, 118, 0.08)',
+              border: '1px solid rgba(0, 230, 118, 0.3)',
+              padding: '5px 14px',
               borderRadius: '20px',
               fontSize: '0.74rem',
-              color: '#f87171',
+              color: '#00E676',
               fontWeight: 700,
-              letterSpacing: '0.05em',
+              letterSpacing: '0.08em',
               textTransform: 'uppercase',
-              margin: '0 auto 12px auto',
-              width: 'fit-content',
+              marginBottom: '14px',
+              boxShadow: '0 0 14px rgba(0, 230, 118, 0.12)',
             }}
           >
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-              <ShieldAlert size={12} />
-              Admin Portal
-            </span>
+            <ShieldCheck size={13} color="#00E676" />
+            <span>Admin Portal</span>
           </div>
 
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '6px' }}>
-            Loyalty Game Admin
+          <h1
+            style={{
+              fontSize: '1.8rem',
+              fontWeight: 800,
+              color: '#FFFFFF',
+              marginBottom: '8px',
+              letterSpacing: '-0.02em',
+              fontFamily: "'Outfit', sans-serif",
+            }}
+          >
+            Loyalty <span style={{ color: '#00E676' }}>Game</span> Admin
           </h1>
-          <p style={{ color: '#9ca3af', fontSize: '0.88rem' }}>
+          <p
+            style={{
+              color: '#9ca3af',
+              fontSize: '0.88rem',
+              margin: 0,
+              maxWidth: '360px',
+              lineHeight: 1.5,
+            }}
+          >
             Sign in with administrative credentials to manage games & platform
           </p>
         </div>
@@ -338,7 +370,7 @@ export default function AdminLogin() {
         </form>
 
         {/* Bottom Link to Player Lobby */}
-        <div
+        {/* <div
           style={{
             borderTop: '1px solid #222632',
             marginTop: '26px',
@@ -366,7 +398,7 @@ export default function AdminLogin() {
           >
             Go to Games Lobby
           </Link>
-        </div>
+        </div> */}
       </div>
     </div>
   );
